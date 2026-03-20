@@ -1,40 +1,24 @@
 """
-Noosphere — Physics-Informed World Model Agent with BCI Apparatus Control
+Noosphere v1.2.0
 
-Quick start
------------
-    from noosphere import NoosphereAgent, AgentConfig
-
-    cfg   = AgentConfig(n_actions=6, n_eeg_ch=3, n_nodes=6)
-    agent = NoosphereAgent(cfg, device=torch.device("cpu"))
-
-    obs    = {"eeg": eeg_array, "rgb": rgb_array, "kinematics": joints_array}
+Quick start — any sensor subset works (missing streams are masked, not zeroed):
+    obs = {"eeg": eeg_array}                        # EEG-only
+    obs = {"rgb": rgb, "depth": depth}              # vision-only
+    obs = {"eeg": eeg, "rgb": rgb, "kinematics": k} # all streams
     action, info = agent.step(obs)
 
-Adding a new sensor modality
------------------------------
-    from noosphere.tokenizer import ImagePatchTokenizer
-    agent.perception.tokenizer.register_modality(
-        "thermal", ImagePatchTokenizer(1, cfg.d_model, patch_size=8)
-    )
+Attaching a digital executor:
+    from noosphere.actions import make_shell_space, ShellExecutor, ActBridge
+    space  = make_shell_space(working_dir=".")
+    bridge = ActBridge(space, ShellExecutor(allow_list=["ls","pwd","git"]))
+    cfg    = AgentConfig(n_actions=space.n_actions)
+    agent  = NoosphereAgent(cfg, device)
+    agent.act_bridge = bridge
 
-BCI + apparatus control
------------------------
-    from noosphere.apparatus import MovementExecutor, IntentionFilter, AnomalyDetector
-    from noosphere.hardware  import ServoController
-
-    executor = MovementExecutor()
-    servo    = ServoController(backend="sim")   # swap "rpi_pca9685" for real hardware
-    commands = executor.plan_and_execute(target_xyz)
-    for angles_deg in commands:
-        servo.set_all_angles(angles_deg)
-
-Communication protocol
-----------------------
-    from noosphere.proto import NCPEncoder, NCPDecoder, Channel
-    enc = NCPEncoder()
-    frame = enc.eeg_segment(raw_uv, probs, root_label, intent, xyz, v, f, ts)
-    # publish frame to Channel.EEG_SOURCE via Redis or any transport
+Continuous training:
+    from noosphere.trainer import Trainer, TrainerConfig
+    trainer = Trainer(agent, env, TrainerConfig())
+    trainer.run()
 """
 
 from noosphere.agent      import NoosphereAgent, AgentConfig
@@ -57,30 +41,27 @@ from noosphere.learning   import (
     LearningManager, LearningConfig, LearningSignal,
     StepNFTPolicy, StepNFTLoss,
 )
+from noosphere.actions    import (
+    Action, ActionSpace, ActBridge, Executor,
+    NullExecutor, ShellExecutor, ApparatusExecutor,
+    make_apparatus_space, make_shell_space, make_binary_space,
+)
+from noosphere.trainer    import Trainer, TrainerConfig, Env, save_checkpoint, load_checkpoint
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = [
-    # Agent
-    "NoosphereAgent", "AgentConfig",
-    # Perception
-    "HybridPerceptionModel", "S4EEGEncoder", "KinematicGNN",
-    "UnifiedTokenizer", "build_tokenizer",
-    # World model
-    "RSSM", "PhysicsAugmentedRSSM",
-    "ConsequenceModel", "ObservationDecoder",
-    # Planning
-    "Actor", "Critic", "ActionEncoder", "MCTSPlanner",
-    # Memory
-    "SequenceReplayBuffer", "EpisodicMemory", "WorkingMemory",
-    # Apparatus
-    "MovementExecutor", "KinematicSolver", "ObstacleSphere",
-    "IntentionFilter", "AnomalyDetector", "CoordinatePredictor",
-    "ArmConfig", "JointState",
-    # Hardware
+    "NoosphereAgent","AgentConfig",
+    "HybridPerceptionModel","S4EEGEncoder","KinematicGNN","UnifiedTokenizer","build_tokenizer",
+    "RSSM","PhysicsAugmentedRSSM","ConsequenceModel","ObservationDecoder",
+    "Actor","Critic","ActionEncoder","MCTSPlanner",
+    "SequenceReplayBuffer","EpisodicMemory","WorkingMemory",
+    "MovementExecutor","KinematicSolver","ObstacleSphere",
+    "IntentionFilter","AnomalyDetector","CoordinatePredictor","ArmConfig","JointState",
     "ServoController",
-    # Protocol
-    "NCPEncoder", "NCPDecoder", "Channel", "MsgType",
-    # Learning
-    "LearningManager", "LearningConfig", "LearningSignal",
-    "StepNFTPolicy", "StepNFTLoss",
+    "NCPEncoder","NCPDecoder","Channel","MsgType",
+    "LearningManager","LearningConfig","LearningSignal","StepNFTPolicy","StepNFTLoss",
+    "Action","ActionSpace","ActBridge","Executor",
+    "NullExecutor","ShellExecutor","ApparatusExecutor",
+    "make_apparatus_space","make_shell_space","make_binary_space",
+    "Trainer","TrainerConfig","Env","save_checkpoint","load_checkpoint",
 ]

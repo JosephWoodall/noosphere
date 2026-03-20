@@ -2,16 +2,16 @@ torch>=2.0.0
 numpy>=1.24.0
 scipy>=1.10.0
 
-# Apparatus / BCI coordinate prediction (optional but recommended)
+# Apparatus coordinate prediction
 scikit-learn>=1.3.0
 
-# Hardware backends (install the one matching your hardware)
-# rppal          # Raspberry Pi GPIO
-# pwm-pca9685    # PCA9685 I2C servo driver
-# pyserial       # Arduino serial
+# Hardware backends (install ONE matching your hardware)
+# rppal             # Raspberry Pi GPIO / I2C
+# pwm-pca9685       # PCA9685 servo driver (recommended for 6+ servos)
+# pyserial          # Arduino serial protocol
 
-# Redis transport (optional — NCP frames can use any transport)
+# Transport (optional — NCP frames work over any byte stream)
 # redis>=4.0.0
 
-# Optional: additional Gym environments for non-BCI domains
+# Additional environments
 # gymnasium>=0.29.0

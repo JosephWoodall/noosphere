@@ -41,6 +41,7 @@ from noosphere.physics    import PhysicsAugmentedRSSM
 from noosphere.rssm       import ConsequenceModel, ObservationDecoder
 from noosphere.planner    import Actor, Critic, ActionEncoder, MCTSPlanner, ImaginationBuffer
 from noosphere.memory     import SequenceReplayBuffer, EpisodicMemory, WorkingMemory
+from noosphere.actions    import ActionSpace, ActBridge, Executor, NullExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,11 @@ class AgentConfig:
     ac_updates:         int   = 5
     train_every:        int   = 10
     warmup_steps:       int   = 1000
+
+    # Act bridge
+    task_type:          str   = "multiclass"   # "binary" | "multiclass" | "regression"
+    min_act_confidence: float = 0.3
+    dry_run:            bool  = False
 
     # Memory
     replay_capacity:    int   = 500
@@ -183,6 +189,11 @@ class NoosphereAgent(nn.Module):
         self.replay   = SequenceReplayBuffer(C.replay_capacity, C.seq_len)
         self.episodic = EpisodicMemory(state_dim, 64, C.episodic_capacity)
         self.working  = WorkingMemory(20)
+
+        # Act bridge — translate MCTS integer → real-world command.
+        # Defaults to NullExecutor (no-op). Replace with ActBridge(action_space, executor)
+        # before deployment. See noosphere/actions.py for available spaces and executors.
+        self.act_bridge: Optional[ActBridge] = None
 
         # Optimizers — store param lists explicitly so clip_grad_norm_
         # in each phase targets only that phase's parameters.
@@ -289,12 +300,38 @@ class NoosphereAgent(nn.Module):
             cog = s4_out["cognitive"]
             info.update({f"bci_{k}": v.mean().item() for k, v in cog.items()})
 
+        # ── Act phase bridge ─────────────────────────────────────────────────
+        # If an ActBridge is attached, translate the integer action to a
+        # real-world command and carry the outcome back into info.
+        # If no bridge is attached, the caller is responsible for translating
+        # the integer using their own ActionSpace.
+        act_result = None
+        if self.act_bridge is not None:
+            act_result = self.act_bridge.act(
+                action,
+                predicted_value=cons["value"].item(),
+                info=info,
+            )
+            info["act_executed"] = act_result["executed"]
+            info["act_outcome"]  = act_result.get("outcome", "")
+            info["act_reward"]   = act_result.get("reward", 0.0)
+            # If the executor produced a structured observation (e.g. shell output
+            # features), attach it so observe() can store it in the replay buffer.
+            if "structured" in act_result:
+                info["_exec_structured"] = act_result["structured"]
+
         self._step += 1
         return action, info
 
     # ── Observe ───────────────────────────────────────────────────────────────
 
-    def observe(self, obs: Dict, action: int, reward: float, done: bool):
+    def observe(self, obs: Dict, action: int, reward: float, done: bool,
+                info: Optional[Dict] = None):
+        # If the act bridge produced structured executor output, merge it
+        # into the observation so the world model trains on real outcomes.
+        if info and "_exec_structured" in info:
+            obs = dict(obs)
+            obs["structured"] = info["_exec_structured"]
         self.replay.add_step(obs, action, reward, done)
         self.working.push(np.zeros(1), action, reward)
         if self._h is not None and self._step % 10 == 0:

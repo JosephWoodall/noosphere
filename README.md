@@ -400,6 +400,10 @@ requirements.txt
 
 ---
 
+!(noosphere_core_loop.svg)
+!(noosphere_data_flow.svg)
+!(noosphere_file_map.svg)
+
 ## What else can this do?
 
 The world model is the core primitive. Everything else is a vocabulary and an executor. Some directions that extend naturally from the current architecture:

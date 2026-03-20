@@ -2,5 +2,16 @@ torch>=2.0.0
 numpy>=1.24.0
 scipy>=1.10.0
 
-# Optional — additional environments for demo.py
+# Apparatus / BCI coordinate prediction (optional but recommended)
+scikit-learn>=1.3.0
+
+# Hardware backends (install the one matching your hardware)
+# rppal          # Raspberry Pi GPIO
+# pwm-pca9685    # PCA9685 I2C servo driver
+# pyserial       # Arduino serial
+
+# Redis transport (optional — NCP frames can use any transport)
+# redis>=4.0.0
+
+# Optional: additional Gym environments for non-BCI domains
 # gymnasium>=0.29.0

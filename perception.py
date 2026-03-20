@@ -267,12 +267,19 @@ class HybridPerceptionModel(nn.Module):
         B  = next(v.shape[0] for v in inputs.values() if v is not None)
         dev= next(v.device   for v in inputs.values() if v is not None)
 
+        # Track which streams are present — absent streams are fully masked
+        # so zero-padded tokens never pollute attention from present streams.
+        has_eeg   = inputs.get("eeg") is not None
+        has_kin   = inputs.get("kinematics") is not None
+        has_vis   = any(inputs.get(k) is not None
+                        for k in ("rgb","depth","rgb_right","lidar","audio"))
+
         # Stream B: S4 EEG
         t = time.perf_counter()
         s4_out      = None
         s4_summary  = torch.zeros(B, self.d_model, device=dev)
         s4_seq      = torch.zeros(B, 1, self.d_model, device=dev)
-        if inputs.get("eeg") is not None:
+        if has_eeg:
             s4_out     = self.s4(inputs["eeg"], inputs.get("electrode_mask"), inference)
             s4_summary = s4_out["summary"]
             s4_seq     = s4_out["sequence"]
@@ -283,7 +290,7 @@ class HybridPerceptionModel(nn.Module):
         gnn_out     = None
         gnn_summary = torch.zeros(B, self.d_model, device=dev)
         gnn_nodes   = torch.zeros(B, 1, self.d_model, device=dev)
-        if inputs.get("kinematics") is not None:
+        if has_kin:
             gnn_out     = self.gnn(inputs["kinematics"])
             gnn_summary = gnn_out["graph_token"].squeeze(1)
             gnn_nodes   = gnn_out["graph_sequence"]
@@ -293,9 +300,9 @@ class HybridPerceptionModel(nn.Module):
         t = time.perf_counter()
         vis_inputs = {k: v for k, v in inputs.items()
                       if k in ("rgb","depth","rgb_right","lidar","audio") and v is not None}
-        vis_tokens = torch.zeros(B, 4, self.d_model, device=dev)
+        vis_tokens = None   # None means absent — do NOT inject
         pad_mask   = None
-        if vis_inputs:
+        if has_vis:
             try:
                 raw, pad_mask = self.tokenizer(vis_inputs)
                 vis_tokens    = raw[:, 1:]          # strip tokenizer CLS
@@ -303,18 +310,33 @@ class HybridPerceptionModel(nn.Module):
                 pass
         self.profiler.record("vis_ms", (time.perf_counter() - t) * 1000)
 
-        # Assemble sequence: [CLS | S4_tok | GNN_tok | vis_1 ... vis_N]
-        x = torch.cat([
-            self.cls.expand(B, 1, -1),
-            self.s4_proj(s4_summary).unsqueeze(1),
-            self.gnn_proj(gnn_summary).unsqueeze(1),
-            vis_tokens,
-        ], dim=1)
+        # Assemble token sequence.
+        # Only present streams contribute tokens.
+        # CLS is always present; S4/GNN tokens carry zeros but ARE included
+        # so the positional structure is stable — they are masked to True
+        # (excluded from attention) when the stream is absent.
+        token_parts = [self.cls.expand(B, 1, -1)]
+        mask_parts  = [torch.zeros(B, 1, dtype=torch.bool, device=dev)]  # CLS never masked
 
-        if pad_mask is not None:
-            pad_mask = torch.cat([
-                torch.zeros(B, 3, dtype=torch.bool, device=dev), pad_mask
-            ], dim=1)
+        s4_tok = self.s4_proj(s4_summary).unsqueeze(1)   # (B,1,d) — zero if absent
+        gnn_tok= self.gnn_proj(gnn_summary).unsqueeze(1) # (B,1,d) — zero if absent
+        token_parts.append(s4_tok)
+        token_parts.append(gnn_tok)
+        # Mask absent streams so their zero tokens are excluded from attention
+        mask_parts.append(torch.full((B, 1), not has_eeg, dtype=torch.bool, device=dev))
+        mask_parts.append(torch.full((B, 1), not has_kin,  dtype=torch.bool, device=dev))
+
+        if vis_tokens is not None:
+            token_parts.append(vis_tokens)
+            if pad_mask is not None:
+                mask_parts.append(pad_mask)
+            else:
+                mask_parts.append(torch.zeros(B, vis_tokens.shape[1], dtype=torch.bool, device=dev))
+        # else: no vision tokens appended at all — sequence is shorter
+
+        x        = torch.cat(token_parts, dim=1)
+        pad_mask = torch.cat(mask_parts, dim=1) if any(
+            m.any().item() for m in mask_parts) else None
 
         # Transformer with fusion hooks
         t = time.perf_counter()

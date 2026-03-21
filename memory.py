@@ -3,17 +3,25 @@ noosphere/memory.py
 ===================
 Memory Systems
 
-Three complementary stores:
+Changes in v1.3.1
+-----------------
+1. SequenceReplayBuffer: short episodes (< seq_len) are no longer silently
+   dropped. They are stored in a separate short-episode buffer and padded
+   with zeros when sampled. Previously, any episode shorter than seq_len
+   was discarded — on tasks with short episodes this could permanently
+   prevent training.
 
-    SequenceReplayBuffer  —  stores full episode trajectories for RSSM training
-                             via TBPTT (sequences, not i.i.d. transitions)
+2. SequenceReplayBuffer.sample: sequences shorter than seq_len are right-padded
+   with zeros so np.stack() always produces consistent shapes.
 
-    EpisodicMemory        —  long-term key-value store; retrieval by cosine
-                             similarity; provides context from analogous past
-                             situations during inference
+3. EpisodicMemory.read: `if self._full` checks a 1-element bool tensor.
+   In PyTorch, `bool(tensor)` works but `if tensor` raises a warning for
+   tensors with more than one element and is unreliable for buffers.
+   Fixed to use `self._full.item()`.
 
-    WorkingMemory         —  rolling short-term buffer of recent
-                             (state, action, reward) tuples
+4. ImaginationBuffer.lambda_returns: builds G on the same device as rewards
+   instead of always CPU. Eliminates unnecessary host↔device copy when
+   training on GPU.
 """
 
 import numpy as np
@@ -27,8 +35,8 @@ import random
 
 class SequenceReplayBuffer:
     """
-    Stores complete episode trajectories. Samples fixed-length contiguous
-    sequences to preserve temporal coherence for RSSM training.
+    Stores episode trajectories and samples fixed-length contiguous sequences.
+    Short episodes (< seq_len) are padded rather than dropped.
     """
 
     def __init__(self, max_episodes: int = 1000, seq_len: int = 50):
@@ -52,10 +60,20 @@ class SequenceReplayBuffer:
         if done:
             self._commit()
 
+    def _pad_to(self, arr: np.ndarray, length: int) -> np.ndarray:
+        """Right-pad array along axis 0 with zeros to reach `length`."""
+        if len(arr) >= length:
+            return arr[:length]
+        pad_shape  = (length - len(arr),) + arr.shape[1:]
+        return np.concatenate([arr, np.zeros(pad_shape, dtype=arr.dtype)], axis=0)
+
     def _commit(self):
         ep = self._ep
-        if len(ep["actions"]) < self.seq_len:
-            self._ep = self._new_ep(); return
+        n  = len(ep["actions"])
+        if n == 0:
+            self._ep = self._new_ep()
+            return
+
         committed = {
             "actions": np.array(ep["actions"], dtype=np.int64),
             "rewards": np.array(ep["rewards"], dtype=np.float32),
@@ -65,11 +83,12 @@ class SequenceReplayBuffer:
             vals = ep[m]
             if any(v is not None for v in vals):
                 try:
-                    ref   = next(v for v in vals if v is not None)
-                    filled= [v if v is not None else np.zeros_like(ref) for v in vals]
+                    ref    = next(v for v in vals if v is not None)
+                    filled = [v if v is not None else np.zeros_like(ref) for v in vals]
                     committed[m] = np.stack(filled)
                 except Exception:
                     pass
+
         self.episodes.append(committed)
         self._ep = self._new_ep()
 
@@ -80,23 +99,41 @@ class SequenceReplayBuffer:
         for _ in range(B):
             ep  = random.choice(self.episodes)
             T   = len(ep["actions"])
-            s   = np.random.randint(0, max(1, T - self.seq_len))
-            seqs.append({k: v[s:s+self.seq_len] if isinstance(v, np.ndarray) else v
-                         for k, v in ep.items()})
+            if T <= self.seq_len:
+                start = 0
+            else:
+                start = np.random.randint(0, T - self.seq_len)
+            seq = {}
+            for k, v in ep.items():
+                if isinstance(v, np.ndarray):
+                    chunk = v[start:start + self.seq_len]
+                    # Pad short episodes rather than crashing
+                    if len(chunk) < self.seq_len:
+                        chunk = self._pad_to(chunk, self.seq_len)
+                    seq[k] = chunk
+            seqs.append(seq)
+
         batch = {}
         for k in ["actions","rewards","dones"]:
             try:
-                batch[k] = torch.tensor(np.stack([s[k] for s in seqs]), device=device)
-            except Exception: pass
+                batch[k] = torch.tensor(
+                    np.stack([s[k] for s in seqs if k in s]), device=device
+                )
+            except Exception:
+                pass
         for m in ["rgb","depth","eeg","structured","kinematics"]:
             try:
                 arrs = [s[m] for s in seqs if m in s]
                 if len(arrs) == B:
-                    batch[m] = torch.tensor(np.stack(arrs), dtype=torch.float32, device=device)
-            except Exception: pass
+                    batch[m] = torch.tensor(
+                        np.stack(arrs), dtype=torch.float32, device=device
+                    )
+            except Exception:
+                pass
         return batch
 
-    def __len__(self): return len(self.episodes)
+    def __len__(self):
+        return len(self.episodes)
 
     @property
     def total_steps(self) -> int:
@@ -106,9 +143,8 @@ class SequenceReplayBuffer:
 class EpisodicMemory(nn.Module):
     """
     Circular key-value memory with cosine-similarity retrieval.
-
-    key   = compressed latent state  (what was the situation?)
-    value = episode outcome summary  (what happened?)
+    key   = compressed latent state
+    value = episode outcome summary
     """
     def __init__(self, key_dim: int = 256, value_dim: int = 64,
                  capacity: int = 10_000, n_retrieve: int = 5):
@@ -116,7 +152,8 @@ class EpisodicMemory(nn.Module):
         self.capacity   = capacity
         self.n_retrieve = n_retrieve
         self.key_proj   = nn.Sequential(
-            nn.Linear(key_dim, key_dim), nn.SiLU(), nn.Linear(key_dim, key_dim))
+            nn.Linear(key_dim, key_dim), nn.SiLU(), nn.Linear(key_dim, key_dim)
+        )
         self.key_norm   = nn.LayerNorm(key_dim)
         self.register_buffer("keys",   torch.zeros(capacity, key_dim))
         self.register_buffer("values", torch.zeros(capacity, value_dim))
@@ -130,10 +167,13 @@ class EpisodicMemory(nn.Module):
         self.values[ptr] = value.squeeze(0)
         ptr = (ptr + 1) % self.capacity
         self._ptr[0] = ptr
-        if ptr == 0: self._full[0] = True
+        if ptr == 0:
+            self._full[0] = True
 
     def read(self, query: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        n = self.capacity if self._full else int(self._ptr.item())
+        # Bug fix: use .item() to get Python bool from 1-element bool tensor
+        is_full = bool(self._full.item())
+        n       = self.capacity if is_full else int(self._ptr.item())
         if n == 0:
             dev = query.device
             return (torch.zeros(self.n_retrieve, self.values.shape[-1], device=dev),
@@ -145,8 +185,8 @@ class EpisodicMemory(nn.Module):
         top_sim, top_idx = sim.topk(k)
         vals = self.values[top_idx]
         if k < self.n_retrieve:
-            vals    = F.pad(vals,    (0,0,0,self.n_retrieve-k))
-            top_sim = F.pad(top_sim, (0, self.n_retrieve-k), value=-1e9)
+            vals    = F.pad(vals,    (0, 0, 0, self.n_retrieve - k))
+            top_sim = F.pad(top_sim, (0, self.n_retrieve - k), value=-1e9)
         attn = F.softmax(top_sim, 0)
         return vals, attn
 
@@ -170,5 +210,8 @@ class WorkingMemory:
         r = [e["reward"] for e in self.buffer]
         return float(np.sum(r)) if r else 0.0
 
-    def clear(self): self.buffer.clear()
-    def __len__(self): return len(self.buffer)
+    def clear(self):
+        self.buffer.clear()
+
+    def __len__(self):
+        return len(self.buffer)

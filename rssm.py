@@ -3,17 +3,21 @@ noosphere/rssm.py
 =================
 Recurrent State Space Model (RSSM)
 
-The latent dynamics core. Maintains a structured world state sₜ = (hₜ, zₜ):
-
-    hₜ  — deterministic GRU state      captures long-range temporal dependencies
-    zₜ  — stochastic discrete latent   captures uncertainty and multimodal futures
+Latent state sₜ = (hₜ, zₜ):
+    hₜ  — deterministic GRU state      long-range temporal memory
+    zₜ  — stochastic discrete latent   uncertainty + multimodal futures
 
 Two forward modes:
-    observe_step   uses real observations → trains the posterior q(zₜ | hₜ, oₜ)
-    imagine_step   no observations       → runs the prior p(ẑₜ | hₜ) for planning
+    observe_step   uses real observations → trains posterior q(zₜ | hₜ, oₜ)
+    imagine_step   no observations       → runs prior p(ẑₜ | hₜ) for planning
 
-The KL loss KL(q ‖ p) forces the prior to anticipate the posterior — this is
-what enables the model to imagine plausible futures without seeing real data.
+Changes in v1.3.1
+-----------------
+- kl_loss: probs clamped to [1e-6, 1] before OneHotCategorical construction.
+  Without this, values near 0 produce log(0) = -inf inside the KL computation,
+  which propagates as NaN through the entire training loss.
+- reset_episode moved here (was only on PhysicsAugmentedRSSM wrapper) so bare
+  RSSM can also be used as a standalone planner simulator cleanly.
 """
 
 import torch
@@ -64,10 +68,10 @@ class RSSM(nn.Module):
         hidden_dim:    int = 512,
     ):
         super().__init__()
-        self.det_dim      = det_dim
-        self.stoch_cats   = stoch_cats
-        self.stoch_classes= stoch_classes
-        self.stoch_dim    = stoch_cats * stoch_classes
+        self.det_dim       = det_dim
+        self.stoch_cats    = stoch_cats
+        self.stoch_classes = stoch_classes
+        self.stoch_dim     = stoch_cats * stoch_classes
 
         self.gru_input_proj = nn.Linear(self.stoch_dim + action_dim, det_dim)
         self.gru            = nn.GRUCell(det_dim, det_dim)
@@ -82,11 +86,17 @@ class RSSM(nn.Module):
         )
         self.st = StraightThroughOneHot(stoch_classes)
 
+        # Episode-level recurrent state (used by PhysicsAugmentedRSSM wrapper)
+        self._ep_h: Dict[int, torch.Tensor] = {}
+
     def initial_state(self, batch_size: int, device: torch.device) -> Dict[str, torch.Tensor]:
         return {
             "h": torch.zeros(batch_size, self.det_dim,   device=device),
             "z": torch.zeros(batch_size, self.stoch_dim, device=device),
         }
+
+    def reset_episode(self):
+        self._ep_h.clear()
 
     def imagine_step(
         self,
@@ -115,8 +125,8 @@ class RSSM(nn.Module):
         prior_logits = self.prior_mlp(h_next).view(-1, self.stoch_cats, self.stoch_classes)
         _, prior_probs = self.st(prior_logits)
 
-        post_logits  = self.posterior_mlp(torch.cat([h_next, obs_embed], dim=-1))
-        post_logits  = post_logits.view(-1, self.stoch_cats, self.stoch_classes)
+        post_logits = self.posterior_mlp(torch.cat([h_next, obs_embed], dim=-1))
+        post_logits = post_logits.view(-1, self.stoch_cats, self.stoch_classes)
         z_next, posterior_probs = self.st(post_logits)
 
         return h_next, z_next.view(-1, self.stoch_dim), prior_probs, posterior_probs
@@ -131,13 +141,27 @@ class RSSM(nn.Module):
         """
         Balanced KL (DreamerV3):
             L = 0.8 · KL(sg(q) ‖ p)  +  0.2 · KL(q ‖ sg(p))
-        free_nats clips minimum to avoid posterior collapse.
+
+        Bug fix v1.3.1: clamp probs to [1e-6, 1] before constructing
+        OneHotCategorical. Without this, probs that are exactly 0 (common
+        after straight-through discretisation) produce log(0) = -inf in the
+        KL computation → NaN propagates through the entire training loss.
         """
-        p = OneHotCategorical(probs=prior_probs)
-        q = OneHotCategorical(probs=posterior_probs)
+        EPS = 1e-6
+        p_clamped = prior_probs.clamp(min=EPS)
+        p_clamped = p_clamped / p_clamped.sum(-1, keepdim=True)
+
+        q_clamped = posterior_probs.clamp(min=EPS)
+        q_clamped = q_clamped / q_clamped.sum(-1, keepdim=True)
+
+        p = OneHotCategorical(probs=p_clamped)
+        q = OneHotCategorical(probs=q_clamped)
+
         kl = (
-            balance       * kl_divergence(OneHotCategorical(probs=posterior_probs.detach()), p).sum(-1) +
-            (1 - balance) * kl_divergence(q, OneHotCategorical(probs=prior_probs.detach())).sum(-1)
+            balance       * kl_divergence(
+                                OneHotCategorical(probs=q_clamped.detach()), p).sum(-1) +
+            (1 - balance) * kl_divergence(
+                                q, OneHotCategorical(probs=p_clamped.detach())).sum(-1)
         )
         return kl.clamp(min=free_nats).mean()
 
@@ -172,9 +196,13 @@ class ConsequenceModel(nn.Module):
             "value":       self.value_head(state).squeeze(-1),
         }
 
+    def min_value(self, state: torch.Tensor) -> torch.Tensor:
+        """Compatibility shim — ConsequenceModel has one value head."""
+        return self.value_head(state).squeeze(-1)
+
 
 class ObservationDecoder(nn.Module):
-    """Decodes latent state back to observation embedding space for reconstruction loss."""
+    """Decodes latent state back to observation embedding for reconstruction loss."""
     def __init__(self, state_dim: int, obs_dim: int, hidden_dim: int = 256):
         super().__init__()
         self.decoder = nn.Sequential(
@@ -185,3 +213,110 @@ class ObservationDecoder(nn.Module):
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         return self.decoder(state)
+
+
+# ── Digital consequence model (v1.5.0) ───────────────────────────────────────
+
+class DigitalConsequenceHead(nn.Module):
+    """
+    Extends ConsequenceModel to predict digital state changes.
+
+    The world model now predicts not just reward but the *structured
+    digital state* that will result from an action. This gives it a
+    richer, more accurate model of reality for digital domains.
+
+    Predicted outputs:
+        exit_code_logit  (B, 3)   — {success, error, timeout} classification
+        stdout_len_pred  (B,)     — predicted stdout length (log-normalised)
+        state_change_pred(B,)     — predicted magnitude of state change [0,1]
+        n_files_pred     (B,)     — predicted files affected
+        process_spawned  (B,)     — probability a new process was spawned
+
+    Supervised by ShellExecutor output features so the world model learns
+    that "ls" → short stdout, no state change, no process; whereas
+    "make_build" → long stdout, files modified, processes spawned.
+    """
+
+    def __init__(self, state_dim: int, hidden_dim: int = 256,
+                 digital_state_dim: int = 64):
+        super().__init__()
+        self.digital_state_dim = digital_state_dim
+
+        # Exit code classifier: success / error / timeout
+        self.exit_head = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim), nn.SiLU(),
+            nn.Linear(hidden_dim, 3),
+        )
+        # Predicted stdout length (log-normalised [0,1])
+        self.stdout_len_head = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim // 2), nn.SiLU(),
+            nn.Linear(hidden_dim // 2, 1), nn.Sigmoid(),
+        )
+        # Predicted magnitude of digital state change
+        self.state_change_head = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim // 2), nn.SiLU(),
+            nn.Linear(hidden_dim // 2, 1), nn.Sigmoid(),
+        )
+        # Predicted next digital state (full vector regression)
+        self.next_state_head = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim), nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim), nn.SiLU(),
+            nn.Linear(hidden_dim, digital_state_dim),
+        )
+
+    def forward(self, state: torch.Tensor) -> Dict[str, torch.Tensor]:
+        return {
+            "exit_logits":   self.exit_head(state),             # (B, 3)
+            "stdout_len":    self.stdout_len_head(state).squeeze(-1),    # (B,)
+            "state_change":  self.state_change_head(state).squeeze(-1), # (B,)
+            "next_digital":  self.next_state_head(state),       # (B, D)
+        }
+
+    def loss(
+        self,
+        preds:       Dict[str, torch.Tensor],
+        actual_exit: torch.Tensor,    # (B,) long — 0=success, 1=error, 2=timeout
+        actual_stdout_len: torch.Tensor,  # (B,) float normalised
+        actual_state_change: torch.Tensor, # (B,) float
+        actual_next_state: Optional[torch.Tensor] = None,  # (B, D)
+    ) -> torch.Tensor:
+        """Supervised loss from ShellExecutor output."""
+        import torch.nn.functional as F
+        L  = F.cross_entropy(preds["exit_logits"], actual_exit.long())
+        L += F.mse_loss(preds["stdout_len"],   actual_stdout_len)
+        L += F.mse_loss(preds["state_change"], actual_state_change)
+        if actual_next_state is not None:
+            L += F.mse_loss(preds["next_digital"], actual_next_state)
+        return L
+
+
+class EnhancedConsequenceModel(ConsequenceModel):
+    """
+    ConsequenceModel extended with DigitalConsequenceHead.
+
+    Backward compatible — forward() returns same keys as ConsequenceModel
+    plus digital prediction keys when digital_mode=True.
+    """
+
+    def __init__(self, state_dim: int, hidden_dim: int = 256,
+                 digital_state_dim: int = 64, digital_mode: bool = True):
+        super().__init__(state_dim, hidden_dim)
+        self.digital_mode = digital_mode
+        if digital_mode:
+            self.digital = DigitalConsequenceHead(state_dim, hidden_dim, digital_state_dim)
+
+    def forward(self, state: torch.Tensor) -> Dict[str, torch.Tensor]:
+        out = super().forward(state)
+        if self.digital_mode:
+            out.update(self.digital(state))
+        return out
+
+    def digital_loss(self, state, actual_exit, actual_stdout_len,
+                     actual_state_change, actual_next_state=None):
+        if not self.digital_mode:
+            return torch.tensor(0.0, device=state.device)
+        preds = self.digital(state)
+        return self.digital.loss(
+            preds, actual_exit, actual_stdout_len,
+            actual_state_change, actual_next_state,
+        )

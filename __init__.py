@@ -1,29 +1,20 @@
 """
-Noosphere v1.2.0
+Noosphere v1.6.0
 
-Quick start — any sensor subset works (missing streams are masked, not zeroed):
-    obs = {"eeg": eeg_array}                        # EEG-only
-    obs = {"rgb": rgb, "depth": depth}              # vision-only
-    obs = {"eeg": eeg, "rgb": rgb, "kinematics": k} # all streams
-    action, info = agent.step(obs)
-
-Attaching a digital executor:
-    from noosphere.actions import make_shell_space, ShellExecutor, ActBridge
-    space  = make_shell_space(working_dir=".")
-    bridge = ActBridge(space, ShellExecutor(allow_list=["ls","pwd","git"]))
-    cfg    = AgentConfig(n_actions=space.n_actions)
-    agent  = NoosphereAgent(cfg, device)
-    agent.act_bridge = bridge
-
-Continuous training:
-    from noosphere.trainer import Trainer, TrainerConfig
-    trainer = Trainer(agent, env, TrainerConfig())
-    trainer.run()
+New in this version:
+- WorldModelBundle: export/import transferable world dynamics for community sharing
+  Only person-independent components (RSSM, physics, consequence model) are included.
+  S4 encoder, apparatus calibration, and personal data are explicitly excluded.
+- Bug fixes: removed dead shlex import; BCIApparatusEnv now handles both
+  callable and .next_segment() EEG sources correctly.
 """
 
 from noosphere.agent      import NoosphereAgent, AgentConfig
 from noosphere.perception import HybridPerceptionModel
-from noosphere.rssm       import RSSM, ConsequenceModel, ObservationDecoder
+from noosphere.rssm       import (
+    RSSM, ConsequenceModel, ObservationDecoder,
+    DigitalConsequenceHead, EnhancedConsequenceModel,
+)
 from noosphere.physics    import PhysicsAugmentedRSSM
 from noosphere.planner    import Actor, Critic, ActionEncoder, MCTSPlanner
 from noosphere.memory     import SequenceReplayBuffer, EpisodicMemory, WorkingMemory
@@ -32,36 +23,76 @@ from noosphere.gnn        import KinematicGNN
 from noosphere.tokenizer  import UnifiedTokenizer, build_tokenizer
 from noosphere.apparatus  import (
     MovementExecutor, KinematicSolver, ObstacleSphere,
-    IntentionFilter, AnomalyDetector, CoordinatePredictor,
+    IntentionFilter, AnomalyDetector,
+    CoordinatePredictor, SparseGPPredictor, NeuralCoordinatePredictor,
+    TemporalSmoother, CalibrationSession, PositionErrorFeedback,
     ArmConfig, JointState,
 )
 from noosphere.hardware   import ServoController
-from noosphere.proto      import NCPEncoder, NCPDecoder, Channel, MsgType
+from noosphere.proto      import NCPEncoder, NCPDecoder, Channel, MsgType, NCPTransport
 from noosphere.learning   import (
     LearningManager, LearningConfig, LearningSignal,
-    StepNFTPolicy, StepNFTLoss,
+    SupervisedCoordinateLoss, S4XYZSupervisionLoss, PositionErrorLoss,
+    StepNFTPolicy, StepNFTLoss, EEGAugment,
 )
 from noosphere.actions    import (
-    Action, ActionSpace, ActBridge, Executor,
+    Action, ActionSpace, ActBridge, Executor, Tier,
     NullExecutor, ShellExecutor, ApparatusExecutor,
+    DigitalStateObserver, ShellOutputEncoder,
     make_apparatus_space, make_shell_space, make_binary_space,
 )
-from noosphere.trainer    import Trainer, TrainerConfig, Env, save_checkpoint, load_checkpoint
+from noosphere.trainer    import (
+    Trainer, TrainerConfig, Env,
+    BCIApparatusEnv, SyntheticBCIEnv,
+    reach_reward, save_checkpoint, load_checkpoint,
+)
+from noosphere.monitor    import Monitor, MonitorConfig, Alert, Level
+from noosphere.bundle     import (
+    export_bundle, load_bundle, inspect_bundle, check_compatibility,
+    BundleMetadata, ALL_BUNDLE_KEYS,
+)
 
-__version__ = "1.2.0"
+__version__ = "1.6.0"
 __all__ = [
-    "NoosphereAgent","AgentConfig",
-    "HybridPerceptionModel","S4EEGEncoder","KinematicGNN","UnifiedTokenizer","build_tokenizer",
-    "RSSM","PhysicsAugmentedRSSM","ConsequenceModel","ObservationDecoder",
-    "Actor","Critic","ActionEncoder","MCTSPlanner",
-    "SequenceReplayBuffer","EpisodicMemory","WorkingMemory",
-    "MovementExecutor","KinematicSolver","ObstacleSphere",
-    "IntentionFilter","AnomalyDetector","CoordinatePredictor","ArmConfig","JointState",
+    # Core agent
+    "NoosphereAgent", "AgentConfig",
+    # Perception
+    "HybridPerceptionModel", "S4EEGEncoder", "KinematicGNN",
+    "UnifiedTokenizer", "build_tokenizer",
+    # World model
+    "RSSM", "PhysicsAugmentedRSSM",
+    "ConsequenceModel", "ObservationDecoder",
+    "DigitalConsequenceHead", "EnhancedConsequenceModel",
+    # Planning
+    "Actor", "Critic", "ActionEncoder", "MCTSPlanner",
+    # Memory
+    "SequenceReplayBuffer", "EpisodicMemory", "WorkingMemory",
+    # Apparatus
+    "MovementExecutor", "KinematicSolver", "ObstacleSphere",
+    "IntentionFilter", "AnomalyDetector",
+    "CoordinatePredictor", "SparseGPPredictor", "NeuralCoordinatePredictor",
+    "TemporalSmoother", "CalibrationSession", "PositionErrorFeedback",
+    "ArmConfig", "JointState",
+    # Hardware
     "ServoController",
-    "NCPEncoder","NCPDecoder","Channel","MsgType",
-    "LearningManager","LearningConfig","LearningSignal","StepNFTPolicy","StepNFTLoss",
-    "Action","ActionSpace","ActBridge","Executor",
-    "NullExecutor","ShellExecutor","ApparatusExecutor",
-    "make_apparatus_space","make_shell_space","make_binary_space",
-    "Trainer","TrainerConfig","Env","save_checkpoint","load_checkpoint",
+    # Protocol
+    "NCPEncoder", "NCPDecoder", "Channel", "MsgType", "NCPTransport",
+    # Learning
+    "LearningManager", "LearningConfig", "LearningSignal",
+    "SupervisedCoordinateLoss", "S4XYZSupervisionLoss", "PositionErrorLoss",
+    "StepNFTPolicy", "StepNFTLoss", "EEGAugment",
+    # Actions
+    "Action", "ActionSpace", "ActBridge", "Executor", "Tier",
+    "NullExecutor", "ShellExecutor", "ApparatusExecutor",
+    "DigitalStateObserver", "ShellOutputEncoder",
+    "make_apparatus_space", "make_shell_space", "make_binary_space",
+    # Training
+    "Trainer", "TrainerConfig", "Env",
+    "BCIApparatusEnv", "SyntheticBCIEnv", "reach_reward",
+    "save_checkpoint", "load_checkpoint",
+    # Monitoring
+    "Monitor", "MonitorConfig", "Alert", "Level",
+    # Bundle
+    "export_bundle", "load_bundle", "inspect_bundle", "check_compatibility",
+    "BundleMetadata", "ALL_BUNDLE_KEYS",
 ]

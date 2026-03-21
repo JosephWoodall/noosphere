@@ -305,3 +305,149 @@ FRAME_SIZES = {
     "COGNITIVE (NCP)":      8 + 24 + 2,   # 34 bytes
     "HEARTBEAT (NCP)":      8 +  4 + 2,   # 14 bytes
 }
+
+
+# ── NCP Transport layer (v1.4.0) ──────────────────────────────────────────────
+
+"""
+NCPTransport
+============
+Moves NCP frames between processes. Two backends:
+
+    Redis   — production; uses pub/sub; each channel maps to a Redis topic
+    InProc  — single-process; uses threading.Queue; no external dependencies
+
+Usage:
+    # Redis
+    transport = NCPTransport.redis(host="127.0.0.1", port=6380)
+    transport.publish(Channel.EEG_SOURCE, frame)
+    transport.subscribe(Channel.EEG_SOURCE, callback)
+
+    # In-process (testing / single machine)
+    transport = NCPTransport.inproc()
+    transport.publish(Channel.MOTOR_CMD, frame)
+    frame = transport.recv(Channel.MOTOR_CMD, timeout_s=0.05)
+"""
+
+import threading
+import queue
+from typing import Callable, Dict as _Dict
+
+
+class NCPTransport:
+    """
+    Transport backend for NCP binary frames.
+
+    Backends
+    --------
+    NCPTransport.redis(host, port, db)  — Redis pub/sub
+    NCPTransport.inproc()               — in-process threading.Queue
+
+    Both expose the same interface:
+        publish(channel, frame)     — send a frame
+        recv(channel, timeout_s)    — blocking receive, returns frame or None
+        subscribe(channel, callback)— register a callback (Redis only)
+        close()                     — clean up connections
+    """
+
+    def __init__(self, backend):
+        self._backend = backend
+
+    # ── Factory methods ───────────────────────────────────────────────────────
+
+    @classmethod
+    def redis(cls, host: str = "127.0.0.1", port: int = 6379, db: int = 0):
+        """Redis pub/sub backend. Requires `pip install redis`."""
+        try:
+            import redis as _redis
+            r = _redis.Redis(host=host, port=port, db=db, socket_timeout=1.0)
+            r.ping()
+            return cls(_RedisBackend(r))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Redis unavailable ({e}) — falling back to in-process transport"
+            )
+            return cls.inproc()
+
+    @classmethod
+    def inproc(cls):
+        """In-process queue backend — no external dependencies."""
+        return cls(_InProcBackend())
+
+    # ── Interface ─────────────────────────────────────────────────────────────
+
+    def publish(self, channel: str, frame: bytes) -> None:
+        self._backend.publish(channel, frame)
+
+    def recv(self, channel: str, timeout_s: float = 0.1) -> None:
+        return self._backend.recv(channel, timeout_s)
+
+    def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
+        self._backend.subscribe(channel, callback)
+
+    def close(self) -> None:
+        self._backend.close()
+
+
+class _RedisBackend:
+    def __init__(self, client):
+        self._r     = client
+        self._subs  = {}
+        self._threads: list = []
+
+    def publish(self, channel: str, frame: bytes) -> None:
+        self._r.publish(channel, frame)
+
+    def recv(self, channel: str, timeout_s: float = 0.1):
+        raw = self._r.blpop(channel, timeout=timeout_s)
+        return raw[1] if raw else None
+
+    def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
+        ps = self._r.pubsub(ignore_subscribe_messages=True)
+        ps.subscribe(**{channel: lambda msg: callback(msg["data"])})
+        t = threading.Thread(target=ps.run_forever, daemon=True)
+        t.start()
+        self._threads.append(t)
+
+    def close(self) -> None:
+        self._r.close()
+
+
+class _InProcBackend:
+    def __init__(self):
+        self._queues:    _Dict[str, queue.Queue] = {}
+        self._callbacks: _Dict[str, list]        = {}
+
+    def _queue(self, channel: str) -> queue.Queue:
+        if channel not in self._queues:
+            self._queues[channel] = queue.Queue(maxsize=1024)
+        return self._queues[channel]
+
+    def publish(self, channel: str, frame: bytes) -> None:
+        q = self._queue(channel)
+        try:
+            q.put_nowait(frame)
+        except queue.Full:
+            try: q.get_nowait()  # drop oldest
+            except queue.Empty:  pass
+            q.put_nowait(frame)
+        # Notify synchronous subscribers
+        for cb in self._callbacks.get(channel, []):
+            try:
+                cb(frame)
+            except Exception:
+                pass
+
+    def recv(self, channel: str, timeout_s: float = 0.1):
+        try:
+            return self._queue(channel).get(timeout=timeout_s)
+        except queue.Empty:
+            return None
+
+    def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
+        self._callbacks.setdefault(channel, []).append(callback)
+
+    def close(self) -> None:
+        self._queues.clear()
+        self._callbacks.clear()

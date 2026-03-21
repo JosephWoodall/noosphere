@@ -5,26 +5,28 @@ S4 Structured State Space Model — Stream B (EEG)
 
 EEG is processed sample-by-sample at full temporal resolution. No windowing.
 
-Why S4 over patch tokenization for neural signals:
-    A P300 ERP spans ~50ms at 256Hz (~12 samples). Patch boundaries split
-    this event across tokens, destroying the shape that carries the label.
-    S4 processes every sample through a continuous-time ODE, preserving
-    sub-window structure entirely.
+Changes in v1.3.0
+-----------------
+1. BatchNorm → GroupNorm in spatial encoder.
+   BatchNorm fails silently at batch_size=1 (inference on a single segment).
+   GroupNorm normalises within each sample — works at any batch size.
 
-S4 state space:
-    ẋ(t) = Ax(t) + Bu(t)    continuous-time ODE
-    y(t) = Cx(t) + Du(t)    output equation
+2. Stable S4 kernel via log-space power computation.
+   A_bar.unsqueeze(-1) ** arange(L) accumulates floating-point error for
+   large L because powers of values near 1.0 lose mantissa bits progressively.
+   Replaced with exp(arange(L) * log(A_bar)) which stays in log space.
 
-Discretised at rate Δ (bilinear transform):
-    xₖ = Ā xₖ₋₁ + B̄ uₖ
-    yₖ = C xₖ  + D uₖ
+3. Continuous xyz head directly on the S4 encoder.
+   The 5-class discrete intent head is too coarse for precise coordinate
+   prediction. A new `xyz_head` produces a direct 3D coordinate estimate
+   from the summary embedding. Gradient flows back through the full S4 stack
+   — the encoder learns to represent signals useful for continuous spatial
+   intent, not just class separation.
+   Output: `continuous_xyz` (B, 3)  — arm tip target in metres
 
-Training mode  : parallel FFT convolution   O(L log L)
-Inference mode : single recurrence step     O(N)  — real-time capable
-
-The HiPPO-LegS initialisation of A is designed to optimally memorise
-continuous signals by projecting onto Legendre polynomial bases — aligned
-with the oscillatory structure of neural data.
+4. Confidence head: scalar uncertainty estimate [0,1] for the xyz prediction.
+   Used by ActBridge confidence gate and TemporalSmoother alpha schedule.
+   Low confidence → smoother damps prediction → arm moves conservatively.
 """
 
 import torch
@@ -84,7 +86,6 @@ class S4Layer(nn.Module):
         A = _hippo_a(d_state)
         B = _hippo_b(d_state)
 
-        # Diagonal S4D parameterisation
         self.A_log = nn.Parameter(
             torch.log(torch.abs(torch.diagonal(A))).unsqueeze(0).expand(d_model, -1).clone()
         )
@@ -96,7 +97,6 @@ class S4Layer(nn.Module):
         self.log_dt = nn.Parameter(log_dt)
 
         self.out  = nn.Linear(d_model, d_model)
-        self.norm = nn.LayerNorm(d_model)
         self.drop = nn.Dropout(dropout)
 
         if bidirectional:
@@ -115,10 +115,20 @@ class S4Layer(nn.Module):
         return A_bar, B_bar, C
 
     def _kernel(self, L: int, rev: bool = False) -> torch.Tensor:
+        """
+        Compute convolution kernel of length L.
+        Uses log-space exponentiation for numerical stability:
+            A_bar^k = exp(k * log(A_bar))
+        This avoids progressive mantissa loss when computing A_bar^L
+        for large L (e.g. L=256 at 256Hz sampling rate).
+        """
         A_bar, B_bar, C = self._disc(rev)
-        CB  = C * B_bar
-        pows = A_bar.unsqueeze(-1) ** torch.arange(L, device=A_bar.device).float()
-        return torch.einsum("dn,dnl->dl", CB, pows)
+        CB  = C * B_bar  # (d_model, d_state)
+        # Stable: exp(k * log(A_bar)) rather than A_bar ** k
+        log_A = torch.log(A_bar.clamp(min=1e-30))  # (d_model, d_state)
+        k     = torch.arange(L, device=A_bar.device, dtype=A_bar.dtype)  # (L,)
+        pows  = torch.exp(k.view(1, 1, L) * log_A.unsqueeze(-1))         # (d, N, L)
+        return torch.einsum("dn,dnl->dl", CB, pows)                       # (d, L)
 
     def _conv(self, u: torch.Tensor, rev: bool = False) -> torch.Tensor:
         B, L, H = u.shape
@@ -172,9 +182,11 @@ class S4Block(nn.Module):
         self.drop  = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor, inference: bool = False) -> torch.Tensor:
+        # S4 sub-layer
         h, _ = self.s4(self.norm1(x), inference=inference)
-        if isinstance(h, tuple): h = h[0]
+        # h is always a tensor here — _step and _conv both return tensors, not tuples
         x = x + self.drop(h)
+        # GLU sub-layer
         n   = self.norm2(x)
         v1, v2 = self.glu_v(n).chunk(2, -1)
         g1, g2 = torch.sigmoid(self.glu_g(n)).chunk(2, -1)
@@ -190,25 +202,33 @@ class S4EEGEncoder(nn.Module):
 
     Pipeline
     --------
-    1. Artifact rejection  — learned spatial filter (ICA-inspired, identity init)
-    2. Spatial compression — depthwise temporal conv + pointwise spatial mix
-    3. Temporal downsample — AvgPool1d by `downsample` factor
+    1. Artifact rejection  — learned spatial filter (identity init)
+    2. Spatial compression — depthwise temporal conv + pointwise mix
+                             Uses GroupNorm (not BatchNorm) so inference
+                             at batch_size=1 works correctly.
+    3. Temporal downsample — AvgPool1d
     4. S4 blocks           — deep temporal modelling
     5. Attention pooling   — sequence → summary vector
-    6. Auxiliary heads     — motor intent (5 classes), cognitive state (5 dims)
+    6. Output heads:
+        intent_logits   (B, n_intent)  — coarse discrete class (5)
+        continuous_xyz  (B, 3)         — direct continuous coordinate prediction
+        confidence      (B,)           — prediction certainty [0,1]
+        cognitive       dict of (B,) scalars
+        planning_budget (B,)
 
-    Outputs
-    -------
-    summary        (B, d_model)      — single token for injection into transformer
-    sequence       (B, T', d_model)  — full temporal sequence for cross-attention
-    intent_logits  (B, n_intent)
-    cognitive      dict of (B,) tensors: workload, attention, arousal, valence, fatigue
-    planning_budget (B,)             — [0.2, 1.0] adaptive MCTS budget
+    continuous_xyz is the precision improvement over discrete intent_logits.
+    Gradient flows back through the full S4 stack from coordinate supervision,
+    so the encoder learns signal representations optimised for spatial precision,
+    not just class separation.
+
+    confidence is used by:
+        - TemporalSmoother: high uncertainty → higher α (more damping)
+        - ActBridge: low confidence → hold rather than act
     """
 
     def __init__(
         self,
-        n_channels:    int   = 64,
+        n_channels:    int   = 3,
         d_model:       int   = 256,
         d_state:       int   = 64,
         n_blocks:      int   = 4,
@@ -216,28 +236,65 @@ class S4EEGEncoder(nn.Module):
         n_intent:      int   = 5,
         dropout:       float = 0.1,
         bidirectional: bool  = True,
+        max_reach:     float = 0.70,
     ):
         super().__init__()
         self.d_model    = d_model
         self.downsample = downsample
+        self.max_reach  = max_reach
 
-        self.artifact_filter = nn.Conv1d(n_channels, n_channels, 1, groups=1, bias=False)
+        # Learned spatial filter (identity init — no information destroyed at start)
+        self.artifact_filter = nn.Conv1d(n_channels, n_channels, 1, bias=False)
         nn.init.eye_(self.artifact_filter.weight.squeeze(-1))
 
+        # Spatial encoder.
+        # GroupNorm(groups=n_channels) normalises each channel independently,
+        # equivalent to InstanceNorm for 1-D conv — works at any batch size.
         self.spatial = nn.Sequential(
-            nn.Conv1d(n_channels, n_channels, 25, padding=12, groups=n_channels, bias=False),
-            nn.BatchNorm1d(n_channels),
+            nn.Conv1d(n_channels, n_channels, 25, padding=12,
+                      groups=n_channels, bias=False),
+            nn.GroupNorm(n_channels, n_channels),
             nn.Conv1d(n_channels, d_model, 1, bias=False),
             nn.GELU(),
         )
-        self.ds      = nn.AvgPool1d(downsample, stride=downsample)
-        self.blocks  = nn.ModuleList([
+        self.ds     = nn.AvgPool1d(downsample, stride=downsample)
+        self.blocks = nn.ModuleList([
             S4Block(d_model, d_state, dropout, bidirectional) for _ in range(n_blocks)
         ])
-        self.norm    = nn.LayerNorm(d_model)
-        self.pool_w  = nn.Linear(d_model, 1)
-        self.intent  = nn.Linear(d_model, n_intent)
-        self.cog     = nn.Sequential(nn.Linear(d_model, 64), nn.GELU(), nn.Linear(64, 5), nn.Sigmoid())
+        self.norm   = nn.LayerNorm(d_model)
+
+        # Attention pooling: sequence → fixed-size summary
+        self.pool_w = nn.Linear(d_model, 1)
+
+        # ── Output heads ──────────────────────────────────────────────────────
+
+        # Coarse discrete intent (5 classes) — fast, low-resolution
+        self.intent = nn.Linear(d_model, n_intent)
+
+        # Continuous 3D coordinate prediction — precise, high-resolution
+        # Two-layer MLP with bottleneck; tanh output scaled to arm reach
+        self.xyz_head = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.SiLU(),
+            nn.Linear(d_model // 2, 3),
+            nn.Tanh(),
+        )
+
+        # Confidence head: scalar uncertainty [0, 1]
+        # Trained implicitly — high spread in xyz predictions → low confidence
+        # Also accepts direct supervision if ground-truth is available.
+        self.conf_head = nn.Sequential(
+            nn.Linear(d_model, 32),
+            nn.SiLU(),
+            nn.Linear(32, 1),
+            nn.Sigmoid(),
+        )
+
+        # Cognitive state: 5 dims all in [0,1]
+        self.cog = nn.Sequential(
+            nn.Linear(d_model, 64), nn.GELU(),
+            nn.Linear(64, 5), nn.Sigmoid(),
+        )
 
     def forward(
         self,
@@ -245,26 +302,43 @@ class S4EEGEncoder(nn.Module):
         electrode_mask: Optional[torch.Tensor] = None,
         inference:      bool = False,
     ) -> Dict[str, torch.Tensor]:
+        # Artifact filter + electrode masking
         eeg = self.artifact_filter(eeg)
         if electrode_mask is not None:
             eeg = eeg * electrode_mask.unsqueeze(-1)
+
+        # Per-sample normalisation (not per-batch, so it works at any batch size)
         eeg = (eeg - eeg.mean(-1, keepdim=True)) / (eeg.std(-1, keepdim=True).clamp(1e-6))
 
-        x = self.ds(self.spatial(eeg)).transpose(1, 2)   # (B, T', d)
+        # Spatial encode + downsample
+        x = self.ds(self.spatial(eeg)).transpose(1, 2)  # (B, T', d_model)
+
+        # S4 temporal modelling
         for blk in self.blocks:
             x = blk(x, inference)
         x = self.norm(x)
 
+        # Attention-weighted pooling → (B, d_model)
         w       = F.softmax(self.pool_w(x).squeeze(-1), dim=-1)
         summary = (x * w.unsqueeze(-1)).sum(1)
 
-        cog     = self.cog(summary)
-        budget  = (1.0 - 0.4 * cog[:, 0] - 0.4 * cog[:, 4]).clamp(0.2, 1.0)
+        # Continuous coordinate: tanh output scaled to arm reach
+        # xyz is in [-max_reach, +max_reach] per axis
+        xyz = self.xyz_head(summary) * self.max_reach   # (B, 3)
+
+        # Confidence and cognitive state
+        conf = self.conf_head(summary).squeeze(-1)       # (B,)
+        cog  = self.cog(summary)                         # (B, 5)
+
+        # Planning budget: reduce MCTS sims when tired or overloaded
+        budget = (1.0 - 0.4 * cog[:, 0] - 0.4 * cog[:, 4]).clamp(0.2, 1.0)
 
         return {
             "summary":        summary,
             "sequence":       x,
             "intent_logits":  self.intent(summary),
+            "continuous_xyz": xyz,
+            "confidence":     conf,
             "cognitive": {
                 "workload":  cog[:, 0], "attention": cog[:, 1],
                 "arousal":   cog[:, 2], "valence":   cog[:, 3],

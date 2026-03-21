@@ -399,10 +399,12 @@ requirements.txt
 19 files · 5,137 lines · pure Python + PyTorch
 
 ---
-
-!(noosphere_core_loop.svg)
-!(noosphere_data_flow.svg)
-!(noosphere_file_map.svg)
+### Core Loop
+![](noosphere_core_loop.svg)
+### Data Flow
+![](noosphere_data_flow.svg)
+### File Map
+![](noosphere_file_map.svg)
 
 ## What else can this do?
 

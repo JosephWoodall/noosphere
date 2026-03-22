@@ -80,28 +80,29 @@ import time
 from enum import IntEnum
 from typing import Optional, Tuple
 
-MAGIC   = 0xBC   # 0b10111100 — "NC" binary mnemonic
+MAGIC = 0xBC  # 0b10111100 — "NC" binary mnemonic
 VERSION = 1
 
 
 class MsgType(IntEnum):
-    EEG_SEGMENT           = 0x01
-    DESTINATION_COORDS    = 0x02
-    MOTOR_COMMAND         = 0x03
-    OBSTACLE_MAP          = 0x04
-    LEARNING_SIGNAL       = 0x05
-    COGNITIVE_STATE       = 0x06
-    HEARTBEAT             = 0xFF
+    EEG_SEGMENT = 0x01
+    DESTINATION_COORDS = 0x02
+    MOTOR_COMMAND = 0x03
+    OBSTACLE_MAP = 0x04
+    LEARNING_SIGNAL = 0x05
+    COGNITIVE_STATE = 0x06
+    HEARTBEAT = 0xFF
 
 
 class Flags(IntEnum):
-    NONE         = 0x00
-    COMPRESSED   = 0x01   # payload is zlib-compressed
-    HIGH_PRIORITY= 0x02   # skip queue, process immediately
-    ACK_REQUIRED = 0x04   # sender expects 0x10 ACK frame back
+    NONE = 0x00
+    COMPRESSED = 0x01  # payload is zlib-compressed
+    HIGH_PRIORITY = 0x02  # skip queue, process immediately
+    ACK_REQUIRED = 0x04  # sender expects 0x10 ACK frame back
 
 
 # ── CRC-16/CCITT-FALSE ────────────────────────────────────────────────────────
+
 
 def _crc16(data: bytes) -> int:
     crc = 0xFFFF
@@ -118,6 +119,7 @@ def _crc16(data: bytes) -> int:
 
 # ── Encoder ───────────────────────────────────────────────────────────────────
 
+
 class NCPEncoder:
     """Encodes typed messages to NCP frames."""
 
@@ -129,51 +131,55 @@ class NCPEncoder:
         self._seq = (self._seq + 1) & 0xFFFF
         return s
 
-    def _frame(self, msg_type: MsgType, payload: bytes,
-               flags: int = Flags.NONE) -> bytes:
+    def _frame(
+        self, msg_type: MsgType, payload: bytes, flags: int = Flags.NONE
+    ) -> bytes:
         seq = self._seq_next()
         plen = len(payload)
-        header = struct.pack("<BBBBHHb",
-            MAGIC, VERSION, int(msg_type), flags, seq, plen,
-            0)  # last byte padding to align; we trim it
-        # Correct: header is 7 bytes, we want 8 bytes total before payload
-        header = struct.pack("<BBBBHH",
-            MAGIC, VERSION, int(msg_type), flags, seq, plen)
-        body   = header + payload
-        crc    = _crc16(body)
+        header = struct.pack("<BBBBHH", MAGIC, VERSION, int(msg_type), flags, seq, plen)
+        body = header + payload
+        crc = _crc16(body)
         return body + struct.pack("<H", crc)
 
     def eeg_segment(
         self,
-        raw_uv:       Tuple[float, float, float],
-        probs:        Tuple[float, ...],          # 8 values
-        root_label:   int,
-        muscle_intent:int,
-        kinematic_xyz:Tuple[float, float, float],
-        velocity:     float,
-        force:        float,
-        timestamp:    float,
-        flags:        int = Flags.NONE,
+        raw_uv: Tuple[float, float, float],
+        probs: Tuple[float, ...],  # 8 values
+        root_label: int,
+        muscle_intent: int,
+        kinematic_xyz: Tuple[float, float, float],
+        velocity: float,
+        force: float,
+        timestamp: float,
+        flags: int = Flags.NONE,
     ) -> bytes:
-        payload = struct.pack("<3f8fBB3fff d",
+        payload = struct.pack(
+            "<3f8fBB3fff d",
             *raw_uv,
             *probs,
-            root_label, muscle_intent,
+            root_label,
+            muscle_intent,
             *kinematic_xyz,
-            velocity, force,
+            velocity,
+            force,
             timestamp,
         )
         return self._frame(MsgType.EEG_SEGMENT, payload, flags)
 
     def destination_coords(
-        self, x: float, y: float, z: float,
+        self,
+        x: float,
+        y: float,
+        z: float,
         flags: int = Flags.NONE,
     ) -> bytes:
-        return self._frame(MsgType.DESTINATION_COORDS,
-                           struct.pack("<3f", x, y, z), flags)
+        return self._frame(
+            MsgType.DESTINATION_COORDS, struct.pack("<3f", x, y, z), flags
+        )
 
     def motor_command(
-        self, angles_deg: Tuple[float, ...],   # 6 joints
+        self,
+        angles_deg: Tuple[float, ...],  # 6 joints
         smooth: bool = True,
         flags: int = Flags.NONE,
     ) -> bytes:
@@ -182,28 +188,37 @@ class NCPEncoder:
         return self._frame(MsgType.MOTOR_COMMAND, payload, flags)
 
     def learning_signal(
-        self, signal_type: int, value: float,
+        self,
+        signal_type: int,
+        value: float,
         flags: int = Flags.NONE,
     ) -> bytes:
-        return self._frame(MsgType.LEARNING_SIGNAL,
-                           struct.pack("<Bf", signal_type, value), flags)
+        return self._frame(
+            MsgType.LEARNING_SIGNAL, struct.pack("<Bf", signal_type, value), flags
+        )
 
     def cognitive_state(
-        self, workload: float, attention: float, arousal: float,
-        valence: float, fatigue: float, budget: float,
+        self,
+        workload: float,
+        attention: float,
+        arousal: float,
+        valence: float,
+        fatigue: float,
+        budget: float,
         flags: int = Flags.NONE,
     ) -> bytes:
-        return self._frame(MsgType.COGNITIVE_STATE,
-                           struct.pack("<6f",
-                               workload, attention, arousal,
-                               valence, fatigue, budget), flags)
+        return self._frame(
+            MsgType.COGNITIVE_STATE,
+            struct.pack("<6f", workload, attention, arousal, valence, fatigue, budget),
+            flags,
+        )
 
     def heartbeat(self, uptime_ms: int, flags: int = Flags.NONE) -> bytes:
-        return self._frame(MsgType.HEARTBEAT,
-                           struct.pack("<I", uptime_ms), flags)
+        return self._frame(MsgType.HEARTBEAT, struct.pack("<I", uptime_ms), flags)
 
 
 # ── Decoder ───────────────────────────────────────────────────────────────────
+
 
 class NCPDecodeError(Exception):
     pass
@@ -212,14 +227,15 @@ class NCPDecodeError(Exception):
 class NCPDecoder:
     """Decodes NCP frames to typed Python dicts."""
 
-    HEADER_SIZE = 8   # MAGIC + VERSION + TYPE + FLAGS + SEQ(2) + PLEN(2)
-    CRC_SIZE    = 2
+    HEADER_SIZE = 8  # MAGIC + VERSION + TYPE + FLAGS + SEQ(2) + PLEN(2)
+    CRC_SIZE = 2
 
     def decode(self, frame: bytes) -> dict:
         if len(frame) < self.HEADER_SIZE + self.CRC_SIZE:
             raise NCPDecodeError("Frame too short")
         magic, version, msg_type, flags, seq, plen = struct.unpack_from(
-            "<BBBBHH", frame, 0)
+            "<BBBBHH", frame, 0
+        )
         if magic != MAGIC:
             raise NCPDecodeError(f"Bad magic: {magic:#x}")
         if version != VERSION:
@@ -227,35 +243,57 @@ class NCPDecoder:
         expected_len = self.HEADER_SIZE + plen + self.CRC_SIZE
         if len(frame) < expected_len:
             raise NCPDecodeError("Truncated frame")
-        body    = frame[:self.HEADER_SIZE + plen]
+        body = frame[: self.HEADER_SIZE + plen]
         crc_got = struct.unpack_from("<H", frame, self.HEADER_SIZE + plen)[0]
         crc_exp = _crc16(body)
         if crc_got != crc_exp:
             raise NCPDecodeError(f"CRC mismatch: {crc_got:#x} != {crc_exp:#x}")
 
-        payload = frame[self.HEADER_SIZE: self.HEADER_SIZE + plen]
-        parsed  = self._parse_payload(MsgType(msg_type), payload)
+        payload = frame[self.HEADER_SIZE : self.HEADER_SIZE + plen]
+        parsed = self._parse_payload(MsgType(msg_type), payload)
         return {
-            "type":    MsgType(msg_type),
-            "flags":   flags,
-            "seq":     seq,
+            "type": MsgType(msg_type),
+            "flags": flags,
+            "seq": seq,
             "payload": parsed,
         }
 
     def _parse_payload(self, t: MsgType, p: bytes) -> dict:
         if t == MsgType.EEG_SEGMENT:
-            (uv0,uv1,uv2,
-             p0,p1,p2,p3,p4,p5,p6,p7,
-             root,intent,
-             kx,ky,kz,vel,force,ts) = struct.unpack("<3f8fBB3fff d", p)
+            (
+                uv0,
+                uv1,
+                uv2,
+                p0,
+                p1,
+                p2,
+                p3,
+                p4,
+                p5,
+                p6,
+                p7,
+                root,
+                intent,
+                kx,
+                ky,
+                kz,
+                vel,
+                force,
+                ts,
+            ) = struct.unpack("<3f8fBB3fff d", p)
             return {
-                "raw_microvolts":  (uv0, uv1, uv2),
-                "probabilities":   (p0,p1,p2,p3,p4,p5,p6,p7),
-                "root_label":      root,
-                "muscle_intent":   intent,
-                "kinematic":       {"x":kx,"y":ky,"z":kz,
-                                    "velocity":vel,"force":force},
-                "timestamp":       ts,
+                "raw_microvolts": (uv0, uv1, uv2),
+                "probabilities": (p0, p1, p2, p3, p4, p5, p6, p7),
+                "root_label": root,
+                "muscle_intent": intent,
+                "kinematic": {
+                    "x": kx,
+                    "y": ky,
+                    "z": kz,
+                    "velocity": vel,
+                    "force": force,
+                },
+                "timestamp": ts,
             }
         elif t == MsgType.DESTINATION_COORDS:
             x, y, z = struct.unpack("<3f", p)
@@ -267,11 +305,17 @@ class NCPDecoder:
             st, val = struct.unpack("<Bf", p)
             return {"signal_type": st, "value": val}
         elif t == MsgType.COGNITIVE_STATE:
-            wl,at,ar,va,fa,bu = struct.unpack("<6f", p)
-            return {"workload":wl,"attention":at,"arousal":ar,
-                    "valence":va,"fatigue":fa,"budget":bu}
+            wl, at, ar, va, fa, bu = struct.unpack("<6f", p)
+            return {
+                "workload": wl,
+                "attention": at,
+                "arousal": ar,
+                "valence": va,
+                "fatigue": fa,
+                "budget": bu,
+            }
         elif t == MsgType.HEARTBEAT:
-            ms, = struct.unpack("<I", p)
+            (ms,) = struct.unpack("<I", p)
             return {"uptime_ms": ms}
         else:
             return {"raw": p}
@@ -279,31 +323,33 @@ class NCPDecoder:
 
 # ── Channel names (Redis pub/sub topics) ─────────────────────────────────────
 
+
 class Channel:
     """
     Canonical inter-module channel names.
     All inter-module messages are NCP frames published to these channels.
     """
-    EEG_SOURCE              = "ncp:eeg"          # raw EEG segments
-    TRANSFORMED             = "ncp:transformed"   # filtered intentional muscle
-    ANOMALOUS               = "ncp:anomalous"     # statistically significant spikes
-    DESTINATION             = "ncp:destination"   # 3D target coordinates
-    MOTOR_COMMANDS          = "ncp:motor"         # joint angle commands
-    OBSTACLE_MAP            = "ncp:obstacles"     # 3D occupancy updates
-    LEARNING                = "ncp:learning"      # reward / label signals
-    COGNITIVE               = "ncp:cognitive"     # BCI cognitive state
-    HEARTBEAT               = "ncp:hb"            # module liveness
+
+    EEG_SOURCE = "ncp:eeg"  # raw EEG segments
+    TRANSFORMED = "ncp:transformed"  # filtered intentional muscle
+    ANOMALOUS = "ncp:anomalous"  # statistically significant spikes
+    DESTINATION = "ncp:destination"  # 3D target coordinates
+    MOTOR_COMMANDS = "ncp:motor"  # joint angle commands
+    OBSTACLE_MAP = "ncp:obstacles"  # 3D occupancy updates
+    LEARNING = "ncp:learning"  # reward / label signals
+    COGNITIVE = "ncp:cognitive"  # BCI cognitive state
+    HEARTBEAT = "ncp:hb"  # module liveness
 
 
 # ── Efficiency report (for README) ───────────────────────────────────────────
 
 FRAME_SIZES = {
-    "EEG_SEGMENT (NCP)":    8 + 74 + 2,   # 84 bytes
-    "EEG_SEGMENT (JSON)":   820,  # ~820 JSON actual          # typical mechanicus JSON
-    "DESTINATION (NCP)":    8 + 12 + 2,   # 22 bytes
-    "MOTOR_CMD (NCP)":      8 + 25 + 2,   # 35 bytes
-    "COGNITIVE (NCP)":      8 + 24 + 2,   # 34 bytes
-    "HEARTBEAT (NCP)":      8 +  4 + 2,   # 14 bytes
+    "EEG_SEGMENT (NCP)": 8 + 74 + 2,  # 84 bytes
+    "EEG_SEGMENT (JSON)": 820,  # ~820 JSON actual          # typical mechanicus JSON
+    "DESTINATION (NCP)": 8 + 12 + 2,  # 22 bytes
+    "MOTOR_CMD (NCP)": 8 + 25 + 2,  # 35 bytes
+    "COGNITIVE (NCP)": 8 + 24 + 2,  # 34 bytes
+    "HEARTBEAT (NCP)": 8 + 4 + 2,  # 14 bytes
 }
 
 
@@ -329,9 +375,10 @@ Usage:
     frame = transport.recv(Channel.MOTOR_CMD, timeout_s=0.05)
 """
 
-import threading
 import queue
-from typing import Callable, Dict as _Dict
+import threading
+from typing import Callable
+from typing import Dict as _Dict
 
 
 class NCPTransport:
@@ -360,11 +407,13 @@ class NCPTransport:
         """Redis pub/sub backend. Requires `pip install redis`."""
         try:
             import redis as _redis
+
             r = _redis.Redis(host=host, port=port, db=db, socket_timeout=1.0)
             r.ping()
             return cls(_RedisBackend(r))
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).warning(
                 f"Redis unavailable ({e}) — falling back to in-process transport"
             )
@@ -392,8 +441,8 @@ class NCPTransport:
 
 class _RedisBackend:
     def __init__(self, client):
-        self._r     = client
-        self._subs  = {}
+        self._r = client
+        self._subs = {}
         self._threads: list = []
 
     def publish(self, channel: str, frame: bytes) -> None:
@@ -416,8 +465,8 @@ class _RedisBackend:
 
 class _InProcBackend:
     def __init__(self):
-        self._queues:    _Dict[str, queue.Queue] = {}
-        self._callbacks: _Dict[str, list]        = {}
+        self._queues: _Dict[str, queue.Queue] = {}
+        self._callbacks: _Dict[str, list] = {}
 
     def _queue(self, channel: str) -> queue.Queue:
         if channel not in self._queues:
@@ -429,8 +478,10 @@ class _InProcBackend:
         try:
             q.put_nowait(frame)
         except queue.Full:
-            try: q.get_nowait()  # drop oldest
-            except queue.Empty:  pass
+            try:
+                q.get_nowait()  # drop oldest
+            except queue.Empty:
+                pass
             q.put_nowait(frame)
         # Notify synchronous subscribers
         for cb in self._callbacks.get(channel, []):

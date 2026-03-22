@@ -23,15 +23,19 @@ NCP integration:
     so the world model can observe actual motor state (not just planned state).
 """
 
-import time
 import math
-import numpy as np
+import time
 from typing import List, Optional, Tuple
 
+import numpy as np
 
 JOINT_NAMES = [
-    "shoulder_yaw", "shoulder_pitch", "shoulder_roll",
-    "elbow_pitch", "wrist_pitch", "wrist_yaw",
+    "shoulder_yaw",
+    "shoulder_pitch",
+    "shoulder_roll",
+    "elbow_pitch",
+    "wrist_pitch",
+    "wrist_yaw",
 ]
 
 
@@ -46,10 +50,10 @@ class ServoController:
     """
 
     def __init__(self, backend: str = "sim", n_channels: int = 6):
-        self.backend    = backend
+        self.backend = backend
         self.n_channels = n_channels
-        self._current   = np.zeros(n_channels)
-        self._impl      = self._init_backend(backend)
+        self._current = np.zeros(n_channels)
+        self._impl = self._init_backend(backend)
 
     def _init_backend(self, backend: str):
         if backend == "rpi_pca9685":
@@ -68,7 +72,7 @@ class ServoController:
     def set_all_angles(self, angles_deg: np.ndarray):
         self._impl.set_all_angles(angles_deg)
         self._current[:] = angles_deg
-        time.sleep(0.5)   # servo settling time
+        time.sleep(0.5)  # servo settling time
 
     def smooth_move(
         self,
@@ -84,7 +88,8 @@ class ServoController:
         for i in range(steps + 1):
             t = i / steps
             interp = self._current + (target_deg - self._current) * t
-            self.set_all_angles(interp)
+            self._impl.set_all_angles(interp)  # bypass the 0.5s settling sleep
+            self._current[:] = interp
             trajectory.append(interp.copy())
             if i < steps:
                 time.sleep(step_delay_s)
@@ -94,17 +99,23 @@ class ServoController:
         self._impl.disable_all()
 
     def __del__(self):
-        try: self.disable_all()
-        except Exception: pass
+        try:
+            self.disable_all()
+        except Exception:
+            pass
 
 
 # ── Simulation backend ────────────────────────────────────────────────────────
 
+
 class _SimBackend:
-    def __init__(self, n): self.n = n
+    def __init__(self, n):
+        self.n = n
 
     def set_angle(self, ch, deg):
-        print(f"  [SIM] {JOINT_NAMES[ch] if ch < len(JOINT_NAMES) else f'ch{ch}'}: {deg:.2f}°")
+        print(
+            f"  [SIM] {JOINT_NAMES[ch] if ch < len(JOINT_NAMES) else f'ch{ch}'}: {deg:.2f}°"
+        )
 
     def set_all_angles(self, angles):
         print("  [SIM] Motor command:")
@@ -118,17 +129,19 @@ class _SimBackend:
 
 # ── PCA9685 backend (Raspberry Pi I2C) ───────────────────────────────────────
 
+
 class _PCA9685Backend:
     """Raspberry Pi + PCA9685 16-channel PWM driver via I2C."""
 
-    MIN_PULSE = 150   # ~1ms (0°)
-    MAX_PULSE = 600   # ~2ms (180°)
+    MIN_PULSE = 150  # ~1ms (0°)
+    MAX_PULSE = 600  # ~2ms (180°)
 
     def __init__(self, n):
         self.n = n
         try:
             from pwm_pca9685 import Address, Pca9685
             from rppal.i2c import I2c
+
             i2c = I2c()
             self._pwm = Pca9685(i2c, Address.default())
             self._pwm.enable()
@@ -140,14 +153,24 @@ class _PCA9685Backend:
 
     def _angle_to_pulse(self, angle_deg: float) -> int:
         centered = angle_deg + 90.0
-        clamped  = max(0.0, min(180.0, centered))
-        return int(self.MIN_PULSE + (clamped / 180.0) * (self.MAX_PULSE - self.MIN_PULSE))
+        clamped = max(0.0, min(180.0, centered))
+        return int(
+            self.MIN_PULSE + (clamped / 180.0) * (self.MAX_PULSE - self.MIN_PULSE)
+        )
 
     def set_angle(self, ch, deg):
-        if self._pwm is None: return
+        if self._pwm is None:
+            return
         from pwm_pca9685 import Channel
-        ch_map = [Channel.C0,Channel.C1,Channel.C2,
-                  Channel.C3,Channel.C4,Channel.C5]
+
+        ch_map = [
+            Channel.C0,
+            Channel.C1,
+            Channel.C2,
+            Channel.C3,
+            Channel.C4,
+            Channel.C5,
+        ]
         if ch < len(ch_map):
             self._pwm.set_channel_on_off(ch_map[ch], 0, self._angle_to_pulse(deg))
 
@@ -158,12 +181,20 @@ class _PCA9685Backend:
     def disable_all(self):
         if self._pwm:
             from pwm_pca9685 import Channel
-            for ch in [Channel.C0,Channel.C1,Channel.C2,
-                       Channel.C3,Channel.C4,Channel.C5]:
+
+            for ch in [
+                Channel.C0,
+                Channel.C1,
+                Channel.C2,
+                Channel.C3,
+                Channel.C4,
+                Channel.C5,
+            ]:
                 self._pwm.set_channel_on_off(ch, 0, 0)
 
 
 # ── Arduino serial backend ────────────────────────────────────────────────────
+
 
 class _ArduinoBackend:
     """
@@ -177,8 +208,9 @@ class _ArduinoBackend:
         self.n = n
         try:
             import serial
+
             self._port = serial.Serial(port, baud, timeout=1)
-            time.sleep(2.0)   # Arduino reset
+            time.sleep(2.0)  # Arduino reset
             print(f"[Hardware] Arduino on {port} @ {baud}")
         except Exception as e:
             print(f"[Hardware] Arduino init failed ({e}), falling back to sim")
@@ -190,10 +222,10 @@ class _ArduinoBackend:
             self._port.flush()
 
     def set_angle(self, ch, deg):
-        self._write(f"M{ch},{deg+90.0:.2f}\n")
+        self._write(f"M{ch},{deg + 90.0:.2f}\n")
 
     def set_all_angles(self, angles):
-        parts = ",".join(f"{a+90.0:.2f}" for a in angles)
+        parts = ",".join(f"{a + 90.0:.2f}" for a in angles)
         self._write(f"A{parts}\n")
 
     def disable_all(self):
@@ -202,6 +234,7 @@ class _ArduinoBackend:
 
 # ── Raspberry Pi GPIO PWM backend ─────────────────────────────────────────────
 
+
 class _GPIOBackend:
     """Raspberry Pi hardware PWM (2 channels max)."""
 
@@ -209,20 +242,23 @@ class _GPIOBackend:
         self.n = min(n, 2)
         try:
             from rppal.pwm import Channel, Polarity, Pwm
+
             self._pwms = [
                 Pwm.with_frequency(Channel.Pwm0, 50.0, 0.075, Polarity.Normal, True),
                 Pwm.with_frequency(Channel.Pwm1, 50.0, 0.075, Polarity.Normal, True),
             ]
             print("[Hardware] Raspberry Pi GPIO PWM (2 channels)")
             if n > 2:
-                print("[Hardware] WARNING: Only 2 servos supported — use PCA9685 for more")
+                print(
+                    "[Hardware] WARNING: Only 2 servos supported — use PCA9685 for more"
+                )
         except Exception as e:
             print(f"[Hardware] GPIO PWM init failed ({e})")
             self._pwms = []
 
     def _angle_to_duty(self, deg: float) -> float:
         centered = max(0.0, min(180.0, deg + 90.0))
-        return 0.05 + (centered / 180.0) * 0.05   # 5%–10%
+        return 0.05 + (centered / 180.0) * 0.05  # 5%–10%
 
     def set_angle(self, ch, deg):
         if ch < len(self._pwms):

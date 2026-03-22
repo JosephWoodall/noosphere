@@ -491,6 +491,9 @@ noosphere/
 demo.py               Entry point
 requirements.txt
 ```
+
+21 files · 7,649 lines · pure Python + PyTorch
+
 ---
 
 ## Data privacy

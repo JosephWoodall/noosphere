@@ -15,18 +15,20 @@ Changes in v1.3.1
 """
 
 import math
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-
 
 # ── Action encoder ────────────────────────────────────────────────────────────
 
+
 class ActionEncoder(nn.Module):
     """Embeds integer actions as continuous vectors."""
+
     def __init__(self, n_actions: int, action_dim: int):
         super().__init__()
         self.emb = nn.Embedding(n_actions, action_dim)
@@ -37,16 +39,20 @@ class ActionEncoder(nn.Module):
 
 # ── Actor ─────────────────────────────────────────────────────────────────────
 
+
 class Actor(nn.Module):
     """
     Categorical policy.
     Returns a Categorical distribution over n_actions.
     """
+
     def __init__(self, state_dim: int, n_actions: int, hidden: int = 256):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(state_dim, hidden), nn.SiLU(),
-            nn.Linear(hidden, hidden),    nn.SiLU(),
+            nn.Linear(state_dim, hidden),
+            nn.SiLU(),
+            nn.Linear(hidden, hidden),
+            nn.SiLU(),
             nn.Linear(hidden, n_actions),
         )
 
@@ -63,19 +69,25 @@ class Actor(nn.Module):
 
 # ── Critic ────────────────────────────────────────────────────────────────────
 
+
 class Critic(nn.Module):
     """
     Clipped double-Q critic.
     Two independent value heads; min is used for conservative estimates.
     """
+
     def __init__(self, state_dim: int, hidden: int = 256):
         super().__init__()
+
         def _v():
             return nn.Sequential(
-                nn.Linear(state_dim, hidden), nn.SiLU(),
-                nn.Linear(hidden, hidden),    nn.SiLU(),
+                nn.Linear(state_dim, hidden),
+                nn.SiLU(),
+                nn.Linear(hidden, hidden),
+                nn.SiLU(),
                 nn.Linear(hidden, 1),
             )
+
         self.v1 = _v()
         self.v2 = _v()
 
@@ -89,16 +101,17 @@ class Critic(nn.Module):
 
 # ── MCTS node ─────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class MCTSNode:
     h: torch.Tensor
     z: torch.Tensor
-    parent:    Optional["MCTSNode"] = None
-    action:    Optional[int]        = None
-    prior:     float                = 1.0
-    visits:    int                  = 0
-    value_sum: float                = 0.0
-    children:  Dict[int, "MCTSNode"] = field(default_factory=dict)
+    parent: Optional["MCTSNode"] = None
+    action: Optional[int] = None
+    prior: float = 1.0
+    visits: int = 0
+    value_sum: float = 0.0
+    children: Dict[int, "MCTSNode"] = field(default_factory=dict)
 
     @property
     def Q(self) -> float:
@@ -113,21 +126,37 @@ class MCTSNode:
 
 # ── MCTS planner ──────────────────────────────────────────────────────────────
 
+
 class MCTSPlanner:
     """
     AlphaZero-style MCTS in world-model latent space.
     The world model is the simulator — no real environment calls during search.
     """
-    def __init__(self, rssm, consequence, actor: Actor,
-                 action_encoder: ActionEncoder, n_actions: int,
-                 n_simulations: int = 50, horizon: int = 15,
-                 gamma: float = 0.99, c_puct: float = 1.25,
-                 device: torch.device = torch.device("cpu")):
-        self.rssm  = rssm;  self.cons = consequence
-        self.actor = actor; self.ae   = action_encoder
-        self.N     = n_actions; self.nsim = n_simulations
-        self.H     = horizon;   self.g    = gamma
-        self.c     = c_puct;    self.dev  = device
+
+    def __init__(
+        self,
+        rssm,
+        consequence,
+        actor: Actor,
+        action_encoder: ActionEncoder,
+        n_actions: int,
+        n_simulations: int = 50,
+        horizon: int = 15,
+        gamma: float = 0.99,
+        c_puct: float = 1.25,
+        device: torch.device = torch.device("cpu"),
+    ):
+        self.rssm = rssm
+        self.cons = consequence
+        self.actor = actor
+        self.ae = action_encoder
+        self.N = n_actions
+        self.nsim = n_simulations
+        self.H = horizon
+        self.g = gamma
+        self.c = c_puct
+        self.dev = device
+        self.episodic_bonus: float = 0.0
 
     @property
     def n_simulations(self):
@@ -156,14 +185,17 @@ class MCTSPlanner:
         path = [node]
         while not node.is_leaf():
             node = node.children[
-                max(node.children, key=lambda a: node.children[a].ucb(node.visits, self.c))
+                max(
+                    node.children,
+                    key=lambda a: node.children[a].ucb(node.visits, self.c),
+                )
             ]
             path.append(node)
         return node, path
 
     def _expand(self, node: MCTSNode):
-        s     = torch.cat([node.h, node.z], -1)
-        dist  = self.actor.forward(s)
+        s = torch.cat([node.h, node.z], -1)
+        dist = self.actor.forward(s)
         prior = dist.probs.squeeze(0).cpu().numpy()
         for a in range(self.N):
             h2, z2, _ = self.rssm.imagine_step(
@@ -187,16 +219,21 @@ class MCTSPlanner:
             if a.dim() == 0:
                 a = a.unsqueeze(0)
             h, z, _ = self.rssm.imagine_step(h, z, self.ae(a))
-        return R + disc * self.cons(torch.cat([h, z], -1))["value"].item()
+        return (
+            R
+            + disc * self.cons(torch.cat([h, z], -1))["value"].item()
+            + self.episodic_bonus
+        )
 
     def _backup(self, path: List[MCTSNode], v: float):
         for node in reversed(path):
-            node.visits    += 1
+            node.visits += 1
             node.value_sum += v
             v *= self.g
 
 
 # ── Imagination buffer ────────────────────────────────────────────────────────
+
 
 class ImaginationBuffer:
     """
@@ -205,14 +242,16 @@ class ImaginationBuffer:
     Fix v1.3.1: lambda_returns builds G on the device of the rewards tensor,
     not always on CPU. This eliminates a host↔device copy each AC update.
     """
+
     def __init__(self, gamma: float = 0.99, lam: float = 0.95):
-        self.g = gamma; self.l = lam
-        self.states:    List[torch.Tensor] = []
-        self.actions:   List[torch.Tensor] = []
-        self.rewards:   List[torch.Tensor] = []
-        self.values:    List[torch.Tensor] = []
+        self.g = gamma
+        self.l = lam
+        self.states: List[torch.Tensor] = []
+        self.actions: List[torch.Tensor] = []
+        self.rewards: List[torch.Tensor] = []
+        self.values: List[torch.Tensor] = []
         self.log_probs: List[torch.Tensor] = []
-        self.dones:     List[torch.Tensor] = []
+        self.dones: List[torch.Tensor] = []
 
     def add(self, s, a, r, v, lp, d):
         self.states.append(s)
@@ -223,20 +262,26 @@ class ImaginationBuffer:
         self.dones.append(d)
 
     def lambda_returns(self) -> torch.Tensor:
-        T  = len(self.rewards)
+        T = len(self.rewards)
         vs = torch.stack(self.values).detach()
         rs = torch.stack(self.rewards).detach()
         ds = torch.stack(self.dones).detach()
         # Build G on same device as rs — no CPU detour
-        G  = torch.zeros(T, device=rs.device)
+        G = torch.zeros_like(rs)
         Gn = vs[-1]
         for t in reversed(range(T)):
-            nd  = 1.0 - ds[t].float()
-            Gn  = rs[t] + self.g * nd * ((1 - self.l) * vs[t] + self.l * Gn)
-            G[t] = Gn if Gn.numel() == 1 else Gn.mean()
+            nd = 1.0 - ds[t].float()
+            Gn = rs[t] + self.g * nd * ((1 - self.l) * vs[t] + self.l * Gn)
+            G[t] = Gn
         return G
 
     def clear(self):
-        for lst in [self.states, self.actions, self.rewards,
-                    self.values, self.log_probs, self.dones]:
+        for lst in [
+            self.states,
+            self.actions,
+            self.rewards,
+            self.values,
+            self.log_probs,
+            self.dones,
+        ]:
             lst.clear()

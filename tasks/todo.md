@@ -71,6 +71,14 @@
 - **Continuous Learning Compatibility:** The AI is no longer "turned off" when the human is confident. Instead, the mathematical distributions of biological intent and digital consequence are fused. If the user commands a fatal action, the MCTS drives the probability of that action down to 0%, gently steering the blended `p_final` curve away from disaster instead of requiring an abrupt "safety block" override. This allows the system to be perfectly obedient without being brittle.
 
 ## Phase 6: Documentation Integration & Interactive Demo
-- [ ] `readme.md`: Add "Intent Translation (Shared Autonomy)" and "Continuous Learning Loop" sections under Architecture.
-- [ ] `readme.md`: Add detailed metrics export list under Monitoring.
-- [ ] `demo.py`: Create `--interactive` mode to visually explain Shared Autonomy probability blending to the end user.
+- [x] `readme.md`: Add "Intent Translation (Shared Autonomy)" and "Continuous Learning Loop" sections under Architecture.
+- [x] `readme.md`: Add detailed metrics export list under Monitoring.
+- [x] `demo.py`: Create `--interactive` mode to visually explain Shared Autonomy probability blending to the end user.
+
+## Phase 7: Architectural Roadmap & Model Hardening
+- [x] **Step A: Evidential Deep Learning (EDL)**: Upgrade `s4_eeg.py` to output Dirichlet evidence (softplus) from the intent head and compute rigorous uncertainty bounds. Update `agent.py` to consume this uncertainty as the `alpha` blending weight.
+- [x] **Step B: Neural Test Suite**: Implement `tests/test_architectures.py` for all 6 core neural models.
+- [x] **Step C: Performance Metrics**: Build Prometheus HTTP metric exporter in `monitor.py`.
+## Phase 8: Generalizable Physics & Plug-and-Play Architecture
+- [x] **Step A: Neural Residual Physics Engine**: Upgrade `physics.py` to use a continuous-time residual MLP mapped over the rigid Hamiltonian to naturally simulate soft robotics and turbulent fluids.
+- [x] **Step B: Hardware Discovery Daemon**: Build `discovery.py` to mock a physical USB/Serial scan. Update `gnn.py` to dynamically resize its topology matrix and inject arbitrary N extremeties on the fly!

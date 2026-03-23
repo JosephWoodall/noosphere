@@ -354,7 +354,9 @@ class NoosphereAgent(nn.Module):
 
         # 2. Get BCI Biological Policy (p_bci) & Blend
         if s4_out is not None:
-            p_bci = torch.softmax(s4_out["intent_logits"][0], dim=-1)
+            # Phase 7: Evidential Deep Learning (EDL)
+            # p_bci is now drawn directly from the mathematically bounded Dirichlet parameters
+            p_bci = s4_out["intent_probs"][0]
             
             # Phase 5: Probabilistic Blending (Shared Autonomy)
             alpha = bci_confidence
@@ -388,6 +390,9 @@ class NoosphereAgent(nn.Module):
             cog = s4_out["cognitive"]
             info.update({f"bci_{k}": v.mean().item() for k, v in cog.items()})
             info["s4_confidence"] = s4_out["confidence"][0].item()
+            info["p_bci"] = p_bci.detach().cpu().numpy()
+            info["p_final"] = p_final.detach().cpu().numpy()
+        info["p_ai"] = p_ai.detach().cpu().numpy()
 
         # ── Act bridge — now passes s4_confidence for dual gate ───────────────
         if self.act_bridge is not None:

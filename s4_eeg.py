@@ -296,22 +296,16 @@ class S4EEGEncoder(nn.Module):
 
         # ── Output heads ──────────────────────────────────────────────────────
 
-        # Temporal Smoothing Head (Ensemble over sequence)
-        # Non-linear classifier applied to each time step, averaging the logits.
+        # Evidential Deep Learning (EDL) Head
+        # Calculates Dirichlet distribution evidence instead of uncalibrated logits.
         self.intent = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.GELU(),
             nn.Linear(d_model // 2, n_intent)
         )
 
-        # Confidence head: scalar uncertainty [0, 1]
-        # Trained implicitly via ActBridge output / TemporalSmoother
-        self.conf_head = nn.Sequential(
-            nn.Linear(d_model, 32),
-            nn.SiLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid(),
-        )
+        # Removed the arbitrary `conf_head`. Confidence is now a rigorous mathematical 
+        # property of the Dirichlet distribution (1 - uncertainty).
 
         # Cognitive state: 5 dims all in [0,1]
         self.cog = nn.Sequential(
@@ -352,13 +346,31 @@ class S4EEGEncoder(nn.Module):
         w = F.softmax(self.pool_w(x).squeeze(-1), dim=-1)
         summary = (x * w.unsqueeze(-1)).sum(1)
 
-        # Temporal Smoothing Head: ensemble overlapping windows (time steps)
-        # Non-linear classification at each step, then average logits for robust intent.
-        step_logits = self.intent(x)  # (B, T', n_intent)
-        smoothed_intent_logits = step_logits.mean(dim=1)
+        # Evidential Deep Learning (EDL) - Subjective Logic
+        # Non-linear feature extraction at each step, then averaged.
+        step_features = self.intent(x)  # (B, T', n_intent)
+        smoothed_features = step_features.mean(dim=1)
+        
+        # 1. Output non-negative Evidence (e)
+        evidence = F.softplus(smoothed_features)
+        
+        # 2. Dirichlet Parameters (\alpha = e + 1)
+        alpha = evidence + 1.0
+        
+        # 3. Dirichlet Mass (S)
+        S = torch.sum(alpha, dim=1, keepdim=True)
+        
+        # 4. Expected Probabilities (p = \alpha / S)
+        intent_probs = alpha / S
+        
+        # 5. Rigorous Epistemic Uncertainty (u = K / S)
+        num_classes = smoothed_features.shape[-1]
+        uncertainty = num_classes / S
+        
+        # Mathematical Confidence is strictly bounded [0, 1] as the inverse of uncertainty
+        conf = (1.0 - uncertainty).clamp(0.0, 1.0).squeeze(-1)  # (B,)
 
-        # Confidence and cognitive state
-        conf = self.conf_head(summary).squeeze(-1)  # (B,)
+        # Cognitive state
         cog = self.cog(summary)  # (B, 5)
 
         # Planning budget: reduce MCTS sims when tired or overloaded
@@ -367,7 +379,11 @@ class S4EEGEncoder(nn.Module):
         return {
             "summary": summary,
             "sequence": x,
-            "intent_logits": smoothed_intent_logits,
+            "intent_logits": smoothed_features,  # For backward-compatibility with the contrastive loss function
+            "intent_probs": intent_probs,        # EDL mathematically strictly bounded probabilities!
+            "evidence": evidence,
+            "alpha": alpha,
+            "uncertainty": uncertainty.squeeze(-1),
             "confidence": conf,
             "cognitive": {
                 "workload": cog[:, 0],

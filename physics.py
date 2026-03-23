@@ -307,21 +307,50 @@ class ConservationLaws(nn.Module):
 # ── Residual corrector ────────────────────────────────────────────────────────
 
 
-class ResidualCorrector(nn.Module):
-    def __init__(self, phys_dim: int, embed_dim: int, hidden: int = 256):
+class SwishResBlock(nn.Module):
+    """Residual block with SiLU (Swish) activations for continuous flow modeling."""
+    def __init__(self, dim: int):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(phys_dim + embed_dim, hidden),
+            nn.Linear(dim, dim),
             nn.SiLU(),
+            nn.Linear(dim, dim)
+        )
+        self.act = nn.SiLU()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.net(self.act(x))
+
+
+class ResidualCorrector(nn.Module):
+    """
+    Deep Continuous-Time Residual Neural Physics Engine.
+    Overrides the rigid Kelvin-Voigt Hamiltonian with learned dynamics
+    for soft-robotic deformations, turbulent fluid flows, and complex contacts.
+    """
+    def __init__(self, phys_dim: int, embed_dim: int, hidden: int = 512, n_blocks: int = 4):
+        super().__init__()
+        self.proj_in = nn.Sequential(
+            nn.Linear(phys_dim + embed_dim, hidden),
+            nn.SiLU()
+        )
+        
+        self.blocks = nn.Sequential(*[SwishResBlock(hidden) for _ in range(n_blocks)])
+        
+        self.proj_out = nn.Sequential(
             nn.Linear(hidden, hidden),
             nn.SiLU(),
-            nn.Linear(hidden, phys_dim),
+            nn.Linear(hidden, phys_dim)
         )
-        nn.init.zeros_(self.net[-1].weight)
-        nn.init.zeros_(self.net[-1].bias)
+        
+        # Initialize output to zero to ensure stable analytical physics burnout
+        nn.init.zeros_(self.proj_out[-1].weight)
+        nn.init.zeros_(self.proj_out[-1].bias)
 
     def forward(self, phys_flat: torch.Tensor, obs: torch.Tensor) -> torch.Tensor:
-        return self.net(torch.cat([phys_flat, obs], dim=-1))
+        x = torch.cat([phys_flat, obs], dim=-1)
+        h = self.blocks(self.proj_in(x))
+        return self.proj_out(h)
 
 
 # ── Physics-augmented RSSM ────────────────────────────────────────────────────

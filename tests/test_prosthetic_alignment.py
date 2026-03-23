@@ -22,12 +22,15 @@ def test_prosthetic_alignment():
     # We mock out the S4 perception to force a confident intent
     class MockS4(nn.Module):
         def forward(self, eeg, mask=None, inference=False):
-            logits = torch.zeros(1, space.n_actions)
-            logits[0, 5] = 10.0  # Force intent to action 5
+            probs = torch.zeros(1, space.n_actions)
+            probs[0, 5] = 0.99
             return {
                 "summary": torch.zeros(1, 256),
                 "sequence": torch.zeros(1, 60, 256),
-                "intent_logits": logits,
+                "intent_probs": probs,
+                "alpha": torch.tensor([0.99]),
+                "uncertainty": torch.tensor([0.01]),
+                "evidence": torch.ones(1, space.n_actions),
                 "continuous_xyz": torch.zeros(1, 3),
                 "confidence": torch.tensor([0.99]),
                 "cognitive": {
@@ -85,12 +88,15 @@ def test_prosthetic_alignment():
     # 4. Test RL Fallback (Low Confidence BCI)
     class UncertainS4(nn.Module):
         def forward(self, eeg, mask=None, inference=False):
-            logits = torch.zeros(1, space.n_actions)
-            logits[0, 5] = 10.0 # Intent is 5, but...
+            probs = torch.zeros(1, space.n_actions)
+            probs[0, 5] = 0.99 
             return {
                 "summary": torch.zeros(1, 256),
                 "sequence": torch.zeros(1, 60, 256),
-                "intent_logits": logits,
+                "intent_probs": probs,
+                "alpha": torch.tensor([0.1]),
+                "uncertainty": torch.tensor([0.9]),
+                "evidence": torch.zeros(1, space.n_actions),
                 "continuous_xyz": torch.zeros(1, 3),
                 "confidence": torch.tensor([0.1]), # LOW CONFIDENCE!
                 "cognitive": {

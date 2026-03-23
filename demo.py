@@ -546,6 +546,101 @@ def run_domain(
         agent.perception.print_profile()
 
 
+# ── Interactive Educational Demo ──────────────────────────────────────────────
+
+
+def interactive_demo(dev: torch.device):
+    """
+    Educational interactive mode.
+    Walks the user through how Probabilistic Blending (Shared Autonomy)
+    fuses the Biological Intent and the Digital Twin's consequence model.
+    """
+    from noosphere import AgentConfig, NoosphereAgent
+    from noosphere.synth import ScalpEEGGenerator
+
+    print("\n" + "="*70)
+    print(" 🧠 NOOSPHERE INTERACTIVE DEMO: SHARED AUTONOMY & BLENDING 🧠 ")
+    print("="*70)
+    print("Welcome! This tutorial will show you exactly how Noosphere")
+    print("translates your brain signals into action via Probabilistic Blending.")
+    print("Instead of a rigid ON/OFF switch, Noosphere continuously fuses")
+    print("your Biological Intent with an AI Digital Twin's physics simulation.\n")
+    
+    cfg = AgentConfig(n_actions=5, n_eeg_ch=3, d_model=32, det_dim=64, stoch_cats=4, stoch_cls=4, hidden_dim=32, n_mcts_sims=4, use_mcts=True)
+    agent = NoosphereAgent(cfg, dev)
+    agent.eval()
+    agent.reset_latent()
+    gen = ScalpEEGGenerator(seed=1337)
+    
+    def run_scenario(title, intent, force_confidence, force_fatal_idx=None, desc=""):
+        print(f"\n{'-'*70}\nSCENARIO: {title}\n{'-'*70}")
+        print(desc)
+        input("\n[Press Enter to initiate thought sequence...]")
+        
+        seg = gen.next_segment(intent=intent)
+        obs = {"eeg": seg["eeg"], "electrode_mask": np.ones(3, dtype=np.float32)}
+        
+        _, info = agent.step(obs, deterministic=True)
+        
+        p_bci = info["p_bci"].copy()
+        p_ai = info["p_ai"].copy()
+        alpha = force_confidence
+        
+        if force_fatal_idx is not None:
+            # Simulate the MCTS detecting a fatal crash and driving probability to 0
+            p_ai[force_fatal_idx] = 0.00
+            p_ai = p_ai / p_ai.sum()
+            
+        p_final = (alpha * p_bci) + ((1.0 - alpha) * p_ai)
+        action = int(p_final.argmax())
+             
+        print(f"\n1. [Biological Intent -> p_bci]")
+        print("Your decoded EEG probability distribution:")
+        for i, p in enumerate(p_bci):
+            print(f"   Action {i}: {p*100:5.1f}% {'<-- (What you want)' if i == p_bci.argmax() else ''}")
+            
+        print(f"\n2. [Digital Twin Policy -> p_ai]")
+        print("The AI's internal MCTS distribution (mimicking past-you, avoiding crashes):")
+        for i, p in enumerate(p_ai):
+            print(f"   Action {i}: {p*100:5.1f}% {'<-- (SIMULATED FATAL CRASH => 0%)' if p == 0.0 else ''}")
+            
+        print(f"\n3. [Shared Autonomy Blending]")
+        print(f"Signal Confidence (alpha) = {alpha:.2f}")
+        print("Equation: p_final = (alpha * p_bci)  +  ((1 - alpha) * p_ai)")
+        print("Resulting Distribution:")
+        for i, p in enumerate(p_final):
+            print(f"   Action {i}: {p*100:5.1f}% {'<-- [ WINNER ]' if i == action else ''}")
+            
+        print(f"\n>> EXECUTING ACTION: {action}")
+        input("\n[Press Enter to continue...]")
+
+    run_scenario(
+        "Strong Focus",
+        intent=ScalpEEGGenerator.INTENT_RIGHT_HAND,
+        force_confidence=0.96,
+        desc="You are highly focused. The BCI signal is crystal clear (96% confidence).\nNotice how your biological intent almost entirely dictates the final action."
+    )
+    
+    run_scenario(
+        "Distracted / Fatigued",
+        intent=ScalpEEGGenerator.INTENT_RIGHT_HAND,
+        force_confidence=0.15,
+        desc="You are distracted. The BCI signal drops to 15% confidence.\nWatch the AI Digital Twin pick up the slack to stabilize the choice."
+    )
+    
+    fatal_action = int(agent.step({"eeg": gen.next_segment(intent=ScalpEEGGenerator.INTENT_RIGHT_HAND)["eeg"], "electrode_mask": np.ones(3, dtype=np.float32)})[1]["p_bci"].argmax())
+    run_scenario(
+        "Graceful Safety Gate",
+        intent=ScalpEEGGenerator.INTENT_RIGHT_HAND,
+        force_confidence=0.60,
+        force_fatal_idx=fatal_action,
+        desc="You confidently command an action (60%), but the physics engine simulates a fatal crash.\nThe MCTS drops the AI probability for that action to 0%, gently steering the\nblended curve away from disaster without requiring a rigid 'hard block' exception."
+    )
+    
+    print("\n" + "="*70)
+    print(" Tutorial complete. You have successfully collaborated with Noosphere.")
+    print("="*70 + "\n")
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 
@@ -577,10 +672,18 @@ def main():
         action="store_true",
         help="Run continuous training loop on synthetic BCI env",
     )
+    ap.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Educational tutorial explaining Probabilistic Blending & Shared Autonomy",
+    )
     args = ap.parse_args()
     dev = device()
     log.info(f"Device: {dev}")
 
+    if args.interactive:
+        interactive_demo(dev)
+        return
     if args.proto:
         proto_test()
         return

@@ -77,6 +77,13 @@ from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
+try:
+    import prometheus_client
+    from prometheus_client import Gauge
+    HAS_PROMETHEUS = True
+except ImportError:
+    HAS_PROMETHEUS = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -163,6 +170,9 @@ class MonitorConfig:
     # Cooldown
     cooldown_s:        float = 30.0    # don't re-fire same alert within N seconds
 
+    # Prometheus Export
+    prometheus_port:   int   = 9090
+
 
 # ── Internal monitor ──────────────────────────────────────────────────────────
 
@@ -196,6 +206,19 @@ class Monitor:
         # System poll state
         self._last_sys_check = 0.0
 
+        # Prometheus Gauges
+        self._prom_wm_loss = None
+        self._prom_wm_kl = None
+        self._prom_ac_bc_loss = None
+        self._prom_bci_confidence = None
+        self._prom_reward = None
+        if HAS_PROMETHEUS:
+            self._prom_wm_loss = Gauge("noosphere_wm_loss", "World Model Loss")
+            self._prom_wm_kl = Gauge("noosphere_wm_kl", "World Model KL Divergence")
+            self._prom_ac_bc_loss = Gauge("noosphere_ac_bc_loss", "Actor Behavioral Cloning Loss")
+            self._prom_bci_confidence = Gauge("noosphere_bci_confidence", "BCI Evidential Confidence")
+            self._prom_reward = Gauge("noosphere_reward", "Environment Reach Reward")
+
         if cfg.alert_file:
             try:
                 open(cfg.alert_file, "a").close()
@@ -208,6 +231,14 @@ class Monitor:
         """Start background monitoring thread."""
         self._thread = threading.Thread(target=self._loop, daemon=True, name="NoosphereMonitor")
         self._thread.start()
+        
+        if HAS_PROMETHEUS:
+            try:
+                prometheus_client.start_http_server(self.cfg.prometheus_port)
+                logger.info(f"[Monitor] Prometheus metrics exported on port {self.cfg.prometheus_port}")
+            except Exception as e:
+                logger.warning(f"[Monitor] Failed to start Prometheus server: {e}")
+                
         logger.info("[Monitor] Started")
 
     def stop(self):
@@ -227,11 +258,22 @@ class Monitor:
         with self._lock:
             r = info.get("pred_reward", info.get("reward", 0.0))
             self._rewards.append(float(r))
+            
+            if self._prom_reward is not None:
+                self._prom_reward.set(float(r))
+            if self._prom_bci_confidence is not None and "s4_confidence" in info:
+                self._prom_bci_confidence.set(float(info["s4_confidence"]))
 
             if "wm/loss" in train_metrics:
                 self._wm_losses.append(float(train_metrics["wm/loss"]))
+                if self._prom_wm_loss is not None:
+                    self._prom_wm_loss.set(float(train_metrics["wm/loss"]))
             if "wm/kl" in train_metrics:
                 self._kl_vals.append(float(train_metrics["wm/kl"]))
+                if self._prom_wm_kl is not None:
+                    self._prom_wm_kl.set(float(train_metrics["wm/kl"]))
+            if "ac/bc_loss" in train_metrics and self._prom_ac_bc_loss is not None:
+                self._prom_ac_bc_loss.set(float(train_metrics["ac/bc_loss"]))
 
             if env_info:
                 if "position_error" in env_info:

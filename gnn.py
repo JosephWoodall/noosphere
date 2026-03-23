@@ -52,6 +52,18 @@ class LearnedAdjacency(nn.Module):
     def anneal(self, factor: float = 0.999):
         self.temp.mul_(factor).clamp_(min=0.01)
 
+    def inject_nodes(self, n_new: int):
+        """
+        Dynamically resizes the adjacency matrix to incorporate N new extremities.
+        Existing learned spatial connections are preserved.
+        """
+        new_N = self.n_nodes + n_new
+        with torch.no_grad():
+            new_W = torch.randn(new_N, new_N, device=self.W.device) * 0.1
+            new_W[:self.n_nodes, :self.n_nodes] = self.W.data
+        self.W = nn.Parameter(new_W)
+        self.n_nodes = new_N
+
 
 # ── Graph attention layer ─────────────────────────────────────────────────────
 
@@ -166,6 +178,15 @@ class KinematicGNN(nn.Module):
     def anneal_adjacencies(self, factor: float = 0.999):
         for adj in self.adjacencies:
             adj.anneal(factor)
+
+    def inject_nodes(self, n_new: int):
+        """
+        Expands the spatial graph topology to accept unmapped Plug-and-Play nodes 
+        (e.g., from the HardwareDiscoveryDaemon) at runtime!
+        """
+        self.n_nodes += n_new
+        for adj in self.adjacencies:
+            adj.inject_nodes(n_new)
 
     def get_adjacency_summary(self) -> Dict[str, float]:
         results = {}

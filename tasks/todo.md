@@ -58,3 +58,19 @@
 ## Phase 4 Results Review
 - **Behavioral Cloning Pipeline:** `_update_ac` now ingests the detached posterior states and actual commanded actions from `_update_wm()`. This cleverly recycles the heavy perception/world-modeling forward pass, allowing us to compute the BC Negative Log-Likelihood loss almost for free.
 - **The Imitation Prior:** By fusing `L_bc` into the Actor's loss equation, Noosphere's internal agent is no longer an autonomous explorer. It is a personalized digital twin. When the MCTS is invoked for macro-expansion or when the human is absent, the agent evaluates the environment using the *human's* baseline behavior, preventing the philosophical drift that ruins standard BCI/RL hybrid systems.
+
+## Phase 5: Probabilistic Blending & Shared Autonomy
+- [x] `agent.py`: Remove the deterministic BCI bypass in `step()`.
+- [x] `agent.py`: Retrieve the unscaled policy logits from `MCTSPlanner` (or the actor network if MCTS is skipped).
+- [x] `agent.py`: Blend `p_bci` and `p_ai` using `s4_confidence` as the mixing weight `alpha`.
+- [x] `agent.py`: Sample or argmax from the blended distribution to select the executable action.
+- [x] `tests/test_prosthetic_alignment.py`: Update the assertions to reflect Shared Autonomy blending logic.
+
+## Phase 5 Results Review
+- **True Shared Autonomy:** By migrating from a hard deterministic categorical bypass (`if s4_confidence > 0.5`) to a continuous probabilistic blend (`p_final = alpha * p_bci + (1-alpha) * p_ai`), Noosphere now achieves state-of-the-art Intent Translation.
+- **Continuous Learning Compatibility:** The AI is no longer "turned off" when the human is confident. Instead, the mathematical distributions of biological intent and digital consequence are fused. If the user commands a fatal action, the MCTS drives the probability of that action down to 0%, gently steering the blended `p_final` curve away from disaster instead of requiring an abrupt "safety block" override. This allows the system to be perfectly obedient without being brittle.
+
+## Phase 6: Documentation Integration & Interactive Demo
+- [ ] `readme.md`: Add "Intent Translation (Shared Autonomy)" and "Continuous Learning Loop" sections under Architecture.
+- [ ] `readme.md`: Add detailed metrics export list under Monitoring.
+- [ ] `demo.py`: Create `--interactive` mode to visually explain Shared Autonomy probability blending to the end user.

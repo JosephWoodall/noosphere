@@ -32,3 +32,14 @@ Applying standard RL (where the agent discovers actions to maximize environmenta
 **Action Decoding Bypass:** We refactored `agent.py` to act as an *Obedient Consequence Engine*. When confident BCI intent is triggered, the system explicitly decodes the action (`argmax(s4_out["intent_logits"])`) and bypasses the MCTS Planner/Actor entirely. 
 **Repurposing Simulation:** The World Model still runs, but it only simulates the forward trajectory of the *human's intended action* to predict safety/termination. If the simulated termination probability is critical (>90%), `ActBridge` steps in to block the catastrophic failure, acting as a safety gate rather than an autonomous decision-maker.
 **The Imitation Prior (Behavioral Cloning):** To ensure the internal Actor remains perfectly culturally aligned with the user (for when MCTS macro-expansion is required), we added a Negative Log-Likelihood (NLL) Behavioral Cloning loss (`L_bc`) to the `_update_ac()` sequence. The Actor is now forced to mimic the human's explicitly executed commands stored in the replay buffer, making it a personalized digital twin.
+
+## 3. The Limits of Deterministic Bypss (The Shared Autonomy Shift)
+
+**The Problem:**
+During Phase 3, we created an "Obedient Consequence Engine" that bypassed the RL agent whenever the user's BCI confidence was above 0.5. However, this hard `argmax` override is too rigid. It discards the stochastic probability distribution of the user's intent. If the BCI is 51% confident in A and 49% confident in B, a deterministic bypass simply forces A. If A is unsafe, the system crashes unless explicitly blocked by a post-execution safety gate.
+
+**The Solution:**
+Instead of an on/off switch, modern BCIs require **Shared Autonomy (Probabilistic Blending)**. We refactored `agent.py` so that the final executed command is sampled from a mathematically blended distribution: `p_final = alpha * p_bci + (1-alpha) * p_ai`, where `alpha` is the EEG signal confidence.
+- When confidence is high, the BCI heavily dominates the probability space.
+- When confidence is low, the AI (trained to mimic the user via the Imitation Prior) naturally stabilizes choice.
+- If a command is fatal, the AI's MCTS drives its probability to 0%, gently steering the blended curve away from disaster without requiring a rigid "safety trigger" exception.

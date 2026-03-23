@@ -454,12 +454,12 @@ class NoosphereAgent(nn.Module):
             return {}
 
         spatial_features = torch.tensor(
-            np.stack([c["spatial_features"] for c in corrections]),
+            np.stack([c["embedding"] for c in corrections]),
             dtype=torch.float32,
             device=self.device,
         )
         actual_tips = torch.tensor(
-            np.stack([c["target_xyz"] for c in corrections]),
+            np.stack([c["actual_tip"] for c in corrections]),
             dtype=torch.float32,
             device=self.device,
         )

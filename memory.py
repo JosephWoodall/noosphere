@@ -102,7 +102,7 @@ class SequenceReplayBuffer:
             if T <= self.seq_len:
                 start = 0
             else:
-                start = np.random.randint(0, T - self.seq_len)
+                start = random.randint(0, T - self.seq_len - 1)
             seq = {}
             for k, v in ep.items():
                 if isinstance(v, np.ndarray):

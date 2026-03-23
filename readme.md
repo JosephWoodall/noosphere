@@ -20,14 +20,64 @@ The same trained world model can drive a physical robotic arm or execute Linux s
 
 ---
 
-## Changes in v1.6.0
-
-Version 1.6.0 adds `bundle.py`, a module that lets trained world dynamics be shared between users as a single portable `.pt` file. Only the person-independent components — the physics-augmented RSSM, consequence model, and observation decoder — are included. The S4 EEG encoder, apparatus calibration data, and GP coordinate predictor are explicitly excluded because they are calibrated to a specific person's neural patterns and electrode placement. A recipient loads a bundle into their own agent, which initialises their world dynamics from the shared prior rather than from random weights, then calibrates only the personal components from scratch. Two bugs were also fixed: a dead `shlex` import was removed from `actions.py`, and `BCIApparatusEnv` now correctly handles both callable EEG sources and `ScalpEEGGenerator` instances.
-
----
-
 ## Architecture
 
+### Overview
+```
+1. Neural Models & Roles
+Noosphere is composed of six interlinked neural modules:
+- S4EEGEncoder (State-Space Signal Processor): 
+    - Processes raw, noisy EEG time-series data. It maps biological brain activity into discrete intent_logits (what the user wants to do), confidence (signal clarity), and cognitive states (fatigue, workload).
+- NoosphereGNN (Graph Neural Network): 
+    - Handles variable brain electrode topologies. It routes the extracted spatial features across the brain graph.    
+- PhysicsAugmentedRSSM (World Model): 
+    - A Recurrent State-Space Model fused with strict Hamiltonian physics priors. Its job is to simulate the environment and predict the future latent state based on the current state and a given action.
+- ConsequenceModel (The Critic):
+    - Evaluates a latent state produced by the World Model, predicting the expected reward, value, and termination (the probability of a catastrophic collision/failure).
+- Actor (Digital Twin Policy):
+    - A neural policy trained inside the World Model's imagination. It learns to avoid fatal states while explicitly mimicking the human's historical intent.
+- MCTSPlanner (Monte Carlo Tree Search):
+    - Rapidly simulates multiple future trajectories using the World Model to evaluate complex sequential actions before executing them.
+
+2. Intent Translation (Shared Autonomy)
+Human intent is translated into action through a Probabilistic Blending Circuit, rather than a rigid deterministic switch:
+- Decoding: 
+    - The S4 module decodes the raw EEG into a biological probability distribution (p_bci) and an estimate of signal clarity (confidence).
+- AI Prior: 
+    - Simultaneously, the Actor / MCTSPlanner evaluates the environment and proposes a digital twin probability distribution (p_ai).
+- Blending: 
+    - The two distributions are fused mathematically: p_final = (confidence * p_bci) + ((1 - confidence) * p_ai) When the user is focused and the BCI signal is strong, the human dictates the action. When the signal degrades, the AI stabilizes the choice using its historical understanding of the user.
+- Safety Gating: 
+    - Before execution, the system imagines executing the highest probability action. If the ConsequenceModel predicts a fatal outcome (sim_termination > 0.90), the ActBridge intercepts and blocks the translation, acting as an involuntary safety reflex.
+
+3. Continuous Learning Loop
+- Noosphere improves automatically while the user operates it. It does not require pausing for "calibration sessions."
+- Experience Replay: 
+    - Every action, observation, and biological intent is appended to the ReplayBuffer.
+- World Model Updates: 
+    - A background thread continuously updates the RSSM by minimizing reconstruction loss, Kullback-Leibler (KL) divergence, and physics conservation errors. It learns how the environment works.
+- Imagination Training (TD-λ): 
+    - The Actor and Critic train rapidly inside the frozen World Model's imagination.   
+- The Imitation Prior (Behavioral Cloning): 
+    - During imagination training, the Actor is penalized if it diverges from the actual commands the human previously executed in the same states. This ensures the AI culturally aligns with the user rather than becoming an autonomous explorer.
+
+4. Performance Metics (Monitoring Export)
+To build a comprehensive monitoring dashboard, hook into the noosphere.monitor.SystemMonitor or standard logging outputs and extract the following telemetry:
+    - Learning Stability Metrics
+        - wm/loss: World Model total loss. Spikes indicate the environment is exhibiting novel, unpredicted behavior.
+        - wm/kl_loss: Predictability error. High KL divergence means the system is surprised.
+        - wm/phys_loss: Physics conservation violations (useful for debugging synthetic environments).
+        - ac/value_loss (Critic error): How badly the Consequence model mispredicted the outcome.
+        - ac/bc_loss (Behavioral Cloning loss): Critical Metric. Measures how well the AI digital twin models the user. If this rises, the AI is losing its alignment with the human.
+    -  Biological Telemetry
+        - bci/confidence: Real-time signal-to-noise ratio. Drops indicate sensor degradation or user distraction.
+        - bci/cognitive_workload: Mental strain. Triggers automatic increases to MCTS search budget when the user is overwhelmed.
+        - bci/fatigue: Tracks neural drift and user exhaustion over the session.
+    - Operational & Safety Metrics
+        - safety/sim_termination: Expected catastrophic probability for the chosen action.
+        - safety/interventions: A counter of how many commands the ActBridge successfully intercepted.
+        - perf/gnn_ms & perf/s4_ms: Latency markers for the neural forward passes (must remain <50ms for smooth control).
+```
 ### Three perception streams, always early-fused
 
 ```

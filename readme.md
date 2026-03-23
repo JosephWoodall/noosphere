@@ -199,7 +199,7 @@ python demo.py --profile            # per-stream latency breakdown
 ## Installation
 
 ```bash
-git clone https://github.com/yourhandle/noosphere
+git clone https://github.com/JosephWoodall/noosphere
 cd noosphere
 pip install -r requirements.txt
 ```

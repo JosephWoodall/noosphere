@@ -234,9 +234,9 @@ class SyntheticBCIEnv(Env):
         self._target = np.zeros(3, dtype=np.float32)
 
     def _sample_target(self) -> np.ndarray:
-        r = np.random.uniform(0.15, 0.55)
-        theta = np.random.uniform(-np.pi / 3, np.pi / 3)
-        phi = np.random.uniform(0.1, np.pi / 2)
+        r = self.rng.uniform(0.15, 0.55)
+        theta = self.rng.uniform(-np.pi / 3, np.pi / 3)
+        phi = self.rng.uniform(0.1, np.pi / 2)
         return np.array(
             [
                 r * np.cos(theta) * np.sin(phi),

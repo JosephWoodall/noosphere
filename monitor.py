@@ -221,7 +221,8 @@ class Monitor:
 
         if cfg.alert_file:
             try:
-                open(cfg.alert_file, "a").close()
+                with open(cfg.alert_file, "a") as _f:
+                    pass  # ensure file is writable
             except Exception:
                 pass
 

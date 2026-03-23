@@ -102,7 +102,7 @@ class AgentConfig:
     lambda_gnn_sparse: float = 0.01
     entropy_scale: float = 3e-4
     bc_weight: float = 1.0  # Behavioral Cloning prior strength
-    min_act_confidence: float = 0.50
+    min_act_confidence: float = 0.3
     free_nats: float = 1.0
     wm_updates: int = 5
     ac_updates: int = 5
@@ -110,7 +110,6 @@ class AgentConfig:
     warmup_steps: int = 1000
 
     task_type: str = "multiclass"
-    min_act_confidence: float = 0.3
     dry_run: bool = False
 
     replay_capacity: int = 500
@@ -130,7 +129,7 @@ class _Prep:
         def _t(k):
             if obs.get(k) is None:
                 return
-            x = np.array(obs[k], dtype=np.float32)
+            x = np.asarray(obs[k], dtype=np.float32)
             if k in ("rgb", "depth", "rgb_right"):
                 if x.max() > 1.0 and k != "depth":
                     x /= 255.0
@@ -453,8 +452,6 @@ class NoosphereAgent(nn.Module):
         
         if not hasattr(self.apparatus_predictor, "update"):
             return {}
-
-        import torch
 
         spatial_features = torch.tensor(
             np.stack([c["spatial_features"] for c in corrections]),

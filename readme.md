@@ -101,44 +101,33 @@ next_digital  (B, 64)  — predicted next digital state vector
 
 These heads are supervised directly from `ShellExecutor` output so the world model learns the texture of what commands do — not just whether they get reward.
 
-### Planning
+### Intent Translation (Shared Autonomy)
 
-**Obedient Consequence Engine**: When confident BCI intent is triggered, Noosphere bypasses MCTS planning entirely and executes the human intent natively. The world model is repurposed to execute a forward simulation of the *human's explicit command*, acting purely as a safety gate to block catastrophic physical/digital outcomes rather than an autonomous decision-maker maximizing arbitrary rewards. For non-BCI tasks, MCTS operates in latent space.
+Human intent is translated into action through a **Probabilistic Blending Circuit**, rather than a rigid deterministic switch:
 
-**Budget scaling:**
+1. **Decoding:** The `S4` module decodes the raw EEG into a biological probability distribution (`p_bci`) and an estimate of signal clarity (`confidence`).
+2. **AI Prior:** Simultaneously, the `Actor`/`MCTSPlanner` evaluates the environment and proposes a digital twin probability distribution (`p_ai`).
+3. **Blending:** The two distributions are fused mathematically: `p_final = (confidence * p_bci) + ((1 - confidence) * p_ai)`. When the signal is strong, the human dictates the action. When weak, the AI stabilizes the choice.
+4. **Safety Gating:** If the `ConsequenceModel` predicts a fatal outcome (`sim_termination > 0.90`) for the highest probability action, the `ActBridge` blocks the translation, acting as an involuntary safety reflex.
+
+**Budget scaling for MCTS:**
 ```
 n_sims = max(5, n_sims_base × budget)
   where budget = 1 − 0.4·workload − 0.4·fatigue    (from S4 cognitive heads)
   and   recent failure streak → n_sims × 2          (from WorkingMemory)
 ```
 
-**Episodic memory bias:** Before search, the agent retrieves the top-K most similar past states from `EpisodicMemory` and uses their stored values to nudge the root prior.
+### Continuous Learning Loop
 
-**Dual confidence gate (ActBridge):**
-```
-effective_confidence = min(predicted_value, s4_confidence)
-```
-Both the world model's value estimate (or specifically, the predicted safety/termination probability of the explicitly chosen action) and the S4 encoder's GP-derived uncertainty must satisfy thresholds before any action executes. If the predicted termination probability indicates a catastrophic failure, `ActBridge` will block the execution. Low signal quality alone can also hold the agent back.
+Noosphere improves automatically while the user operates it. It does not require pausing for "calibration sessions."
 
-**Three learning phases run simultaneously:**
-
-Phase A — World model on real replay data:
-```
-L = λ_kl · KL  +  λ_r · reconstruction  +  λ_rew · reward prediction
-  + termination  +  λ_phys · conservation laws  +  λ_xyz · S4 coordinate
-  + λ_gnn · GNN sparsity
-```
-
-Phase B — Policy in imagination (world model frozen) + Imitation Prior:
-```
-TD(λ) actor-critic + Behavioral Cloning (L_bc) on the human's explicitly decoded BCI intents.
-Ensures the internal agent acts as a personalized digital twin.
-
-Phase C — Contrastive EEG (always running, no labels):
-```
-NT-Xent on augmented pairs: amplitude jitter · time shift · channel dropout · band-mask
-Single batched forward pass through both views (consistent dropout state)
-```
+- **Experience Replay:** Every action, observation, and biological intent is appended to the `ReplayBuffer`.
+- **World Model Updates (Phase A):** A background thread continuously updates the `RSSM` by minimizing reconstruction loss, Kullback-Leibler (KL) divergence, and physics conservation errors.
+  ```
+  L = λ_kl · KL + λ_r · reconstruction + λ_rew · reward_prediction + termination + λ_phys · conservation + λ_gnn · sparsity
+  ```
+- **Imagination Training & Imitation Prior (Phase B):** The `Actor` and `Critic` train rapidly *inside* the frozen World Model's imagination. The `Actor` is heavily penalized (`L_bc`) if it diverges from the actual commands the human historically executed. This ensures the AI culturally aligns with the user rather than drifting.
+- **Contrastive Learning (Phase C):** Always running, no labels. NT-Xent on four EEG augmentations to cluster neural embeddings continuously.
 
 ---
 
@@ -354,10 +343,28 @@ Digital system state is captured as a 64-dimensional observation at each step: m
 
 ---
 
-## Monitoring
+## Monitoring (Metrics & Telemetry)
 
-`Monitor` runs as a background thread. Start it before training, feed it each step, drain alerts in the training loop.
+`Monitor` runs as a background thread to track the continuous learning loop and the user's biological state. For an external dashboard (e.g., Prometheus/Grafana), extract the following metrics:
 
+### A. Learning Stability Metrics
+- **`wm/loss`**: World Model total loss. Spikes indicate the environment is exhibiting novel, unpredicted behavior.
+- **`wm/kl_loss`**: Predictability error. High KL divergence means the system is surprised.
+- **`wm/phys_loss`**: Physics conservation violations.
+- **`ac/value_loss`**: How badly the consequence model mispredicted the outcome.
+- **`ac/bc_loss` (Imitation Prior):** *Critical Metric.* Measures how well the AI models the user. If this rises, the AI is losing cultural alignment and shared autonomy is degrading.
+
+### B. Biological Telemetry
+- **`bci/confidence`**: Real-time signal-to-noise ratio. Controls the `alpha` blend between the biological brain and digital physics brain.
+- **`bci/cognitive_workload`**: Mental strain. Triggers automatic increases to MCTS search budget when the user is overwhelmed.
+- **`bci/fatigue`**: Tracks neural drift and user exhaustion over the session.
+
+### C. Operational & Safety Metrics
+- **`safety/sim_termination`**: Expected catastrophic probability for the chosen trajectory.
+- **`safety/interventions`**: Counter of how many commands `ActBridge` intercepted.
+- **`perf/gnn_ms` & `perf/s4_ms`**: Extracted latency markers to ensure inference remains <50ms.
+
+**API Usage:**
 ```python
 monitor = Monitor(MonitorConfig(
     mem_pct_warn=85.0,      # warn at 85% memory
@@ -369,8 +376,6 @@ monitor = Monitor(MonitorConfig(
 ))
 monitor.start()
 ```
-
-Conditions watched: KL divergence explosion, world model loss spikes, reward trend decline, memory pressure (warn/critical), GPU memory (warn/critical), disk space, sustained CPU load, position error above threshold, shell command failure rate, consecutive timeouts, permission denied streaks.
 
 Alert channels: coloured console logging, `alerts.jsonl` append, desktop notification (`notify-send` on Linux, `osascript` on macOS), NCP frame on `ncp:alert` channel.
 

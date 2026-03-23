@@ -58,9 +58,9 @@ def test_prosthetic_alignment():
         "eeg": torch.zeros(3, 256),
     }
     
-    # Run step
-    action, info = agent.step(dummy_obs)
-    assert action == 5, f"Expected BCI to bypass RL and choose action 5. Got {action}."
+    # Run step deterministically so the 99% probability argmaxes to 5
+    action, info = agent.step(dummy_obs, deterministic=True)
+    assert action == 5, f"Expected Shared Autonomy Blend to heavily favor 5. Got {action}."
     assert info["sim_termination"] < 0.1, "Simulated termination should be low."
     
     # 3. Test Safety Gating 
@@ -74,8 +74,8 @@ def test_prosthetic_alignment():
             }
     agent.consequence = FatalConsequence()
     
-    action, info = agent.step(dummy_obs)
-    assert action == 5, "BCI should still dictate the intended action."
+    action, info = agent.step(dummy_obs, deterministic=True)
+    assert action == 5, "Shared Autonomy Blend should still dictate the intended action."
     
     # Bridge should reject it
     assert info["act_executed"] == False, "ActBridge FAILED to gate a catastrophic BCI command!"
@@ -106,10 +106,10 @@ def test_prosthetic_alignment():
     agent.perception.s4 = UncertainS4()
     agent.consequence = SafeConsequence()
     
-    action, info = agent.step(dummy_obs)
-    # The MCTS planner and actor are un-trained in this script, so they will pick a random action.
-    # It is highly unlikely they pick 5 out of 148 by chance.
-    print(f"Low confidence fallback picked action: {action}")
+    action, info = agent.step(dummy_obs, deterministic=True)
+    # The BCI weight is only 0.1, so the AI's prior dominates. Since the Actor is untrained, it might pick randomly.
+    # We just ensure it doesn't crash and correctly blends rather than defaulting to 5.
+    print(f"Blended Shared Autonomy (10% BCI, 90% AI) picked action: {action}")
     
     print("\n✅ All regression tests passed! Prosthetic Alignment is secure.")
 

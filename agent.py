@@ -340,23 +340,34 @@ class NoosphereAgent(nn.Module):
         # ── Action selection ──────────────────────────────────────────────────
         bci_confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
 
-        if s4_out is not None and bci_confidence >= self.cfg.min_act_confidence:
-            # Phase 3: Obedient Consequence Engine
-            # Decode action directly from human intent (bypasses RL agent autonomy)
-            action = int(s4_out["intent_logits"][0].argmax(-1).item())
-            n_sims = 0  # No planning required for explicit human commands
-        elif self.cfg.use_mcts and not deterministic:
+        # 1. Get AI Digital Twin Policy (p_ai)
+        if self.cfg.use_mcts and not deterministic:
             # Apply episodic value bonus to the consequence model value for root
-            # by temporarily biasing the planner's evaluation horizon
             if episodic_value_bonus is not None and episodic_value_bonus.abs() > 0.01:
-                # Patch planner's consequence model value with episodic bonus
                 self.planner.episodic_bonus = episodic_value_bonus.item()
             else:
                 self.planner.episodic_bonus = 0.0
             self.planner.n_simulations = n_sims
-            action = self.planner.search(self._h, self._z)
+            _, p_ai = self.planner.search(self._h, self._z)
         else:
-            action = int(self.actor.act(state, deterministic).item())
+            p_ai = self.actor.forward(state).probs.squeeze(0)
+
+        # 2. Get BCI Biological Policy (p_bci) & Blend
+        if s4_out is not None:
+            p_bci = torch.softmax(s4_out["intent_logits"][0], dim=-1)
+            
+            # Phase 5: Probabilistic Blending (Shared Autonomy)
+            alpha = bci_confidence
+            p_final = (alpha * p_bci) + ((1.0 - alpha) * p_ai)
+        else:
+            p_final = p_ai
+
+        # 3. Select Executable Action
+        if deterministic:
+            action = int(p_final.argmax().item())
+        else:
+            dist = torch.distributions.Categorical(probs=p_final)
+            action = int(dist.sample().item())
 
         # ── Consequence Simulation ────────────────────────────────────────────
         # Phase 3: Simulate the consequence of the human's explicitly intended action

@@ -167,7 +167,7 @@ class MCTSPlanner:
         self.nsim = v
 
     @torch.no_grad()
-    def search(self, h: torch.Tensor, z: torch.Tensor) -> int:
+    def search(self, h: torch.Tensor, z: torch.Tensor) -> tuple[int, torch.Tensor]:
         root = MCTSNode(h=h, z=z)
         self._expand(root)
         for _ in range(self.nsim):
@@ -179,7 +179,16 @@ class MCTSPlanner:
                     path.append(node)
             v = self._evaluate(node)
             self._backup(path, v)
-        return max(root.children, key=lambda a: root.children[a].visits)
+            
+        visits = torch.tensor([root.children[a].visits for a in range(self.N)], dtype=torch.float32, device=self.dev)
+        if visits.sum() > 0:
+            probs = visits / visits.sum()
+        else:
+            probs = torch.tensor([root.children[a].prior for a in range(self.N)], dtype=torch.float32, device=self.dev)
+            probs = probs / probs.sum()
+            
+        action = int(probs.argmax().item())
+        return action, probs
 
     def _select(self, node: MCTSNode):
         path = [node]

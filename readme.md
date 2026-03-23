@@ -6,14 +6,14 @@
 
 ## What it is
 
-Noosphere is a closed-loop neural interface system that translates human intent — captured as electrical signals from three electrodes on the back of the neck — into physical or digital action, and learns continuously from the consequences.
+Noosphere is a closed-loop neural interface system that translates human intent — captured as electrical signals from three electrodes on the scalp — into physical or digital action, and learns continuously from the consequences.
 
-When you think about moving your arm, or think about running a command, your motor cortex fires a pattern that travels down through your nervous system and produces measurable muscle activity at the posterior neck. Noosphere reads those signals at 256 Hz, infers what you intended, models what will happen if it acts on that intent, searches for the best action through imagination, executes it, observes what actually happened, and updates every layer of itself from the outcome. It repeats this cycle continuously, without stopping between episodes, without requiring resets, and without sending any data off the device.
+When you think about moving your arm, or think about running a command, your motor cortex fires a pattern that travels down through your nervous system. Noosphere reads the true neural signals at the scalp at 256 Hz, infers what you intended, explicitly executes your intention, and uses imagination strictly to predict and verify the consequence of your command before execution. It repeats this cycle continuously, without stopping between episodes, without requiring resets, and without sending any data off the device.
 
 **Core loop:**
 
 ```
-Perceive → Model → Plan → Act → Observe → Learn → Repeat
+Perceive (Intent & Context) → Simulate Consequence → Act (Obey & Gate) → Observe → Learn → Repeat
 ```
 
 The same trained world model can drive a physical robotic arm or execute Linux shell commands. The architecture is domain-agnostic. Only the action vocabulary and executor change.
@@ -22,7 +22,7 @@ The same trained world model can drive a physical robotic arm or execute Linux s
 
 ## Changes in v1.6.0
 
-Version 1.6.0 adds `bundle.py`, a module that lets trained world dynamics be shared between users as a single portable `.pt` file. Only the person-independent components — the physics-augmented RSSM, consequence model, and observation decoder — are included. The S4 EEG encoder, apparatus calibration data, and GP coordinate predictor are explicitly excluded because they are calibrated to a specific person's neck muscle patterns and electrode placement. A recipient loads a bundle into their own agent, which initialises their world dynamics from the shared prior rather than from random weights, then calibrates only the personal components from scratch. Two bugs were also fixed: a dead `shlex` import was removed from `actions.py`, and `BCIApparatusEnv` now correctly handles both callable EEG sources and `NeckEEGGenerator` instances.
+Version 1.6.0 adds `bundle.py`, a module that lets trained world dynamics be shared between users as a single portable `.pt` file. Only the person-independent components — the physics-augmented RSSM, consequence model, and observation decoder — are included. The S4 EEG encoder, apparatus calibration data, and GP coordinate predictor are explicitly excluded because they are calibrated to a specific person's neural patterns and electrode placement. A recipient loads a bundle into their own agent, which initialises their world dynamics from the shared prior rather than from random weights, then calibrates only the personal components from scratch. Two bugs were also fixed: a dead `shlex` import was removed from `actions.py`, and `BCIApparatusEnv` now correctly handles both callable EEG sources and `ScalpEEGGenerator` instances.
 
 ---
 
@@ -37,7 +37,7 @@ EEG-only, vision-only, kinematics-only all work without contaminating the CLS to
 Sensors
    │
    ├── RGB · depth · stereo · LiDAR · audio    → patch tokenizer   Stream A  tokenizer.py
-   ├── EEG — 3 neck electrodes @ 256 Hz        → S4 SSM            Stream B  s4_eeg.py
+   ├── EEG — 3 scalp electrodes @ 256 Hz       → S4 SSM            Stream B  s4_eeg.py
    └── joints · IMU · force/torque             → learned-adj GNN   Stream C  gnn.py
 
 Token sequence entering the shared transformer:
@@ -51,7 +51,7 @@ EEG directly modulates visual interpretation and vice versa.
 
 **Stream B — S4 EEG Encoder:** EEG processed sample-by-sample with no windowing. The S4 continuous-time ODE uses HiPPO-LegS initialisation, which is mathematically optimal for memorising oscillatory signals. GroupNorm replaces BatchNorm so inference at batch size 1 works correctly. A numerically stable log-space kernel avoids floating-point error accumulation at 256 samples per segment. Outputs eleven values: a `summary` embedding, a full `sequence` for cross-attention, coarse `intent_logits` (5 classes), a continuous `continuous_xyz` coordinate prediction, a calibrated `confidence` scalar, five cognitive state dimensions (workload, attention, arousal, valence, fatigue), and a `planning_budget` that scales MCTS simulation count.
 
-**EEG electrode placement:** Three electrodes on the posterior neck (C7). Neck muscle EMG is the signal at this site, not the noise. Standard EEG artifact rejection is inverted: `MuscleArtifact` with `action=Intentional` is published downstream. `CleanBrain` segments are discarded.
+**EEG electrode placement:** Three electrodes on the scalp targeting the motor cortex (C3, Cz, C4). True neural activity (such as Event-Related Desynchronization during motor imagery) is the intentional signal. Standard EEG artifact rejection is applied: `MuscleArtifact` is discarded as noise, while `CleanBrain` segments containing intentional cognitive activity are published downstream.
 
 **Stream C — Learned-Adjacency GNN:** Joint states as graph nodes. Adjacency is learned per layer from data with L1 sparsity regularisation. Normalisation uses element-wise diagonal scaling — O(N²) not O(N³). Topology converges toward actual physical coupling structure over training.
 
@@ -103,7 +103,7 @@ These heads are supervised directly from `ShellExecutor` output so the world mod
 
 ### Planning
 
-MCTS operates entirely in latent space. The world model is the simulator; no real environment calls are made during search.
+**Obedient Consequence Engine**: When confident BCI intent is triggered, Noosphere bypasses MCTS planning entirely and executes the human intent natively. The world model is repurposed to execute a forward simulation of the *human's explicit command*, acting purely as a safety gate to block catastrophic physical/digital outcomes rather than an autonomous decision-maker maximizing arbitrary rewards. For non-BCI tasks, MCTS operates in latent space.
 
 **Budget scaling:**
 ```
@@ -118,7 +118,7 @@ n_sims = max(5, n_sims_base × budget)
 ```
 effective_confidence = min(predicted_value, s4_confidence)
 ```
-Both the world model's value estimate and the S4 encoder's GP-derived uncertainty must exceed `min_confidence` before any action executes. Low signal quality alone can hold the agent back.
+Both the world model's value estimate (or specifically, the predicted safety/termination probability of the explicitly chosen action) and the S4 encoder's GP-derived uncertainty must satisfy thresholds before any action executes. If the predicted termination probability indicates a catastrophic failure, `ActBridge` will block the execution. Low signal quality alone can also hold the agent back.
 
 **Three learning phases run simultaneously:**
 
@@ -129,10 +129,10 @@ L = λ_kl · KL  +  λ_r · reconstruction  +  λ_rew · reward prediction
   + λ_gnn · GNN sparsity
 ```
 
-Phase B — Policy in imagination (world model frozen):
+Phase B — Policy in imagination (world model frozen) + Imitation Prior:
 ```
-TD(λ) actor-critic  or  π-StepNFT (critic-free, single forward pass)
-```
+TD(λ) actor-critic + Behavioral Cloning (L_bc) on the human's explicitly decoded BCI intents.
+Ensures the internal agent acts as a personalized digital twin.
 
 Phase C — Contrastive EEG (always running, no labels):
 ```
@@ -345,7 +345,7 @@ Digital system state is captured as a 64-dimensional observation at each step: m
 
 | Domain | Actions | Primary sensors |
 |---|---|---|
-| BCI apparatus | 5 intent classes | 3-ch neck EEG, depth camera |
+| BCI apparatus | 5 intent classes | 3-ch scalp EEG, depth camera |
 | Linux shell | 138 commands (6 tiers) | EEG, structured (64-dim system state) |
 | Drone | 6 | RGB, depth, IMU |
 | Legged locomotion | 12 | Stereo RGB, joint state |
@@ -447,7 +447,7 @@ A bundle is a `.pt` file containing:
 
 **What is included:** RSSM (GRU, prior/posterior MLPs, physics state estimator, RK4 transition prior, residual corrector, conservation laws, physics projection), consequence model (reward/value/termination heads, digital prediction heads if present), observation decoder.
 
-**What is excluded:** S4 EEG encoder (calibrated to one person's neck EMG), GNN topology (task-specific learned adjacency), patch tokenizer (fine structurally but trained with personal data), apparatus predictor (GP calibration data, neural head kinematic labels).
+**What is excluded:** S4 EEG encoder (calibrated to one person's neural patterns), GNN topology (task-specific learned adjacency), patch tokenizer (fine structurally but trained with personal data), apparatus predictor (GP calibration data, neural head kinematic labels).
 
 ---
 
@@ -486,7 +486,7 @@ noosphere/
 ├── proto.py          NCP binary protocol + NCPTransport (Redis / in-process)
 ├── learning.py       5 loss classes + LearningManager + EEGAugment
 └── data/
-    └── synth.py      NeckEEGGenerator + obs_* builders + make_batch()
+    └── synth.py      ScalpEEGGenerator + obs_* builders + make_batch()
 
 demo.py               Entry point
 requirements.txt
@@ -505,9 +505,10 @@ All computation runs onboard. No data leaves the device. No network connection r
 ## Citation
 
 ```bibtex
-@software{noosphere2025,
+@software{noosphere2026,
   title  = {Noosphere: Physics-Informed World Model Agent with BCI Control},
-  year   = {2025},
-  url    = {https://github.com/yourhandle/noosphere}
+  year   = {2026},
+  url    = {https://github.com/JosephWoodall/noosphere},
+  author = {Joseph Woodall},
 }
 ```

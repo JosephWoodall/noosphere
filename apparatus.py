@@ -370,7 +370,7 @@ class MuscleIntent:
 class IntentionFilter:
     def is_intentional(self, segment: dict) -> bool:
         return (
-            segment.get("root_label") == RootArtifactLabel.MUSCLE
+            segment.get("root_label") == RootArtifactLabel.CLEAN_BRAIN
             and segment.get("hierarchical", {}).get("action") == "Intentional"
             and segment.get("hierarchical", {}).get("muscle_intent") is not None
         )
@@ -435,9 +435,8 @@ class SparseGPPredictor:
       placement sessions don't permanently bias the predictor
     - Falls back to sklearn GP when scipy is unavailable
 
-    Feature input: d_model-dimensional S4 summary embedding (not 19-dim heuristics)
-    This is the primary improvement — the S4 embedding captures temporal muscle
-    activation patterns that the heuristic features completely discard.
+    Feature input: Spatial features (e.g. from IMU or eye-tracking) 
+    instead of the constrained S4 summary embedding.
 
     Calibration samples (from CalibrationSession) carry weight_boost multiplier
     so the fresh session anchor dominates early predictions.
@@ -473,12 +472,12 @@ class SparseGPPredictor:
 
     def add_sample(
         self,
-        embedding: np.ndarray,  # (d_model,) S4 summary
+        spatial_features: np.ndarray,  # (feature_dim,) spatial tracking input
         xyz: np.ndarray,  # (3,)
         calibration: bool = False,
     ):
         """Add one labeled example. calibration=True boosts its weight."""
-        self._X.append(embedding.copy())
+        self._X.append(spatial_features.copy())
         self._Y.append(xyz.copy())
         self._w.append(self.boost if calibration else 1.0)
         self._ages.append(0)
@@ -545,7 +544,7 @@ class SparseGPPredictor:
         self._gp = gp
         self._dirty = False
 
-    def predict(self, embedding: np.ndarray) -> Tuple[Optional[np.ndarray], float]:
+    def predict(self, spatial_features: np.ndarray) -> Tuple[Optional[np.ndarray], float]:
         """
         Returns (xyz, uncertainty).
         uncertainty ∈ [0, 1] — 0 = confident, 1 = very uncertain.
@@ -559,7 +558,7 @@ class SparseGPPredictor:
             if not hasattr(self, "_gp"):
                 return None, 1.0
 
-        x = embedding.reshape(1, -1)
+        x = spatial_features.reshape(1, -1)
         if hasattr(self, "_pca") and self._pca is not None:
             x = self._pca.transform(x)
         x_scaled = self._scaler.transform(x)
@@ -579,21 +578,18 @@ class SparseGPPredictor:
 
 class NeuralCoordinatePredictor:
     """
-    MLP operating on S4 summary embedding, replacing the GP after
+    MLP operating on spatial features, replacing the GP after
     min_samples labeled examples are available.
 
-    The MLP's gradient is deliberately propagated back through the S4 encoder
-    via the `s4_xyz_loss` (in learning.py) — this is the precision improvement.
-    The GP is still used for uncertainty estimation even after the neural
-    predictor is active.
+    The continuous xyz prediction is now decoupled from the S4 EEG encoder.
+    Gradient flows back through this MLP based on position error.
 
-    Not a torch.nn.Module because it is updated via the LearningManager,
-    not the main AdamW optimizer. It uses its own small optimizer.
+    Not a torch.nn.Module because it is updated via the LearningManager.
     """
 
     def __init__(
         self,
-        d_model: int = 256,
+        feature_dim: int = 25,  # e.g., 5 steps of 5-dim IMU
         hidden: int = 128,
         lr: float = 1e-3,
         min_samples: int = 50,
@@ -603,14 +599,14 @@ class NeuralCoordinatePredictor:
         self.max_reach = max_reach
         self._n_samples = 0
         self._active = False
-        self._d_model = d_model
+        self._feature_dim = feature_dim
 
         try:
             import torch
             import torch.nn as tnn
 
             self._net = tnn.Sequential(
-                tnn.Linear(d_model, hidden),
+                tnn.Linear(feature_dim, hidden),
                 tnn.SiLU(),
                 tnn.Linear(hidden, hidden // 2),
                 tnn.SiLU(),
@@ -622,7 +618,7 @@ class NeuralCoordinatePredictor:
         except ImportError:
             self._torch_ok = False
 
-    def update(self, embedding_tensor, xyz_tensor):
+    def update(self, spatial_features_tensor, xyz_tensor):
         """One gradient step. Called from LearningManager."""
         if not self._torch_ok:
             return None
@@ -631,20 +627,20 @@ class NeuralCoordinatePredictor:
         self._n_samples += len(xyz_tensor)
         if self._n_samples >= self.min_samples:
             self._active = True
-        pred = self._net(embedding_tensor) * self.max_reach
+        pred = self._net(spatial_features_tensor) * self.max_reach
         loss = F.mse_loss(pred, xyz_tensor)
         self._opt.zero_grad()
         loss.backward()
         self._opt.step()
         return loss.item()
 
-    def predict(self, embedding: np.ndarray) -> Optional[np.ndarray]:
+    def predict(self, spatial_features: np.ndarray) -> Optional[np.ndarray]:
         if not self._active or not self._torch_ok:
             return None
         import torch
 
         with torch.no_grad():
-            t = torch.tensor(embedding, dtype=torch.float32).unsqueeze(0)
+            t = torch.tensor(spatial_features, dtype=torch.float32).unsqueeze(0)
             pred = self._net(t) * self.max_reach
         return pred.squeeze(0).numpy()
 
@@ -729,14 +725,14 @@ class CalibrationSession:
     def add_movement(
         self,
         name: str,
-        embedding: np.ndarray,  # S4 summary vector
+        spatial_features: np.ndarray,  # Spatial tracking vector
         target: np.ndarray,  # known 3D target
     ):
         """
         Add one calibration sample. Call this once per prompted movement.
-        The caller is responsible for collecting the EEG and extracting embedding.
+        The caller is responsible for collecting the features.
         """
-        self.predictor.add_sample(embedding, target, calibration=True)
+        self.predictor.add_sample(spatial_features, target, calibration=True)
         self._collected.append({"name": name, "target": target.tolist()})
         logger.info(f"[Calibration] {name}: {len(self._collected)}/5 collected")
 
@@ -763,15 +759,15 @@ class PositionErrorFeedback:
     to the predicted target. The error vector is accumulated and periodically
     used to:
         1. Update the GP predictor (add corrected sample)
-        2. Emit a LearningSignal.CORRECTION NCP frame for the S4 encoder's
-           xyz_head optimizer in the next Phase A update
+        2. Emit a LearningSignal.CORRECTION NCP frame for the spatial head
+           optimizer in the next update
 
     This is the key mechanism that makes the system get better over time —
     every reach attempt is both a movement and a labeled training example.
 
     Usage:
         feedback = PositionErrorFeedback(predictor)
-        feedback.record(predicted_xyz, actual_tip, embedding)
+        feedback.record(predicted_xyz, actual_tip, spatial_features)
         # ... later, in training loop:
         corrections = feedback.drain()
         # pass corrections to LearningManager.apply_corrections()
@@ -790,7 +786,7 @@ class PositionErrorFeedback:
         self,
         predicted_xyz: np.ndarray,  # what the model aimed for
         actual_tip: np.ndarray,  # where the arm actually ended up
-        embedding: np.ndarray,  # S4 summary that generated the prediction
+        spatial_features: np.ndarray,  # Feature vector that generated the prediction
     ) -> float:
         """
         Record one reach outcome. Returns position error in metres.
@@ -798,10 +794,10 @@ class PositionErrorFeedback:
         error = float(np.linalg.norm(actual_tip - predicted_xyz))
         if error > self.threshold:
             # The actual tip is the true label — add as corrected training sample
-            self.predictor.add_sample(embedding, actual_tip, calibration=False)
+            self.predictor.add_sample(spatial_features, actual_tip, calibration=False)
             self._pending.append(
                 {
-                    "embedding": embedding,
+                    "spatial_features": spatial_features,
                     "target_xyz": actual_tip,  # corrected target
                     "error_m": error,
                     "predicted": predicted_xyz,

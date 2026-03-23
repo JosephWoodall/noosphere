@@ -43,7 +43,7 @@ import torch.optim as optim
 
 from noosphere.actions import ActBridge, ActionSpace, Executor, NullExecutor
 from noosphere.bundle import BundleMetadata, export_bundle, inspect_bundle, load_bundle
-from noosphere.learning import LearningConfig, LearningManager, S4XYZSupervisionLoss
+from noosphere.learning import LearningConfig, LearningManager
 from noosphere.memory import EpisodicMemory, SequenceReplayBuffer, WorkingMemory
 from noosphere.perception import HybridPerceptionModel
 from noosphere.physics import PhysicsAugmentedRSSM
@@ -99,9 +99,10 @@ class AgentConfig:
     lambda_recon: float = 0.5
     lambda_reward: float = 1.0
     lambda_physics: float = 0.5
-    lambda_xyz: float = 2.0
     lambda_gnn_sparse: float = 0.01
     entropy_scale: float = 3e-4
+    bc_weight: float = 1.0  # Behavioral Cloning prior strength
+    min_act_confidence: float = 0.50
     free_nats: float = 1.0
     wm_updates: int = 5
     ac_updates: int = 5
@@ -194,7 +195,6 @@ class NoosphereAgent(nn.Module):
         self.consequence = ConsequenceModel(state_dim, C.hidden_dim)
         self.obs_decoder = ObservationDecoder(state_dim, C.d_model, C.hidden_dim)
         self.action_enc = ActionEncoder(C.n_actions, C.action_dim)
-        self.s4_xyz_loss = S4XYZSupervisionLoss(delta=0.05, max_reach=0.70)
 
         self.actor = Actor(state_dim, C.n_actions, C.hidden_dim)
         self.critic = Critic(state_dim, C.hidden_dim)
@@ -338,7 +338,14 @@ class NoosphereAgent(nn.Module):
             pass
 
         # ── Action selection ──────────────────────────────────────────────────
-        if self.cfg.use_mcts and not deterministic:
+        bci_confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
+
+        if s4_out is not None and bci_confidence >= self.cfg.min_act_confidence:
+            # Phase 3: Obedient Consequence Engine
+            # Decode action directly from human intent (bypasses RL agent autonomy)
+            action = int(s4_out["intent_logits"][0].argmax(-1).item())
+            n_sims = 0  # No planning required for explicit human commands
+        elif self.cfg.use_mcts and not deterministic:
             # Apply episodic value bonus to the consequence model value for root
             # by temporarily biasing the planner's evaluation horizon
             if episodic_value_bonus is not None and episodic_value_bonus.abs() > 0.01:
@@ -351,9 +358,17 @@ class NoosphereAgent(nn.Module):
         else:
             action = int(self.actor.act(state, deterministic).item())
 
+        # ── Consequence Simulation ────────────────────────────────────────────
+        # Phase 3: Simulate the consequence of the human's explicitly intended action
+        h2, z2, _ = self.rssm.imagine_step(self._h, self._z, self.action_enc(torch.tensor([action], device=self.device)))
+        s2 = torch.cat([h2, z2], -1)
+        cons2 = self.consequence(s2)
+
         info = {
             "pred_reward": cons["reward"].item(),
             "pred_value": cons["value"].item(),
+            "sim_reward": cons2["reward"].item(),
+            "sim_termination": cons2["termination"].item(),
             "termination_prob": cons["termination"].item(),
             "physics_energy": ps.energy.mean().item(),
             "n_mcts_sims": n_sims,
@@ -361,9 +376,7 @@ class NoosphereAgent(nn.Module):
         if s4_out is not None:
             cog = s4_out["cognitive"]
             info.update({f"bci_{k}": v.mean().item() for k, v in cog.items()})
-            if "continuous_xyz" in s4_out:
-                info["s4_xyz"] = s4_out["continuous_xyz"][0].cpu().numpy()
-                info["s4_confidence"] = s4_out["confidence"][0].item()
+            info["s4_confidence"] = s4_out["confidence"][0].item()
 
         # ── Act bridge — now passes s4_confidence for dual gate ───────────────
         if self.act_bridge is not None:
@@ -415,38 +428,34 @@ class NoosphereAgent(nn.Module):
     def apply_corrections(self, corrections: List[Dict]):
         """
         Apply position error corrections from PositionErrorFeedback.drain().
-        Each correction is a dict with "embedding" (numpy) and "actual_tip" (numpy).
-        Runs a supervised backward pass on the S4 xyz head.
+        Each correction is a dict with "spatial_features" and "target_xyz".
+        Runs a supervised backward pass on the decoupled neural coordinate predictor.
         Called by the trainer after env.step() returns actual_tip.
         """
-        if not corrections or self.learning_manager is None:
+        if not corrections or self.apparatus_predictor is None:
             return {}
+        
+        if not hasattr(self.apparatus_predictor, "update"):
+            return {}
+
         import torch
 
-        embeddings = torch.tensor(
-            np.stack([c["embedding"] for c in corrections]),
+        spatial_features = torch.tensor(
+            np.stack([c["spatial_features"] for c in corrections]),
             dtype=torch.float32,
             device=self.device,
         )
         actual_tips = torch.tensor(
-            np.stack([c["actual_tip"] for c in corrections]),
+            np.stack([c["target_xyz"] for c in corrections]),
             dtype=torch.float32,
             device=self.device,
         )
-        # Re-encode through the current perception model to get fresh gradients
-        # (embeddings from apparatus were numpy snapshots at step time)
-        # Use them as supervision targets on the S4 xyz head directly
-        predicted_xyz = (
-            self.perception.s4.xyz_head(embeddings) * self.perception.s4.max_reach
-        )
-        loss, metrics = self.learning_manager.compute_position_error_loss(
-            predicted_xyz, actual_tips
-        )
-        self.opt_wm.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(self._wm_params, self.cfg.grad_clip)
-        self.opt_wm.step()
-        return metrics
+        
+        loss_val = self.apparatus_predictor.update(spatial_features, actual_tips)
+        
+        if loss_val is not None:
+            return {"apparatus/position_error": loss_val}
+        return {}
 
     # ── Calibration ───────────────────────────────────────────────────────────
 
@@ -454,28 +463,25 @@ class NoosphereAgent(nn.Module):
         """
         Run session-start calibration.
         calibration_session: CalibrationSession instance
-        eeg_source: callable() → EEG segment dict with "s4_embedding" key,
-                    or a NeckEEGGenerator for synthetic runs
+        eeg_source: callable() → EEG segment dict with "spatial_features" key,
+                    or a ScalpEEGGenerator for synthetic runs
 
         Returns True when all reference movements are collected.
         """
         for name, target, prompt in calibration_session.MOVEMENTS:
             logger.info(f"[Calibration] {prompt} and hold ...")
             seg = eeg_source() if callable(eeg_source) else eeg_source.next_segment()
-            # Extract S4 embedding from the segment
-            if "s4_embedding" in seg:
-                embedding = np.array(seg["s4_embedding"], dtype=np.float32)
+            # Extract spatial features from the segment. We assume structured IMU features
+            # or pre-extracted spatial_features are provided during calibration.
+            if "spatial_features" in seg:
+                spatial_features = np.array(seg["spatial_features"], dtype=np.float32)
+            elif "structured" in seg:
+                spatial_features = np.array(seg["structured"], dtype=np.float32).flatten()
             else:
-                # Fall back: encode through S4 encoder
-                import torch
-
-                eeg_t = torch.tensor(
-                    seg["eeg"][None], dtype=torch.float32, device=self.device
-                )
-                with torch.no_grad():
-                    s4_out = self.perception.s4(eeg_t)
-                embedding = s4_out["summary"][0].cpu().numpy()
-            calibration_session.add_movement(name, embedding, target)
+                # Fallback zero vector
+                spatial_features = np.zeros(25, dtype=np.float32)
+                
+            calibration_session.add_movement(name, spatial_features, target)
         return calibration_session.complete
 
     # ── Update ────────────────────────────────────────────────────────────────
@@ -509,8 +515,12 @@ class NoosphereAgent(nn.Module):
         T_eff = min(T, 20)
 
         obs_embed_list = []
-        s4_xyz_preds = []
         gnn_sparse = torch.tensor(0.0, device=self.device)
+        L_eeg_recon = torch.tensor(0.0, device=self.device)
+
+        # For passing to Actor-Critic Behavioral Cloning and Imagination
+        st_list = []
+        act_list = []
 
         for t in range(T_eff):
             inp = {}
@@ -524,8 +534,13 @@ class NoosphereAgent(nn.Module):
                 perc_out = self.perception(inp)
                 obs_embed_list.append(perc_out["embed"])
                 s4 = perc_out.get("s4_out")
-                if s4 is not None and "continuous_xyz" in s4:
-                    s4_xyz_preds.append(s4["continuous_xyz"])
+                if s4 is not None and "eeg" in inp and self.learning_manager is not None:
+                    def recon_encoder_fn(x):
+                        return self.perception.s4(x, inp.get("electrode_mask"))["sequence"]
+                    
+                    eeg_recon, _ = self.learning_manager.compute_recon_loss(inp["eeg"], recon_encoder_fn)
+                    L_eeg_recon = L_eeg_recon + eeg_recon
+
                 # Accumulate GNN sparsity loss
                 gnn = perc_out.get("gnn_out")
                 if gnn is not None and "sparsity_loss" in gnn:
@@ -547,6 +562,9 @@ class NoosphereAgent(nn.Module):
             h, z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(h, z, a, e)
             s = torch.cat([h, z], -1)
             cons = self.consequence(s)
+            
+            st_list.append(s.detach())
+            act_list.append(batch["actions"][:, t])
 
             L_kl = L_kl + self.rssm.kl_loss(pp, qp, C.free_nats)
             L_r = L_r + F.mse_loss(self.obs_decoder(s), e.detach())
@@ -561,13 +579,6 @@ class NoosphereAgent(nn.Module):
             # Physics loss now stays in graph — gradient flows to residual corrector
             L_p = L_p + torch.nan_to_num(phys_tensor, nan=0.0)
 
-        L_xyz = torch.tensor(0.0, device=self.device)
-        if s4_xyz_preds and "kinematics" in batch:
-            xyz_pred = torch.stack(s4_xyz_preds[:T_eff]).mean(0)
-            xyz_label = batch["kinematics"][:, 0, :3]
-            L_xyz, _ = self.s4_xyz_loss(xyz_pred, xyz_label)
-            L_xyz = C.lambda_xyz * L_xyz
-
         f = float(T_eff)
         loss = (
             C.lambda_kl * L_kl
@@ -576,8 +587,12 @@ class NoosphereAgent(nn.Module):
             + L_t
             + C.lambda_physics * L_p
             + C.lambda_gnn_sparse * gnn_sparse
-            + L_xyz
+            + L_eeg_recon
         ) / f
+
+        # Store the posteriors and actions for Imitation Learning in AC update
+        self._last_st = torch.stack(st_list, dim=1)  # (B, T, D)
+        self._last_act = torch.stack(act_list, dim=1) # (B, T)
 
         self.opt_wm.zero_grad()
         loss.backward()
@@ -590,7 +605,7 @@ class NoosphereAgent(nn.Module):
             "wm/reward_pred": (L_rew / f).item(),
             "wm/physics": (L_p / f).item(),
             "wm/gnn_sparse": (gnn_sparse / f).item(),
-            "wm/xyz": L_xyz.item(),
+            "wm/eeg_recon": (L_eeg_recon / f).item(),
         }
 
     def _update_ac(self) -> Dict[str, float]:
@@ -598,11 +613,26 @@ class NoosphereAgent(nn.Module):
         B = C.batch_size
         H = C.imag_horizon
 
-        h = torch.zeros(B, self._det_dim, device=self.device)
-        z = torch.zeros(B, self._stoch_dim, device=self.device)
+        # Initialize from world model's detached posteriors if available
+        if hasattr(self, "_last_st") and self._last_st is not None:
+            # Flatten (B, T, D) to (B*T, D) and sample B states to start imagination
+            flat_st = self._last_st.view(-1, self._last_st.shape[-1])
+            idx = torch.randint(0, flat_st.shape[0], (B,), device=self.device)
+            s = flat_st[idx]
+            h, z = s[..., :self._det_dim], s[..., self._det_dim:]
+            
+            # Behavioral Cloning Loss on human's actual actions
+            flat_act = self._last_act.view(-1)
+            dist_bc = self.actor(flat_st)
+            L_bc = -dist_bc.log_prob(flat_act).mean()
+        else:
+            h = torch.zeros(B, self._det_dim, device=self.device)
+            z = torch.zeros(B, self._stoch_dim, device=self.device)
+            L_bc = torch.tensor(0.0, device=self.device)
+
         self._imag_buf.clear()
 
-        for _ in range(H):
+        for step_i in range(H):
             s = torch.cat([h, z], -1)
             dist = self.actor(s)
             a = dist.sample()
@@ -626,7 +656,9 @@ class NoosphereAgent(nn.Module):
         A = (G - G.mean()) / (G.std() + 1e-8)
         L_p = -(lp * A.detach()).mean()
         ent = self.actor.entropy(st.view(-1, st.shape[-1]).detach()).mean()
-        loss = L_p - C.entropy_scale * ent + L_v
+        
+        # Phase 4 Prosthetic Alignment: Hybrid Objective (RL + Behavioral Cloning)
+        loss = L_p - C.entropy_scale * ent + L_v + (C.bc_weight * L_bc)
 
         self.opt_ac.zero_grad()
         loss.backward()
@@ -638,6 +670,7 @@ class NoosphereAgent(nn.Module):
             "ac/critic": L_v.item(),
             "ac/entropy": ent.item(),
             "ac/return": G.mean().item(),
+            "ac/bc_loss": L_bc.item(),
         }
 
     # ── Bundle convenience methods ────────────────────────────────────────────

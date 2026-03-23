@@ -215,11 +215,18 @@ class SyntheticBCIEnv(Env):
     Reward = exp(-10 * distance_to_target), not random noise.
     """
 
-    def __init__(self, max_steps: int = 30):
+    def __init__(self, max_steps: int = 30, seed: int = 42):
         from noosphere.apparatus import ArmConfig, CoordinatePredictor, MovementExecutor
-        from noosphere.synth import NeckEEGGenerator
+        from noosphere.synth import (
+            ScalpEEGGenerator,
+            obs_bci,
+            synth_rgb,
+            synth_depth,
+            synth_imu,
+        )
 
-        self.gen = NeckEEGGenerator(seed=0)
+        self.rng = np.random.default_rng(seed)
+        self.eeg = ScalpEEGGenerator(seed=seed)
         self.executor = MovementExecutor(ArmConfig())
         self.predictor = CoordinatePredictor(d_model=64)
         self.max_steps = max_steps
@@ -244,7 +251,7 @@ class SyntheticBCIEnv(Env):
         self._target = self._sample_target()
         tip = self.executor.ik.tip_position(self.executor.current)
         return {
-            "eeg": self.gen.next_segment()["eeg"],
+            "eeg": self.eeg.next_segment()["eeg"],
             "electrode_mask": np.ones(3, dtype=np.float32),
             "structured": np.concatenate([tip, self._target]).astype(np.float32),
         }
@@ -253,7 +260,7 @@ class SyntheticBCIEnv(Env):
         self, action: int, act_result: Optional[Dict] = None
     ) -> Tuple[Dict, float, bool, Dict]:
         self._step += 1
-        seg = self.gen.next_segment()
+        seg = self.eeg.next_segment()
         tip = self.executor.ik.tip_position(self.executor.current)
         dist = float(np.linalg.norm(tip - self._target))
         r = float(np.exp(-10.0 * dist))  # shaped: perfect reach → 1.0

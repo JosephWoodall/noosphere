@@ -16,18 +16,14 @@ Changes in v1.3.0
    Now concatenates [v1, v2] → one forward pass → splits → NT-Xent.
 
 3. PositionErrorLoss: closes the arm position error feedback loop.
-   Direct coordinate supervision on the S4 encoder's continuous_xyz head
+   Direct coordinate supervision on the neural coordinate head
    from actual arm tip position (not predicted target).
    L = Huber(predicted_xyz, actual_tip)
    Using Huber instead of MSE: robust to outliers from IK convergence failures.
 
-4. S4XYZSupervisionLoss: drives the S4 encoder's continuous_xyz head with
-   labeled segment data. Applied during Phase A when kinematic labels are
-   available. Gradient flows back through the full S4 encoder stack.
+4. LearningSignal.CORRECTION now used — apply_corrections() implemented.
 
-5. LearningSignal.CORRECTION now used — apply_corrections() implemented.
-
-6. LearningConfig: xyz_weight and position_error_weight added.
+5. LearningConfig: position_error_weight added.
 """
 
 import math
@@ -43,7 +39,6 @@ from dataclasses import dataclass
 
 class LearningSignal:
     REWARD         = 0x01
-    SUPERVISED_XYZ = 0x02
     ANOMALY        = 0x03
     CORRECTION     = 0x04   # now used: position error from actual arm tip
 
@@ -74,48 +69,13 @@ class SupervisedCoordinateLoss(nn.Module):
         }
 
 
-# ── S4 encoder xyz supervision ────────────────────────────────────────────────
-
-class S4XYZSupervisionLoss(nn.Module):
-    """
-    Supervises the S4 encoder's continuous_xyz head directly with labeled data.
-
-    This is what makes the encoder learn precision-optimised representations
-    rather than just class-separation representations. Gradient flows back
-    through the full S4 stack from the xyz label.
-
-    Uses Huber loss (δ=0.05m = 5cm) — robust to IK outliers and large initial
-    errors early in training.
-    """
-
-    def __init__(self, delta: float = 0.05, max_reach: float = 0.70):
-        super().__init__()
-        self.delta     = delta
-        self.max_reach = max_reach
-
-    def forward(
-        self,
-        s4_continuous_xyz: torch.Tensor,   # (B, 3) — from S4EEGEncoder["continuous_xyz"]
-        true_xyz:          torch.Tensor,   # (B, 3) — kinematic labels
-    ) -> Tuple[torch.Tensor, Dict[str, float]]:
-        loss = F.huber_loss(s4_continuous_xyz, true_xyz, delta=self.delta)
-        # Reach penalty: S4 should not predict unreachable coordinates
-        excess     = F.relu(s4_continuous_xyz.norm(dim=-1) - self.max_reach)
-        reach_loss = 0.3 * excess.pow(2).mean()
-        total      = loss + reach_loss
-        return total, {
-            "s4_xyz/huber":         loss.item(),
-            "s4_xyz/reach_penalty": reach_loss.item(),
-        }
-
-
 # ── Position error feedback loss ──────────────────────────────────────────────
 
 class PositionErrorLoss(nn.Module):
     """
     Closes the arm position error loop.
 
-    Supervises the S4 encoder's continuous_xyz head with the actual arm tip
+    Supervises the spatial coordinate head with the actual arm tip
     position after movement (not the predicted target — the *actual* position).
 
     When the arm overshoots: actual_tip ≠ predicted_xyz.
@@ -204,6 +164,46 @@ class EEGAugment:
         return x
 
 
+class EEGReconstructionLoss(nn.Module):
+    """
+    Generative Denoising / Masked Modeling Loss.
+    Masks 1-2 random channels from the input EEG, asks the encoder to process it,
+    and then reconstructs the downsampled original EEG channels from the S4 sequence.
+    This acts as a powerful regularizer for robust spatial representations.
+    """
+    def __init__(self, d_model: int = 256, n_channels: int = 3, downsample: int = 4):
+        super().__init__()
+        self.decoder = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.GELU(),
+            nn.Linear(d_model // 2, n_channels)
+        )
+        self.downsample = downsample
+
+    def forward(self, eeg: torch.Tensor, encoder_fn) -> Tuple[torch.Tensor, Dict[str, float]]:
+        # eeg: (B, C, T)
+        B, C, T = eeg.shape
+        eeg_masked = eeg.clone()
+        
+        # Randomly mask 1 channel per sequence in the batch
+        mask_idx = torch.randint(0, C, (B,), device=eeg.device)
+        b_idx = torch.arange(B, device=eeg.device)
+        eeg_masked[b_idx, mask_idx, :] = 0.0
+
+        # Pass through S4 encoder to get sequence_out: (B, T', d_model)
+        sequence_out = encoder_fn(eeg_masked)
+
+        # Target: downsampled EEG
+        # Using avg_pool1d to downsample the target to match sequence length
+        target_eeg = F.avg_pool1d(eeg, self.downsample, stride=self.downsample).transpose(1, 2)  # (B, T', C)
+        
+        # Predict missing channels from sequence
+        pred_eeg = self.decoder(sequence_out)  # (B, T', C)
+        
+        # We compute MSE loss over the reconstructed signal
+        loss = F.mse_loss(pred_eeg, target_eeg)
+        return loss, {"unsupervised/eeg_recon": loss.item()}
+
 class NTXentLoss(nn.Module):
     """
     NT-Xent (InfoNCE) contrastive loss.
@@ -282,19 +282,20 @@ class StepNFTLoss(nn.Module):
 
 # ── Unified learning manager ──────────────────────────────────────────────────
 
-@dataclass
 class LearningConfig:
     mode:                 str   = "all"
     supervised_weight:    float = 1.0
     unsupervised_weight:  float = 0.3
     rl_weight:            float = 1.0
-    xyz_weight:           float = 2.0   # higher: coordinate precision is the priority
     position_error_weight:float = 1.5   # position error feedback weight
+    eeg_recon_weight:     float = 0.5   # generative denoising weight
     contrastive_temp:     float = 0.1
     stepnft_beta:         float = 1.0
     reach_penalty:        float = 0.5
     max_reach:            float = 0.70
     huber_delta:          float = 0.05  # metres — for xyz supervision losses
+    d_model:              int   = 256
+    n_channels:           int   = 3
 
 
 class LearningManager:
@@ -309,10 +310,10 @@ class LearningManager:
     def __init__(self, cfg: LearningConfig = LearningConfig()):
         self.cfg      = cfg
         self.sup      = SupervisedCoordinateLoss(cfg.max_reach, cfg.reach_penalty)
-        self.s4_xyz   = S4XYZSupervisionLoss(cfg.huber_delta, cfg.max_reach)
         self.pos_err  = PositionErrorLoss(delta=cfg.huber_delta * 0.6)
         self.aug      = EEGAugment()
         self.cont     = NTXentLoss(cfg.contrastive_temp)
+        self.recon    = EEGReconstructionLoss(d_model=cfg.d_model, n_channels=cfg.n_channels)
         self.nft      = StepNFTLoss(cfg.stepnft_beta)
         self._pending_corrections: List[Dict] = []
 
@@ -321,18 +322,6 @@ class LearningManager:
     ) -> Tuple[torch.Tensor, Dict]:
         loss, m = self.sup(pred_xyz, true_xyz)
         return self.cfg.supervised_weight * loss, m
-
-    def compute_s4_xyz_loss(
-        self,
-        s4_continuous_xyz: torch.Tensor,
-        true_xyz:          torch.Tensor,
-    ) -> Tuple[torch.Tensor, Dict]:
-        """
-        Supervise the S4 encoder's continuous_xyz head directly.
-        Gradient flows back through the full S4 stack.
-        """
-        loss, m = self.s4_xyz(s4_continuous_xyz, true_xyz)
-        return self.cfg.xyz_weight * loss, m
 
     def compute_position_error_loss(
         self,
@@ -359,6 +348,14 @@ class LearningManager:
         z1, z2     = both_emb[:B], both_emb[B:]
         loss, m    = self.cont(z1, z2)
         return self.cfg.unsupervised_weight * loss, m
+
+    def compute_recon_loss(
+        self,
+        eeg: torch.Tensor,
+        encoder_fn,
+    ) -> Tuple[torch.Tensor, Dict]:
+        loss, m = self.recon(eeg, encoder_fn)
+        return self.cfg.eeg_recon_weight * loss, m
 
     def compute_rl_loss(
         self,

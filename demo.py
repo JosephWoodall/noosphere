@@ -46,8 +46,17 @@ def device():
     return torch.device("cpu")
 
 
+# Allow running as `python demo.py` from inside the noosphere/ directory
+import pathlib as _pathlib
+import sys as _sys
+
+_here = _pathlib.Path(__file__).resolve().parent
+_root = _here.parent
+if str(_root) not in _sys.path:
+    _sys.path.insert(0, str(_root))
+
 from noosphere.synth import (
-    NeckEEGGenerator,
+    ScalpEEGGenerator,
     obs_bci,
     obs_drone,
     obs_fluid,
@@ -65,7 +74,7 @@ DOMAIN_OBS = {
 
 DOMAIN_CFG = {
     "drone": dict(n_actions=6, n_nodes=1, node_feat_dim=3, n_eeg_ch=3),
-    "legged": dict(n_actions=12, n_nodes=20, node_feat_dim=30, n_eeg_ch=3),
+    "legged": dict(n_actions=12, n_nodes=30, node_feat_dim=12, n_eeg_ch=3),
     "manipulation": dict(n_actions=8, n_nodes=6, node_feat_dim=13, n_eeg_ch=3),
     "bci": dict(n_actions=5, n_nodes=1, node_feat_dim=3, n_eeg_ch=3),
     "fluid": dict(n_actions=4, n_nodes=2, node_feat_dim=3, n_eeg_ch=3),
@@ -94,7 +103,7 @@ def smoke_test(domain: str, dev: torch.device):
     agent = NoosphereAgent(cfg, dev)
     agent.eval()
     agent.reset_latent()
-    gen = NeckEEGGenerator(seed=0) if domain == "bci" else None
+    gen = ScalpEEGGenerator(seed=0) if domain == "bci" else None
     obs = (
         obs_bci(seed=0, eeg_gen=gen) if domain == "bci" else DOMAIN_OBS[domain](seed=0)
     )
@@ -132,7 +141,7 @@ def partial_sensor_test(dev: torch.device):
         seq_len=10,
         n_actions=6,
     )
-    gen = NeckEEGGenerator(seed=7)
+    gen = ScalpEEGGenerator(seed=7)
 
     subsets = {
         "EEG only": {
@@ -239,15 +248,15 @@ def shell_demo(dev: torch.device):
     agent.act_bridge = bridge
     agent.reset_latent()
 
-    gen = NeckEEGGenerator(seed=42)
+    gen = ScalpEEGGenerator(seed=42)
     prev = None
     log.info("\nRunning 8 steps — EEG drives intent, world model selects command:\n")
 
     for step in range(8):
         seg = gen.next_segment(
-            intent=NeckEEGGenerator.INTENT_RIGHT_HAND
+            intent=ScalpEEGGenerator.INTENT_RIGHT_HAND
             if step < 4
-            else NeckEEGGenerator.INTENT_FINGER_FLEX
+            else ScalpEEGGenerator.INTENT_FINGER_FLEX
         )
         obs = {"eeg": seg["eeg"], "electrode_mask": np.ones(3, dtype=np.float32)}
         action, info = agent.step(obs, prev)
@@ -287,7 +296,7 @@ def training_demo(dev: torch.device, n_steps: int = 100):
         """Minimal synthetic BCI environment for training demo."""
 
         def __init__(self):
-            self.gen = NeckEEGGenerator(seed=0)
+            self.gen = ScalpEEGGenerator(seed=0)
             self._step = 0
 
         def reset(self):
@@ -295,7 +304,7 @@ def training_demo(dev: torch.device, n_steps: int = 100):
             return self._obs()
 
         def _obs(self):
-            seg = self.gen.next_segment(intent=NeckEEGGenerator.INTENT_RIGHT_HAND)
+            seg = self.gen.next_segment(intent=ScalpEEGGenerator.INTENT_RIGHT_HAND)
             return {"eeg": seg["eeg"], "electrode_mask": np.ones(3, dtype=np.float32)}
 
         def step(self, action, act_result=None):
@@ -322,9 +331,17 @@ def training_demo(dev: torch.device, n_steps: int = 100):
         train_every=5,
         warmup_steps=20,
         replay_capacity=50,
-        log_every=10,
     )
+    from noosphere.learning import LearningManager, LearningConfig
+
     agent = NoosphereAgent(cfg, dev)
+    learning_cfg = LearningConfig()
+    learning_cfg.d_model = cfg.d_model
+    learning_cfg.n_channels = cfg.n_eeg_ch
+    agent.learning_manager = LearningManager(learning_cfg)
+    # Move loss modules to the correct device
+    if hasattr(agent.learning_manager, "recon"):
+        agent.learning_manager.recon.to(dev)
 
     trainer_cfg = TrainerConfig(
         checkpoint_dir="/tmp/noosphere_demo_ckpts",
@@ -353,22 +370,22 @@ def apparatus_demo(hardware: str = "sim"):
     )
     from noosphere.hardware import ServoController
     from noosphere.proto import NCPEncoder
-    from noosphere.synth import NeckEEGGenerator
+    from noosphere.synth import ScalpEEGGenerator
 
     log.info(f"\n── BCI Apparatus Demo (hardware={hardware}) ──────────────")
 
-    gen = NeckEEGGenerator(seed=42)
+    gen = ScalpEEGGenerator(seed=42)
     filt = IntentionFilter()
     anomaly = AnomalyDetector()
-    predictor = CoordinatePredictor(retrain_every=20)
+    predictor = CoordinatePredictor()
     executor = MovementExecutor()
     servo = ServoController(backend=hardware)
     enc = NCPEncoder()
 
     intents = [
-        NeckEEGGenerator.INTENT_RIGHT_HAND,
-        NeckEEGGenerator.INTENT_SHOULDER_SHRUG,
-        NeckEEGGenerator.INTENT_FINGER_FLEX,
+        ScalpEEGGenerator.INTENT_RIGHT_HAND,
+        ScalpEEGGenerator.INTENT_SHOULDER_SHRUG,
+        ScalpEEGGenerator.INTENT_FINGER_FLEX,
     ]
     n_moved = 0
 
@@ -485,7 +502,7 @@ def run_domain(
         agent.perception.enable_profiling()
     log.info(f"Parameters: {sum(p.numel() for p in agent.parameters()):,}")
 
-    gen = NeckEEGGenerator(seed=0) if domain == "bci" else None
+    gen = ScalpEEGGenerator(seed=0) if domain == "bci" else None
     agent.reset_latent()
     prev = None
     total_r = 0.0

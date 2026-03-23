@@ -9,22 +9,21 @@ physical systems. All generators produce NumPy arrays in the format
 expected by NoosphereAgent.step(obs).
 
 EEG configuration:
-    3 electrodes on the back of the neck.
-    Posterior-neck placement means:
-        - Strong EMG (neck muscle artifacts) — this IS the intentional signal
-        - Limited alpha (some posterior occipital leakage)
-        - Minimal frontal artifacts (eye blinks attenuated ~90%)
-        - Good access to: neck muscle contraction, shoulder/head movement intent
+    3 electrodes on the scalp (e.g., C3, Cz, C4).
+    Motor cortex placement means:
+        - Strong alpha / desynchronization (ERD) — this IS the intentional signal
+        - Prominent eye blinks (frontend artifacts)
+        - Muscle artifacts (EMG from jaw/neck) — this is NOISE
+        - Good access to: motor imagery, cognitive intent
 
-    This is fundamentally different from standard 64-channel EEG.
-    The signal-to-noise profile is inverted: what is noise in clinic EEG
-    (neck EMG) is signal here. The intentional movement IS the muscle artifact.
+    This follows standard BCI paradigms where cognitive brainwaves form
+    the intentional signal, and muscle twitches must be rejected.
 
 Artifact hierarchy (from mechanicus, adapted for 3-ch neck):
     RootArtifactLabel:
-        CleanBrain      — resting baseline, alpha
-        EyeBlink        — highly attenuated at neck (small amplitude)
-        MuscleArtifact  — DOMINANT intentional signal (high amplitude)
+        CleanBrain      — intent/motor imagery or resting baseline
+        EyeBlink        — frontend artifacts (high amplitude noise)
+        MuscleArtifact  — jaw/neck EMG (high frequency noise)
             → RightHand, LeftHand, BothHands, JawClench,
               HeadTilt, ShoulderShrug, FingerFlexion,
               WristExtension, EyebrowRaise
@@ -46,24 +45,24 @@ import numpy as np
 # ── EEG: 3-electrode neck placement ──────────────────────────────────────────
 
 
-class NeckEEGGenerator:
+class ScalpEEGGenerator:
     """
-    Realistic synthetic EEG from 3 neck electrodes.
+    Realistic synthetic EEG from 3 scalp electrodes.
 
-    Electrode layout (posterior neck):
-        Ch0: Left mastoid / posterior cervical (C7-left)
-        Ch1: Central posterior cervical (C7 midline)
-        Ch2: Right mastoid / posterior cervical (C7-right)
+    Electrode layout (motor cortex):
+        Ch0: C3 (Left motor cortex)
+        Ch1: Cz (Central midline)
+        Ch2: C4 (Right motor cortex)
 
-    Key physiological properties of neck EEG:
-        - EMG bandwidth: 20–200 Hz (dominant at this site)
-        - Alpha (8–13 Hz): weak leakage from occipital, amplitude ~5–15 μV
-        - Muscle artifacts: 20–150 Hz, amplitude 50–300 μV during contraction
+    Key physiological properties of scalp EEG:
+        - Alpha/Mu (8–13 Hz): dominant at rest, desynchronizes during intent
+        - Eye blinks: 1-3 Hz, very high amplitude (100+ μV) frontally, propagates to Cz
+        - Muscle artifacts (jaw/neck EMG): 20–150 Hz, high amplitude noise
         - Line noise: 60 Hz, amplitude 8–15 μV
         - DC drift: slow, 10–50 μV amplitude
-        - Baseline noise: ~8 μV RMS (higher than scalp due to hair/skin contact)
+        - Baseline noise: ~3-5 μV RMS
 
-    Mirrors mechanicus RealWorldEEG but adapted for 3-ch neck placement.
+    Mirrors mechanicus RealWorldEEG adapted for 3-ch motor cortex placement.
     """
 
     SAMPLE_RATE = 256  # Hz
@@ -103,18 +102,18 @@ class NeckEEGGenerator:
         self._muscle_intent = self.INTENT_REST
         self._next_blink = 2.0
 
-        # Per-channel parameters (neck-adapted)
+        # Per-channel parameters (scalp-adapted)
         self._line_amp = self.rng.uniform(8.0, 15.0, size=3)  # μV
         self._drift_amp = self.rng.uniform(10.0, 50.0, size=3)  # μV
-        self._noise_std = self.rng.uniform(6.0, 10.0, size=3)  # μV (higher than scalp)
-        self._muscle_amp = np.array([120.0, 200.0, 130.0])  # μV (strong at neck)
+        self._noise_std = self.rng.uniform(3.0, 6.0, size=3)  # μV (cleaner on scalp)
+        self._muscle_amp = np.array([40.0, 30.0, 40.0])  # μV (jaw/neck noise)
 
         # Blink buffer (Gaussian kernel)
         sigma = 0.08 * self.SAMPLE_RATE / 6.0
         buf = np.exp(-0.5 * ((np.arange(128) - 64) / sigma) ** 2)
         self._blink_buf = buf
-        # Blink amplitude at neck is ~10% of frontal
-        self._blink_amp_neck = np.array([35.0, 20.0, 35.0])  # μV, symmetric at neck
+        # Blink amplitude is strong frontally, moderate at C3/Cz/C4
+        self._blink_amp_scalp = np.array([60.0, 80.0, 60.0])  # μV
 
     def _next_sample(self) -> np.ndarray:
         raw = np.zeros(3)
@@ -128,10 +127,10 @@ class NeckEEGGenerator:
             # 2. 60 Hz line noise
             line = self._line_amp[ch] * math.sin(2 * math.pi * 60 * t)
 
-            # 3. Eye blink (weak at neck — ~10% of frontal)
+            # 3. Eye blink (strongest on Cz)
             blink = 0.0
             if self._blink_phase < 128:
-                blink = self._blink_amp_neck[ch] * self._blink_buf[self._blink_phase]
+                blink = self._blink_amp_scalp[ch] * self._blink_buf[self._blink_phase]
                 if ch == 2:
                     self._blink_phase += 1  # advance once per sample
             if t >= self._next_blink:
@@ -140,27 +139,30 @@ class NeckEEGGenerator:
                     np.clip(self.rng.exponential(1.0 / 0.2), 0.8, 12.0)
                 )
 
-            # 4. Neck muscle artifact (DOMINANT intentional signal)
+            # 4. Jaw/Neck muscle artifact (Intermittent high-freq noise)
             muscle = 0.0
-            if self._muscle_remaining == 0 and self.rng.random() < 0.002:
-                self._muscle_remaining = self.rng.integers(30, 200)
-                self._muscle_freq = self.rng.uniform(30.0, 150.0)
+            if self._muscle_remaining == 0 and self.rng.random() < 0.01:
+                self._muscle_remaining = self.rng.integers(10, 50)
+                self._muscle_freq = self.rng.uniform(40.0, 100.0)
             if self._muscle_remaining > 0:
                 self._muscle_remaining -= 1
                 muscle = self._muscle_amp[ch] * math.sin(
                     2 * math.pi * self._muscle_freq * t
                 )
 
-            # 5. Alpha rhythm (weak occipital leakage)
+            # 5. Mu/Alpha rhythm (Desynchronizes during motor imagery/intent)
             self._env_alpha[ch] += self.rng.uniform(-0.8, 0.8)
-            self._env_alpha[ch] *= 0.997
-            # Symmetric at neck (no occipital asymmetry)
-            alpha_scale = 0.3
+            self._env_alpha[ch] *= 0.995
+            
+            is_intentional = (self._muscle_intent != self.INTENT_REST)
+            
+            # Desynchronization: Alpha drops significantly during active intent
+            alpha_scale = 0.1 if is_intentional else 1.0
             alpha = (
-                8.0
+                15.0
                 * alpha_scale
                 * self._env_alpha[ch]
-                * math.sin(2 * math.pi * 10.5 * t)
+                * math.sin(2 * math.pi * 11.0 * t)
             )
 
             # 6. Sensor noise (higher at neck due to hair/skin)
@@ -196,10 +198,10 @@ class NeckEEGGenerator:
             probabilities   np.ndarray (8,)
             timestamp       float
         """
-        if intent is not None:
-            self._muscle_remaining = n_samples
-            self._muscle_freq = self.rng.uniform(30.0, 120.0)
+        if intent is not None and intent != self.INTENT_REST:
             self._muscle_intent = intent
+        else:
+            self._muscle_intent = self.INTENT_REST
 
         buf = np.zeros((3, n_samples))
         for i in range(n_samples):
@@ -213,12 +215,16 @@ class NeckEEGGenerator:
         kurt = (((buf[1] - buf[1].mean()) ** 4).mean()) / max(var**2, 1.0)
         line_power = buf.mean(axis=0)  # rough proxy
 
-        # Probabilities (rough heuristic, mirrors mechanicus)
+        # Identify dominant artifact label
         probs = np.zeros(8)
-        probs[self.LABEL_MUSCLE] = min(1.0, var / 3000.0)
-        probs[self.LABEL_EYE_BLINK] = min(0.3, max(0.0, avg[0] / 150.0))  # attenuated
+        probs[self.LABEL_MUSCLE] = min(0.6, var / 1000.0)
+        probs[self.LABEL_EYE_BLINK] = min(0.8, max(0.0, avg[1] / 60.0))
         probs[self.LABEL_LINE_NOISE] = min(0.8, self._line_amp.mean() / 20.0)
-        probs[self.LABEL_CLEAN_BRAIN] = min(1.0, abs(avg[1]) / 20.0)
+        
+        # If low var and no blinks, it's CleanBrain
+        if probs[self.LABEL_MUSCLE] < 0.3 and probs[self.LABEL_EYE_BLINK] < 0.3:
+            probs[self.LABEL_CLEAN_BRAIN] = 1.0
+            
         probs[self.LABEL_SLOW_DRIFT] = min(0.6, abs(buf[0, 0] - buf[0, -1]) / 60.0)
         s = probs.sum()
         if s > 0:
@@ -226,24 +232,13 @@ class NeckEEGGenerator:
 
         dom = int(probs.argmax())
 
-        # Kinematic (random plausible coordinates for intentional movements)
+        # Kinematic labels are decoupled from EEG now; but we'll return intent if CleanBrain
         kinematic = None
         m_intent = None
         action = None
 
-        if dom == self.LABEL_MUSCLE and var > 1500.0:
-            m_intent = (
-                self._muscle_intent
-                if intent is not None
-                else int(self.rng.integers(1, 10))
-            )
-            kinematic = {
-                "x": float(self.rng.uniform(-0.4, 0.4)),
-                "y": float(self.rng.uniform(-0.4, 0.4)),
-                "z": float(self.rng.uniform(0.0, 0.60)),  # positive z (above shoulder)
-                "velocity": float(self.rng.uniform(0.0, 2.0)),
-                "force": float(self.rng.uniform(0.0, 1.0)),
-            }
+        if dom == self.LABEL_CLEAN_BRAIN and self._muscle_intent != self.INTENT_REST:
+            m_intent = self._muscle_intent
             action = "Intentional"
 
         return {
@@ -255,7 +250,7 @@ class NeckEEGGenerator:
                 "muscle_intent": m_intent,
                 "action": action,
                 "kinematic": kinematic,
-                "custom_tag": "NeckElectrode",
+                "custom_tag": "ScalpElectrode",
             },
             "probabilities": probs,
             "timestamp": t_mid,
@@ -420,7 +415,7 @@ def obs_manipulation(seed: int = 0) -> Dict:
 def obs_bci(
     seed: int = 0,
     intent: Optional[int] = None,
-    eeg_gen: Optional[NeckEEGGenerator] = None,
+    eeg_gen: Optional[ScalpEEGGenerator] = None,
 ) -> Dict:
     """
     BCI-controlled apparatus observation.
@@ -429,7 +424,7 @@ def obs_bci(
     intent: force a specific MuscleIntent for testing supervised learning.
     eeg_gen: reuse existing generator for temporal continuity.
     """
-    gen = eeg_gen or NeckEEGGenerator(seed)
+    gen = eeg_gen or ScalpEEGGenerator(seed)
     seg = gen.next_segment(intent=intent, n_samples=256)
     rgb = synth_rgb(48, 64, seed)
     imu = synth_imu(
@@ -462,7 +457,7 @@ def make_batch(
     domain: str,
     B: int = 4,
     seed: int = 0,
-    eeg_gen: Optional[NeckEEGGenerator] = None,
+    eeg_gen: Optional[ScalpEEGGenerator] = None,
 ) -> Dict:
     """
     Build a batch of B observations for `domain`.
@@ -476,7 +471,7 @@ def make_batch(
     }.get(domain)
 
     if domain == "bci":
-        gen = eeg_gen or NeckEEGGenerator(seed)
+        gen = eeg_gen or ScalpEEGGenerator(seed)
         samples = [obs_bci(seed + i, eeg_gen=gen) for i in range(B)]
     elif obs_fn is not None:
         samples = [obs_fn(seed + i) for i in range(B)]
@@ -503,11 +498,11 @@ if __name__ == "__main__":
     print("Synthetic data sanity check")
     print("─" * 40)
 
-    gen = NeckEEGGenerator(seed=42)
+    gen = ScalpEEGGenerator(seed=42)
     for intent_name, intent_id in [
-        ("REST", NeckEEGGenerator.INTENT_REST),
-        ("RIGHT_HAND", NeckEEGGenerator.INTENT_RIGHT_HAND),
-        ("SHOULDER_SHRUG", NeckEEGGenerator.INTENT_SHOULDER_SHRUG),
+        ("REST", ScalpEEGGenerator.INTENT_REST),
+        ("RIGHT_HAND", ScalpEEGGenerator.INTENT_RIGHT_HAND),
+        ("SHOULDER_SHRUG", ScalpEEGGenerator.INTENT_SHOULDER_SHRUG),
     ]:
         seg = gen.next_segment(intent=intent_id)
         print(

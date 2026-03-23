@@ -16,15 +16,7 @@ Changes in v1.3.0
    large L because powers of values near 1.0 lose mantissa bits progressively.
    Replaced with exp(arange(L) * log(A_bar)) which stays in log space.
 
-3. Continuous xyz head directly on the S4 encoder.
-   The 5-class discrete intent head is too coarse for precise coordinate
-   prediction. A new `xyz_head` produces a direct 3D coordinate estimate
-   from the summary embedding. Gradient flows back through the full S4 stack
-   — the encoder learns to represent signals useful for continuous spatial
-   intent, not just class separation.
-   Output: `continuous_xyz` (B, 3)  — arm tip target in metres
-
-4. Confidence head: scalar uncertainty estimate [0,1] for the xyz prediction.
+3. Confidence head: scalar uncertainty estimate [0,1] for prediction uncertainty.
    Used by ActBridge confidence gate and TemporalSmoother alpha schedule.
    Low confidence → smoother damps prediction → arm moves conservatively.
 """
@@ -209,6 +201,31 @@ class S4Block(nn.Module):
         return x
 
 
+# ── Functional Connectivity Attention ────────────────────────────────────────
+
+class FunctionalConnectivityAttention(nn.Module):
+    """
+    Captures dynamic spatial synchronization between electrodes (approximation of PLV).
+    Computes channel-wise cosine similarity over time and uses it as an adjacency matrix 
+    to mix signals across channels. This multi-domain fusion is highly effective for MI.
+    """
+    def __init__(self, n_channels: int):
+        super().__init__()
+        self.temp = nn.Parameter(torch.ones(1) * 10.0)
+        self.gate = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, C, T) signal
+        x_norm = F.normalize(x, p=2, dim=-1)
+        # Channel synchronization adj matrix: (B, C, C)
+        adj = torch.bmm(x_norm, x_norm.transpose(1, 2))
+        # Softmax over source channels
+        adj = F.softmax(adj * self.temp, dim=-1)
+        # Mix signals according to their functional connectivity
+        sync_x = torch.bmm(adj, x)
+        return x + torch.sigmoid(self.gate) * sync_x
+
+
 # ── Full EEG Encoder ─────────────────────────────────────────────────────────
 
 
@@ -227,18 +244,11 @@ class S4EEGEncoder(nn.Module):
     5. Attention pooling   — sequence → summary vector
     6. Output heads:
         intent_logits   (B, n_intent)  — coarse discrete class (5)
-        continuous_xyz  (B, 3)         — direct continuous coordinate prediction
         confidence      (B,)           — prediction certainty [0,1]
         cognitive       dict of (B,) scalars
         planning_budget (B,)
 
-    continuous_xyz is the precision improvement over discrete intent_logits.
-    Gradient flows back through the full S4 stack from coordinate supervision,
-    so the encoder learns signal representations optimised for spatial precision,
-    not just class separation.
-
     confidence is used by:
-        - TemporalSmoother: high uncertainty → higher α (more damping)
         - ActBridge: low confidence → hold rather than act
     """
 
@@ -252,16 +262,17 @@ class S4EEGEncoder(nn.Module):
         n_intent: int = 5,
         dropout: float = 0.1,
         bidirectional: bool = True,
-        max_reach: float = 0.70,
     ):
         super().__init__()
         self.d_model = d_model
         self.downsample = downsample
-        self.max_reach = max_reach
 
         # Learned spatial filter (identity init — no information destroyed at start)
         self.artifact_filter = nn.Conv1d(n_channels, n_channels, 1, bias=False)
         nn.init.eye_(self.artifact_filter.weight.squeeze(-1))
+
+        # Functional Connectivity Attention (PLV approximation)
+        self.plv_attn = FunctionalConnectivityAttention(n_channels)
 
         # Spatial encoder.
         # GroupNorm(groups=n_channels) normalises each channel independently,
@@ -285,21 +296,16 @@ class S4EEGEncoder(nn.Module):
 
         # ── Output heads ──────────────────────────────────────────────────────
 
-        # Coarse discrete intent (5 classes) — fast, low-resolution
-        self.intent = nn.Linear(d_model, n_intent)
-
-        # Continuous 3D coordinate prediction — precise, high-resolution
-        # Two-layer MLP with bottleneck; tanh output scaled to arm reach
-        self.xyz_head = nn.Sequential(
+        # Temporal Smoothing Head (Ensemble over sequence)
+        # Non-linear classifier applied to each time step, averaging the logits.
+        self.intent = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
-            nn.SiLU(),
-            nn.Linear(d_model // 2, 3),
-            nn.Tanh(),
+            nn.GELU(),
+            nn.Linear(d_model // 2, n_intent)
         )
 
         # Confidence head: scalar uncertainty [0, 1]
-        # Trained implicitly — high spread in xyz predictions → low confidence
-        # Also accepts direct supervision if ground-truth is available.
+        # Trained implicitly via ActBridge output / TemporalSmoother
         self.conf_head = nn.Sequential(
             nn.Linear(d_model, 32),
             nn.SiLU(),
@@ -331,6 +337,9 @@ class S4EEGEncoder(nn.Module):
             eeg.std(-1, keepdim=True).clamp(1e-6)
         )
 
+        # Apply PLV-based functional connectivity attention
+        eeg = self.plv_attn(eeg)
+
         # Spatial encode + downsample
         x = self.ds(self.spatial(eeg)).transpose(1, 2)  # (B, T', d_model)
 
@@ -339,13 +348,14 @@ class S4EEGEncoder(nn.Module):
             x = blk(x, inference)
         x = self.norm(x)
 
-        # Attention-weighted pooling → (B, d_model)
+        # Attention-weighted pooling → (B, d_model) for cognitive/confidence heads
         w = F.softmax(self.pool_w(x).squeeze(-1), dim=-1)
         summary = (x * w.unsqueeze(-1)).sum(1)
 
-        # Continuous coordinate: tanh output scaled to arm reach
-        # xyz is in [-max_reach, +max_reach] per axis
-        xyz = self.xyz_head(summary) * self.max_reach  # (B, 3)
+        # Temporal Smoothing Head: ensemble overlapping windows (time steps)
+        # Non-linear classification at each step, then average logits for robust intent.
+        step_logits = self.intent(x)  # (B, T', n_intent)
+        smoothed_intent_logits = step_logits.mean(dim=1)
 
         # Confidence and cognitive state
         conf = self.conf_head(summary).squeeze(-1)  # (B,)
@@ -357,8 +367,7 @@ class S4EEGEncoder(nn.Module):
         return {
             "summary": summary,
             "sequence": x,
-            "intent_logits": self.intent(summary),
-            "continuous_xyz": xyz,
+            "intent_logits": smoothed_intent_logits,
             "confidence": conf,
             "cognitive": {
                 "workload": cog[:, 0],

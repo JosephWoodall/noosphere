@@ -1826,6 +1826,17 @@ class ActBridge:
             self._history.append(out)
             return out
 
+        if info is not None and info.get("sim_termination", 0.0) > 0.90:
+            out = {
+                "executed": False,
+                "reason": f"safety_gate: termination {info['sim_termination']:.2f} > 0.90",
+                "reward": 0.0,
+                "action": action,
+                "result": None,
+            }
+            self._history.append(out)
+            return out
+
         if self.dry_run:
             out = {
                 "executed": False,

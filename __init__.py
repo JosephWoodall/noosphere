@@ -32,7 +32,7 @@ from noosphere.hardware   import ServoController
 from noosphere.proto      import NCPEncoder, NCPDecoder, Channel, MsgType, NCPTransport
 from noosphere.learning   import (
     LearningManager, LearningConfig, LearningSignal,
-    SupervisedCoordinateLoss, S4XYZSupervisionLoss, PositionErrorLoss,
+    SupervisedCoordinateLoss, PositionErrorLoss,
     StepNFTPolicy, StepNFTLoss, EEGAugment,
 )
 from noosphere.actions    import (
@@ -79,7 +79,7 @@ __all__ = [
     "NCPEncoder", "NCPDecoder", "Channel", "MsgType", "NCPTransport",
     # Learning
     "LearningManager", "LearningConfig", "LearningSignal",
-    "SupervisedCoordinateLoss", "S4XYZSupervisionLoss", "PositionErrorLoss",
+    "SupervisedCoordinateLoss", "PositionErrorLoss",
     "StepNFTPolicy", "StepNFTLoss", "EEGAugment",
     # Actions
     "Action", "ActionSpace", "ActBridge", "Executor", "Tier",

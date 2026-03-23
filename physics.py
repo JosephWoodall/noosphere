@@ -186,9 +186,11 @@ class PhysicsTransitionPrior(nn.Module):
             k * pen.unsqueeze(-1) * n_hat + b * (vj - vi) * s.contacts.unsqueeze(-1)
         ).sum(2)
         dv = (Fext + Fg + Fd + Fc) / s.mass.unsqueeze(-1)
-        dpos = s.vel
+        dv = torch.clamp(dv, -1000.0, 1000.0)
+        dpos = torch.clamp(s.vel, -100.0, 100.0)
         Io = s.inertia * s.omega
         domega = (tau - torch.cross(s.omega, Io, -1)) / s.inertia.clamp(1e-6)
+        domega = torch.clamp(domega, -1000.0, 1000.0)
         w, x, y, z = s.rot[..., 0], s.rot[..., 1], s.rot[..., 2], s.rot[..., 3]
         ox, oy, oz = s.omega[..., 0], s.omega[..., 1], s.omega[..., 2]
         drot = 0.5 * torch.stack(
@@ -200,9 +202,10 @@ class PhysicsTransitionPrior(nn.Module):
             ],
             -1,
         )
+        drot = torch.clamp(drot, -1000.0, 1000.0)
         P_in = (Fext * s.vel).sum(-1).sum(-1)
         P_dis = -(Fd * s.vel).sum(-1).sum(-1)
-        dE = P_in - P_dis
+        dE = torch.clamp(P_in - P_dis, -10000.0, 10000.0)
         G = int(round(s.fluid_v.shape[1] ** (1 / 3)))
         try:
             u = s.fluid_v.reshape(s.B, G, G, G, 3).permute(0, 4, 1, 2, 3)

@@ -27,7 +27,7 @@ The same trained world model can drive a physical robotic arm or execute Linux s
 1. Neural Models & Roles
 Noosphere is composed of six interlinked neural modules:
 - S4EEGEncoder (State-Space Signal Processor): 
-    - Processes raw, noisy EEG time-series data. It maps biological brain activity into discrete intent_logits (what the user wants to do), confidence (signal clarity), and cognitive states (fatigue, workload).
+    - Processes raw, noisy EEG time-series data. Uses **Evidential Deep Learning (EDL)** to map biological brain activity into Dirichlet-bounded intent probabilities (`intent_probs`), mathematically rigorous epistemic uncertainty, and cognitive states (fatigue, workload). EDL replaces uncalibrated logits with probabilities that are provably bounded and carry principled uncertainty estimates.
 - NoosphereGNN (Graph Neural Network): 
     - Handles variable brain electrode topologies. It routes the extracted spatial features across the brain graph.    
 - PhysicsAugmentedRSSM (World Model): 
@@ -38,11 +38,13 @@ Noosphere is composed of six interlinked neural modules:
     - A neural policy trained inside the World Model's imagination. It learns to avoid fatal states while explicitly mimicking the human's historical intent.
 - MCTSPlanner (Monte Carlo Tree Search):
     - Rapidly simulates multiple future trajectories using the World Model to evaluate complex sequential actions before executing them.
+- HardwareDiscoveryDaemon (Plug-and-Play Extremity Detector):
+    - Scans USB/Serial interfaces at runtime to detect newly attached physical extremities (arms, grippers, wheels). Automatically calls `KinematicGNN.inject_nodes()` to expand the spatial graph topology — no code changes required when adding new hardware.
 
 2. Intent Translation (Shared Autonomy)
 Human intent is translated into action through a Probabilistic Blending Circuit, rather than a rigid deterministic switch:
 - Decoding: 
-    - The S4 module decodes the raw EEG into a biological probability distribution (p_bci) and an estimate of signal clarity (confidence).
+    - The S4 module decodes the raw EEG into a Dirichlet-distributed biological probability distribution (`p_bci`) via **Evidential Deep Learning (EDL)** and a mathematically rigorous epistemic uncertainty estimate (`1 - confidence`). High uncertainty → lower alpha blend → AI stabilises the action.
 - AI Prior: 
     - Simultaneously, the Actor / MCTSPlanner evaluates the environment and proposes a digital twin probability distribution (p_ai).
 - Blending: 
@@ -130,7 +132,7 @@ q̇ = ½ q ⊗ [0, ω]                                   quaternion, no gimbal l
 ∂u/∂t ≈ ν∇²u                                        coarse Navier-Stokes
 ```
 
-Gravity is cached as a `register_buffer` (not allocated per call). All six state components including fluid velocity are properly RK4-combined. The `ResidualCorrector` learns only `Δs = s_actual − s_physics`, initialised to zero. Five conservation law penalties (energy, momentum, angular momentum, quaternion unit norm, incompressibility) are tensor losses — gradient flows through them to the residual corrector.
+Gravity is cached as a `register_buffer` (not allocated per call). All six state components including fluid velocity are properly RK4-combined. The `ResidualCorrector` is a deep continuous-time MLP using `SwishResBlock` residual blocks — it learns `Δs = s_actual − s_physics` for unmodelled dynamics (soft-body deformations, turbulent flows, complex contacts), initialised to zero so analytical physics dominates at the start of training. Five conservation law penalties (energy, momentum, angular momentum, quaternion unit norm, incompressibility) are tensor losses — gradient flows through them to the residual corrector.
 
 **KL loss (DreamerV3 balanced, NaN-safe):**
 ```
@@ -540,6 +542,7 @@ noosphere/
 │                     Console · file · desktop · NCP alert channels
 ├── proto.py          NCP binary protocol + NCPTransport (Redis / in-process)
 ├── learning.py       5 loss classes + LearningManager + EEGAugment
+├── discovery.py      HardwareDiscoveryDaemon — plug-and-play extremity detection
 └── data/
     └── synth.py      ScalpEEGGenerator + obs_* builders + make_batch()
 
@@ -547,7 +550,7 @@ demo.py               Entry point
 requirements.txt
 ```
 
-21 files · 7,649 lines · pure Python + PyTorch
+22 files · 7,800+ lines · pure Python + PyTorch
 
 ---
 

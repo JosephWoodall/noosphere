@@ -282,6 +282,7 @@ class StepNFTLoss(nn.Module):
 
 # ── Unified learning manager ──────────────────────────────────────────────────
 
+@dataclass
 class LearningConfig:
     mode:                 str   = "all"
     supervised_weight:    float = 1.0

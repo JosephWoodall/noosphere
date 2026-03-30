@@ -4,8 +4,9 @@ noosphere/planner.py
 Actor, Critic, and PUCT MCTS Planner
 
 Features:
-- Dual-Control Action Encoder: Fuses the discrete action and continuous spatial intent.
-- Dual-Head Actor: Predicts BOTH discrete macro-intents and continuous physical trajectories.
+- Bounded Imagination: Actor's continuous head is wrapped in a Tanh activation
+  and scaled to `max_reach` to prevent physically impossible hallucinations 
+  during MCTS tree search and RL updates.
 """
 
 import math
@@ -16,28 +17,34 @@ from typing import Tuple, Dict, Optional
 class ActionEncoder(nn.Module):
     def __init__(self, n_actions: int, action_dim: int):
         super().__init__()
-        # Reserve 3 dimensions for the continuous spatial vector (xyz)
         self.emb = nn.Embedding(n_actions, action_dim - 3)
         
     def forward(self, discrete_action: torch.Tensor, continuous_action: torch.Tensor) -> torch.Tensor:
-        # Fuse digital command with physical intent into a unified dimension
         discrete_emb = self.emb(discrete_action)
         return torch.cat([discrete_emb, continuous_action], dim=-1)
 
 class Actor(nn.Module):
-    def __init__(self, state_dim: int, n_actions: int, hidden_dim: int = 256):
+    def __init__(self, state_dim: int, n_actions: int, hidden_dim: int = 256, max_reach: float = 0.70):
         super().__init__()
+        self.max_reach = max_reach
         self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim), nn.SiLU(),
             nn.LayerNorm(hidden_dim),
             nn.Linear(hidden_dim, hidden_dim), nn.SiLU()
         )
         self.discrete_head = nn.Linear(hidden_dim, n_actions)
-        self.continuous_head = nn.Linear(hidden_dim, 3) # Physical trajectory
+        
+        # Bounded Continuous Imagination
+        self.continuous_head = nn.Sequential(
+            nn.Linear(hidden_dim, 3),
+            nn.Tanh() # Constrains output to [-1, 1]
+        )
         
     def forward(self, state: torch.Tensor) -> Tuple[torch.distributions.Categorical, torch.Tensor]:
         h = self.net(state)
-        return torch.distributions.Categorical(logits=self.discrete_head(h)), self.continuous_head(h)
+        # Scale Tanh output by physical max_reach
+        cont_scaled = self.continuous_head(h) * self.max_reach
+        return torch.distributions.Categorical(logits=self.discrete_head(h)), cont_scaled
 
 class Critic(nn.Module):
     def __init__(self, state_dim: int, hidden_dim: int = 256):
@@ -123,7 +130,6 @@ class MCTSPlanner:
             parent = search_path[-2]
             action = action_path[-1]
             
-            # Unroll with fused action representation
             a_emb = self.action_enc(torch.tensor([action], device=self.device), node.continuous_action.unsqueeze(0))
             h2, z2, _ = self.rssm.imagine_step(parent.h, parent.z, a_emb)
             

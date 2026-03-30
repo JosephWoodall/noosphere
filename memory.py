@@ -4,9 +4,9 @@ noosphere/memory.py
 Experience and Episodic Memory Buffers
 
 Features:
-- Dual-Memory Epistemology: Separates 'raw_continuous' (Biological Intent) 
-  from 'exec_continuous' (Clamped Physical Reality) to preserve both 
-  psychological cloning and accurate physics modeling.
+- Biological Masking: SequenceReplayBuffer tracks `bci_active`. This prevents 
+  the Actor from suffering Mode Collapse by accidentally cloning autonomous AI actions.
+- Dual-Memory Epistemology: Separates 'raw_continuous' from 'exec_continuous'.
 """
 
 import numpy as np
@@ -23,14 +23,15 @@ class SequenceReplayBuffer:
         self.obs_buffer: List[Dict[str, np.ndarray]] = [{} for _ in range(capacity)]
         self.action_buffer = np.zeros(capacity, dtype=np.int64)
         
-        # Dual Continuous Memory
-        self.raw_cont_buffer = np.zeros((capacity, 3), dtype=np.float32)  # What the user wanted
-        self.exec_cont_buffer = np.zeros((capacity, 3), dtype=np.float32) # What the hardware allowed
+        self.raw_cont_buffer = np.zeros((capacity, 3), dtype=np.float32) 
+        self.exec_cont_buffer = np.zeros((capacity, 3), dtype=np.float32) 
+        
+        self.bci_active_buffer = np.zeros(capacity, dtype=np.float32) # The Biological Mask
         
         self.reward_buffer = np.zeros(capacity, dtype=np.float32)
         self.done_buffer = np.zeros(capacity, dtype=bool)
 
-    def add_step(self, obs: Dict[str, Any], action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, reward: float, done: bool):
+    def add_step(self, obs: Dict[str, Any], action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, bci_active: bool, reward: float, done: bool):
         numpy_obs = {}
         for k, v in obs.items():
             if isinstance(v, torch.Tensor): numpy_obs[k] = v.detach().cpu().numpy()
@@ -44,6 +45,7 @@ class SequenceReplayBuffer:
         if exec_cont is not None:
             self.exec_cont_buffer[self.ptr] = np.asarray(exec_cont, dtype=np.float32).flatten()[:3]
             
+        self.bci_active_buffer[self.ptr] = 1.0 if bci_active else 0.0
         self.reward_buffer[self.ptr] = reward
         self.done_buffer[self.ptr] = done
 
@@ -53,7 +55,7 @@ class SequenceReplayBuffer:
     def sample(self, batch_size: int, device: torch.device) -> Dict[str, torch.Tensor]:
         if self.size < self.seq_len: return {}
 
-        batch = {"actions": [], "raw_cont": [], "exec_cont": [], "rewards": [], "dones": []}
+        batch = {"actions": [], "raw_cont": [], "exec_cont": [], "bci_active": [], "rewards": [], "dones": []}
         obs_keys = self.obs_buffer[0].keys()
         for k in obs_keys: batch[k] = []
 
@@ -71,6 +73,7 @@ class SequenceReplayBuffer:
             batch["actions"].append(self.action_buffer[seq_indices])
             batch["raw_cont"].append(self.raw_cont_buffer[seq_indices])
             batch["exec_cont"].append(self.exec_cont_buffer[seq_indices])
+            batch["bci_active"].append(self.bci_active_buffer[seq_indices])
             batch["rewards"].append(self.reward_buffer[seq_indices])
             batch["dones"].append(self.done_buffer[seq_indices])
             for k in obs_keys:
@@ -81,6 +84,7 @@ class SequenceReplayBuffer:
             "actions": torch.tensor(np.stack(batch["actions"]), dtype=torch.long, device=device),
             "raw_cont": torch.tensor(np.stack(batch["raw_cont"]), dtype=torch.float32, device=device),
             "exec_cont": torch.tensor(np.stack(batch["exec_cont"]), dtype=torch.float32, device=device),
+            "bci_active": torch.tensor(np.stack(batch["bci_active"]), dtype=torch.float32, device=device),
             "rewards": torch.tensor(np.stack(batch["rewards"]), dtype=torch.float32, device=device),
             "dones": torch.tensor(np.stack(batch["dones"]), dtype=torch.float32, device=device)
         }
@@ -91,6 +95,7 @@ class SequenceReplayBuffer:
 
     def __len__(self) -> int: return self.size
 
+# ── [EpisodicMemory and WorkingMemory classes remain unchanged] ──
 class EpisodicMemory:
     def __init__(self, state_dim: int, value_dim: int, capacity: int = 5000):
         self.capacity = capacity; self.state_dim = state_dim

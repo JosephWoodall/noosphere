@@ -4,10 +4,10 @@ noosphere/agent.py
 Noosphere Agent
 
 Features:
-- The Fast-Path: High biological confidence entirely bypasses synchronous MCTS,
-  restoring zero-latency execution for physical continuous control.
-- Epistemological Split: WM learns physics from `exec_cont`. Actor clones `raw_cont`.
-- SIGReg targets `embed` state directly, preventing representation collapse.
+- Biological Masking: `_update_ac()` computes BC loss ONLY on human-driven timesteps,
+  curing Self-Distillation Mode Collapse.
+- Full-Spectrum Veto: A termination gate vetoes BOTH the discrete and continuous 
+  trajectory intents, holding the physical arm safely in place.
 """
 
 import logging
@@ -42,8 +42,7 @@ class AgentConfig:
     gamma: float = 0.99; lam: float = 0.95; lambda_kl: float = 1.0; lambda_recon: float = 0.5
     lambda_reward: float = 1.0; lambda_physics: float = 0.5; lambda_gnn_sparse: float = 0.01
     entropy_scale: float = 3e-4; bc_weight: float = 2.0; min_act_confidence: float = 0.3
-    fast_path_threshold: float = 0.85 # The bypass threshold
-    max_reach: float = 0.70
+    fast_path_threshold: float = 0.85; max_reach: float = 0.70
     wm_updates: int = 5; ac_updates: int = 5; warmup_steps: int = 1000; dry_run: bool = False
     replay_capacity: int = 500; episodic_capacity: int = 5000
 
@@ -74,7 +73,7 @@ class NoosphereAgent(nn.Module):
 
         self.perception = HybridPerceptionModel(
             d_model=C.d_model, n_heads=8, n_layers=6, n_eeg_channels=C.n_eeg_ch, s4_d_state=64, s4_n_blocks=4, s4_downsample=4, 
-            n_kinematic_nodes=C.n_nodes, node_feature_dim=C.node_feat_dim, gnn_n_layers=3, patch_size=C.patch_size,
+            n_kinematic_nodes=C.n_nodes, node_feature_dim=C.node_feat_dim, gnn_n_layers=3, patch_size=C.patch_size, max_reach=C.max_reach
         )
         self.rssm = PhysicsAugmentedRSSM(
             embed_dim=C.d_model, action_dim=C.action_dim, n_bodies=C.n_bodies, G=C.fluid_grid,
@@ -140,13 +139,16 @@ class NoosphereAgent(nn.Module):
         state = torch.cat([self._h, self._z], -1)
 
         p_bci = s4_out["intent_probs"][0] if s4_out is not None else None
-        cont_bci = s4_out["xyz_pred"][0] if s4_out is not None else None
+        
+        # Spatial Intent is now pulled from the fused perception output, not S4
+        cont_bci = perc_out["xyz_pred"][0] if "xyz_pred" in perc_out else None
+        
         confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
+        bci_active = confidence >= self.cfg.min_act_confidence
 
         n_sims = 0
         fast_path_active = False
 
-        # THE FAST-PATH: Zero-latency physical bypass
         if confidence >= self.cfg.fast_path_threshold:
             action = int(p_bci.argmax().item())
             p_final = p_bci
@@ -164,18 +166,24 @@ class NoosphereAgent(nn.Module):
                 cont_final = cont_bci if cont_bci is not None else actor_cont.squeeze(0)
                 action = int(p_final.argmax().item()) if deterministic else int(torch.distributions.Categorical(probs=p_final).sample().item())
 
-        # 1-Step Unroll for Safety
         a_test_emb = self.action_enc(torch.tensor([action], device=self.device), cont_final.unsqueeze(0))
         h2, z2, _ = self.rssm.imagine_step(self._h, self._z, a_test_emb)
         s2 = torch.cat([h2, z2], -1)
         cons2 = self.consequence(s2)
+        
+        sim_termination = cons2["termination"].item()
+
+        # FULL-SPECTRUM VETO: If termination > 0.9, clamp the physical arm to previous position
+        if sim_termination > 0.90:
+            cont_final = prev_cont_t.squeeze(0) if prev_cont_exec is not None else torch.zeros_like(cont_final)
 
         info = {
-            "sim_termination": cons2["termination"].item(), 
+            "sim_termination": sim_termination, 
             "physics_energy": ps.energy.mean().item(),
             "n_mcts_sims": n_sims,
             "raw_continuous_intent": cont_final.detach().cpu().numpy(),
-            "fast_path_active": fast_path_active
+            "fast_path_active": fast_path_active,
+            "bci_active": bci_active
         }
         
         if s4_out is not None:
@@ -196,8 +204,9 @@ class NoosphereAgent(nn.Module):
             obs = dict(obs)
             obs["structured"] = info["_exec_structured"]
 
-        # Replay Buffer now tracks intent AND execution
-        self.replay.add_step(obs, action, raw_cont, exec_cont, reward, done)
+        bci_active = info.get("bci_active", False) if info else False
+
+        self.replay.add_step(obs, action, raw_cont, exec_cont, bci_active, reward, done)
         self.working.push(np.zeros(1), action, reward)
 
         if self._h is not None and self._step % 10 == 0:
@@ -236,7 +245,6 @@ class NoosphereAgent(nn.Module):
                 perc_out = self.perception(inp)
                 obs_embed_list.append(perc_out["embed"])
                 if "eeg" in inp and self.learning_manager is not None:
-                    # FIX: SIGReg must target the latent 'embed' directly, not the sequence mean, to prevent control collapse.
                     def recon_encoder_fn(x): return self.perception.s4(x, inp.get("electrode_mask"))["embed"]
                     sigreg_loss, _ = self.learning_manager.compute_unsupervised_loss(inp["eeg"], recon_encoder_fn)
                     L_sigreg = L_sigreg + sigreg_loss
@@ -246,7 +254,6 @@ class NoosphereAgent(nn.Module):
 
         for t in range(T_eff):
             e = obs_embed_list[t]
-            # PHYSICS PRIOR: World model unrolls using the CLAMPED executed action, not the raw intent
             a = self.action_enc(batch["actions"][:, t], batch["exec_cont"][:, t])
             h, z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(h, z, a, e)
             s = torch.cat([h, z], -1)
@@ -277,6 +284,9 @@ class NoosphereAgent(nn.Module):
 
     def _update_ac(self) -> Dict[str, float]:
         C = self.cfg; B = C.batch_size; H = C.imag_horizon
+        batch = self.replay.sample(B, self.device)
+        
+        if not batch or "actions" not in batch: return {}
 
         if hasattr(self, "_last_st") and self._last_st is not None:
             flat_st = self._last_st.view(-1, self._last_st.shape[-1])
@@ -288,10 +298,14 @@ class NoosphereAgent(nn.Module):
             flat_raw_cont = self._last_raw_cont.view(-1, 3)
             dist_bc, cont_bc = self.actor(flat_st)
             
-            # PSYCHOLOGY CLONING: Actor learns from the RAW intent, regardless of what physics allowed
-            L_bc_discrete = -dist_bc.log_prob(flat_act).mean()
-            L_bc_cont = F.mse_loss(cont_bc, flat_raw_cont)
-            L_bc = L_bc_discrete + L_bc_cont
+            # BIOLOGICAL MASKING: Only clone human-driven timesteps to cure Self-Distillation Mode Collapse
+            mask = batch["bci_active"].view(-1)
+            
+            L_bc_discrete = -dist_bc.log_prob(flat_act)
+            L_bc_cont = F.mse_loss(cont_bc, flat_raw_cont, reduction='none').mean(dim=-1)
+            
+            # Mask applied before the mean
+            L_bc = ((L_bc_discrete + L_bc_cont) * mask).sum() / (mask.sum() + 1e-8)
         else:
             h = torch.zeros(B, self._det_dim, device=self.device); z = torch.zeros(B, self._stoch_dim, device=self.device)
             L_bc = torch.tensor(0.0, device=self.device)

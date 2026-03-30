@@ -4,9 +4,10 @@ noosphere/agent.py
 Noosphere Agent
 
 Wired in this version:
-1. Obedient Consequence Engine: S4 intent bypasses MCTS. MCTS acts as a safety gate.
-2. Imitation Prior: Actor learns a digital twin behavioral cloning loss.
-3. SIGReg integration via LearningManager.
+1. The MCTS Latency Trap: BCI signals bypass full MCTS search entirely.
+2. 1-Step Rollout: The world model executes localized consequence verification.
+3. The Actor-Critic Fix: Actor training transitions to pure Behavioral Cloning, 
+   dropping the extrinsic RL policy gradient to enforce "Digital Twin" alignment.
 """
 
 import logging
@@ -29,8 +30,6 @@ from noosphere.planner import ActionEncoder, Actor, Critic, ImaginationBuffer, M
 from noosphere.rssm import ConsequenceModel, ObservationDecoder
 
 logger = logging.getLogger(__name__)
-
-# ── Config ────────────────────────────────────────────────────────────────────
 
 @dataclass
 class AgentConfig:
@@ -67,7 +66,7 @@ class AgentConfig:
     lambda_physics: float = 0.5
     lambda_gnn_sparse: float = 0.01
     entropy_scale: float = 3e-4
-    bc_weight: float = 2.0  # Increased for stronger digital twin prior
+    bc_weight: float = 2.0  
     min_act_confidence: float = 0.3
     free_nats: float = 1.0
     wm_updates: int = 5
@@ -78,8 +77,6 @@ class AgentConfig:
     dry_run: bool = False
     replay_capacity: int = 500
     episodic_capacity: int = 5000
-
-# ── Observation preprocessor ──────────────────────────────────────────────────
 
 class _Prep:
     def __init__(self, device: torch.device):
@@ -106,7 +103,6 @@ class _Prep:
             out["electrode_mask"] = torch.tensor(np.array(obs["electrode_mask"], dtype=np.float32)[None], device=self.dev)
         return out
 
-# ── Agent ─────────────────────────────────────────────────────────────────────
 
 class NoosphereAgent(nn.Module):
     def __init__(self, cfg: AgentConfig, device: torch.device):
@@ -184,7 +180,6 @@ class NoosphereAgent(nn.Module):
     def step(self, obs: Dict, prev_action: Optional[int] = None, deterministic: bool = False) -> Tuple[int, Dict]:
         obs_embed, perc_out = self._encode_obs(obs)
         s4_out = perc_out.get("s4_out")
-        gnn_out = perc_out.get("gnn_out")
 
         a_embed = torch.zeros(1, self.cfg.action_dim, device=self.device) if prev_action is None else self.action_enc(torch.tensor([prev_action], device=self.device))
 
@@ -194,40 +189,29 @@ class NoosphereAgent(nn.Module):
         state = torch.cat([self._h, self._z], -1)
         cons = self.consequence(state)
 
-        n_sims = self.cfg.n_mcts_sims
-        if s4_out is not None:
-            budget = s4_out["planning_budget"].mean().item()
-            n_sims = max(5, int(n_sims * budget))
+        n_sims = 0
 
-        recent_r = self.working.recent_rewards(10)
-        if recent_r and float(np.mean(recent_r)) < -0.1:
-            n_sims = min(n_sims * 2, self.cfg.n_mcts_sims * 3)
-
-        episodic_value_bonus: Optional[torch.Tensor] = None
-        try:
-            ep_vals, ep_attn = self.episodic.read(state)
-            ep_bonus = (ep_vals[:, 0] * ep_attn).sum() 
-            episodic_value_bonus = ep_bonus.detach()
-        except Exception: pass
-
-        # ── Obedient Consequence Engine ───────────────────────────────────────
-        if self.cfg.use_mcts and not deterministic:
-            self.planner.episodic_bonus = episodic_value_bonus.item() if episodic_value_bonus is not None and episodic_value_bonus.abs() > 0.01 else 0.0
-            self.planner.n_simulations = n_sims
-            _, p_ai = self.planner.search(self._h, self._z)
-        else:
-            p_ai = self.actor.forward(state).probs.squeeze(0)
-
-        # The Safety Gate Bypass: Human intent dictates action execution.
         if s4_out is not None:
             p_bci = s4_out["intent_probs"][0]
             action = int(p_bci.argmax().item())
             p_final = p_bci 
+            
+            p_ai = torch.zeros_like(p_final) 
         else:
+            n_sims = self.cfg.n_mcts_sims
+            recent_r = self.working.recent_rewards(10)
+            if recent_r and float(np.mean(recent_r)) < -0.1:
+                n_sims = min(n_sims * 2, self.cfg.n_mcts_sims * 3)
+
+            if self.cfg.use_mcts and not deterministic:
+                self.planner.n_simulations = n_sims
+                _, p_ai = self.planner.search(self._h, self._z)
+            else:
+                p_ai = self.actor.forward(state).probs.squeeze(0)
+
             p_final = p_ai
             action = int(p_final.argmax().item()) if deterministic else int(torch.distributions.Categorical(probs=p_final).sample().item())
 
-        # Simulate consequence of the selected action for safety validation
         h2, z2, _ = self.rssm.imagine_step(self._h, self._z, self.action_enc(torch.tensor([action], device=self.device)))
         s2 = torch.cat([h2, z2], -1)
         cons2 = self.consequence(s2)
@@ -236,7 +220,7 @@ class NoosphereAgent(nn.Module):
             "pred_reward": cons["reward"].item(),
             "pred_value": cons["value"].item(),
             "sim_reward": cons2["reward"].item(),
-            "sim_termination": cons2["termination"].item(), # High termination probability triggers ActBridge veto
+            "sim_termination": cons2["termination"].item(), 
             "termination_prob": cons["termination"].item(),
             "physics_energy": ps.energy.mean().item(),
             "n_mcts_sims": n_sims,
@@ -247,6 +231,10 @@ class NoosphereAgent(nn.Module):
             info["s4_confidence"] = s4_out["confidence"][0].item()
             info["p_bci"] = p_bci.detach().cpu().numpy()
             info["p_final"] = p_final.detach().cpu().numpy()
+            
+            budget = s4_out["planning_budget"].mean().item()
+            info["internal_uncertainty_budget"] = budget
+            
         info["p_ai"] = p_ai.detach().cpu().numpy()
 
         if self.act_bridge is not None:
@@ -280,23 +268,6 @@ class NoosphereAgent(nn.Module):
             self.reset_latent()
             self.working.clear()
 
-    def apply_corrections(self, corrections: List[Dict]):
-        if not corrections or self.apparatus_predictor is None or not hasattr(self.apparatus_predictor, "update"): return {}
-        spatial_features = torch.tensor(np.stack([c["embedding"] for c in corrections]), dtype=torch.float32, device=self.device)
-        actual_tips = torch.tensor(np.stack([c["actual_tip"] for c in corrections]), dtype=torch.float32, device=self.device)
-        loss_val = self.apparatus_predictor.update(spatial_features, actual_tips)
-        return {"apparatus/position_error": loss_val} if loss_val is not None else {}
-
-    def run_calibration(self, calibration_session, eeg_source) -> bool:
-        for name, target, prompt in calibration_session.MOVEMENTS:
-            logger.info(f"[Calibration] {prompt} and hold ...")
-            seg = eeg_source() if callable(eeg_source) else eeg_source.next_segment()
-            if "spatial_features" in seg: spatial_features = np.array(seg["spatial_features"], dtype=np.float32)
-            elif "structured" in seg: spatial_features = np.array(seg["structured"], dtype=np.float32).flatten()
-            else: spatial_features = np.zeros(25, dtype=np.float32)
-            calibration_session.add_movement(name, spatial_features, target)
-        return calibration_session.complete
-
     def update(self) -> Dict[str, float]:
         metrics = {}
         if len(self.replay) < self.cfg.batch_size: return metrics
@@ -305,7 +276,11 @@ class NoosphereAgent(nn.Module):
             for _ in range(self.cfg.ac_updates): metrics.update(self._update_ac())
         if self.learning_manager is not None:
             corrections = self.learning_manager.drain_corrections()
-            if corrections: metrics.update(self.apply_corrections(corrections))
+            if corrections and self.apparatus_predictor is not None:
+                spatial_features = torch.tensor(np.stack([c["embedding"] for c in corrections]), dtype=torch.float32, device=self.device)
+                actual_tips = torch.tensor(np.stack([c["actual_tip"] for c in corrections]), dtype=torch.float32, device=self.device)
+                loss_val = self.apparatus_predictor.update(spatial_features, actual_tips)
+                if loss_val is not None: metrics.update({"apparatus/position_error": loss_val})
         return metrics
 
     def _update_wm(self) -> Dict[str, float]:
@@ -418,23 +393,18 @@ class NoosphereAgent(nn.Module):
 
         G = self._imag_buf.lambda_returns()
         st = torch.stack(self._imag_buf.states)
-        lp = torch.stack(self._imag_buf.log_probs)
-
+        
         v1, v2 = self.critic(st.detach().view(-1, st.shape[-1]))
         L_v = F.mse_loss(v1.view(H, B), G) + F.mse_loss(v2.view(H, B), G)
-        A = (G - G.mean()) / (G.std() + 1e-8)
-        L_p = -(lp * A.detach()).mean()
-        ent = self.actor.entropy(st.view(-1, st.shape[-1]).detach()).mean()
         
-        # Digital Twin Prior ensures alignment 
-        loss = L_p - C.entropy_scale * ent + L_v + (C.bc_weight * L_bc)
+        loss = L_v + (C.bc_weight * L_bc)
 
         self.opt_ac.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self._ac_params, C.grad_clip)
         self.opt_ac.step()
 
-        return {"ac/actor": L_p.item(), "ac/critic": L_v.item(), "ac/return": G.mean().item(), "ac/bc_loss": L_bc.item()}
+        return {"ac/critic": L_v.item(), "ac/return": G.mean().item(), "ac/bc_loss": L_bc.item()}
 
     def export_bundle(self, path: str, domain_tags: Optional[List[str]] = None, description: str = "", author: str = "", n_training_steps: int = 0, train_metrics: Optional[Dict[str, float]] = None):
         meta = BundleMetadata(domain_tags=domain_tags or [], description=description, author=author, n_training_steps=n_training_steps or self._step)

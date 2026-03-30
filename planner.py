@@ -1,296 +1,170 @@
 """
 noosphere/planner.py
 ====================
-MCTS Planner, Actor, Critic, ImaginationBuffer
+Actor, Critic, and PUCT MCTS Planner
 
-Changes in v1.3.1
------------------
-1. ImaginationBuffer.lambda_returns: builds G tensor on the same device as
-   rewards, not always on CPU. Eliminates silent host↔device copy each AC step.
-
-2. ImaginationBuffer: `clear()` now also resets the buffer after lambda_returns
-   so it can be reused across AC update calls without re-instantiation.
-
-3. Actor.entropy(): added convenience method for use in actor loss.
+Features:
+- PUCT Algorithm: The MCTSPlanner uses the Behavioral Cloning Actor to provide
+  the structural prior P(s,a) for node expansion. The AI cannot search outside 
+  the boundaries of how you personally operate.
 """
 
 import math
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-# ── Action encoder ────────────────────────────────────────────────────────────
-
+from typing import Tuple, Dict, List, Optional
 
 class ActionEncoder(nn.Module):
-    """Embeds integer actions as continuous vectors."""
-
     def __init__(self, n_actions: int, action_dim: int):
         super().__init__()
         self.emb = nn.Embedding(n_actions, action_dim)
-
-    def forward(self, a: torch.Tensor) -> torch.Tensor:
-        return self.emb(a.long())
-
-
-# ── Actor ─────────────────────────────────────────────────────────────────────
-
+    def forward(self, action: torch.Tensor) -> torch.Tensor:
+        return self.emb(action)
 
 class Actor(nn.Module):
-    """
-    Categorical policy.
-    Returns a Categorical distribution over n_actions.
-    """
-
-    def __init__(self, state_dim: int, n_actions: int, hidden: int = 256):
+    def __init__(self, state_dim: int, n_actions: int, hidden_dim: int = 256):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(state_dim, hidden),
-            nn.SiLU(),
-            nn.Linear(hidden, hidden),
-            nn.SiLU(),
-            nn.Linear(hidden, n_actions),
+            nn.Linear(state_dim, hidden_dim), nn.SiLU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim), nn.SiLU(),
+            nn.Linear(hidden_dim, n_actions)
         )
-
     def forward(self, state: torch.Tensor) -> torch.distributions.Categorical:
-        return torch.distributions.Categorical(logits=self.net(state))
-
-    def act(self, state: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
-        dist = self.forward(state)
-        return dist.mode if deterministic else dist.sample()
-
-    def entropy(self, state: torch.Tensor) -> torch.Tensor:
-        return self.forward(state).entropy()
-
-
-# ── Critic ────────────────────────────────────────────────────────────────────
-
+        logits = self.net(state)
+        return torch.distributions.Categorical(logits=logits)
 
 class Critic(nn.Module):
-    """
-    Clipped double-Q critic.
-    Two independent value heads; min is used for conservative estimates.
-    """
-
-    def __init__(self, state_dim: int, hidden: int = 256):
+    def __init__(self, state_dim: int, hidden_dim: int = 256):
         super().__init__()
-
-        def _v():
+        def make_q():
             return nn.Sequential(
-                nn.Linear(state_dim, hidden),
-                nn.SiLU(),
-                nn.Linear(hidden, hidden),
-                nn.SiLU(),
-                nn.Linear(hidden, 1),
+                nn.Linear(state_dim, hidden_dim), nn.SiLU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, hidden_dim), nn.SiLU(),
+                nn.Linear(hidden_dim, 1)
             )
-
-        self.v1 = _v()
-        self.v2 = _v()
+        self.q1, self.q2 = make_q(), make_q()
 
     def forward(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.v1(state).squeeze(-1), self.v2(state).squeeze(-1)
+        return self.q1(state), self.q2(state)
 
     def min_value(self, state: torch.Tensor) -> torch.Tensor:
         v1, v2 = self.forward(state)
         return torch.min(v1, v2)
 
+class ImaginationBuffer:
+    def __init__(self, gamma: float = 0.99, lam: float = 0.95):
+        self.gamma = gamma; self.lam = lam
+        self.clear()
+    def clear(self):
+        self.states, self.actions, self.rewards = [], [], []
+        self.values, self.log_probs, self.dones = [], [], []
+    def add(self, s, a, r, v, lp, d):
+        self.states.append(s); self.actions.append(a); self.rewards.append(r)
+        self.values.append(v); self.log_probs.append(lp); self.dones.append(d)
+    def lambda_returns(self) -> torch.Tensor:
+        R = self.values[-1]
+        returns = []
+        for r, v, d in zip(reversed(self.rewards), reversed(self.values), reversed(self.dones)):
+            R = r + self.gamma * (1.0 - d) * ((1.0 - self.lam) * v + self.lam * R)
+            returns.insert(0, R)
+        return torch.stack(returns)
 
-# ── MCTS node ─────────────────────────────────────────────────────────────────
-
-
-@dataclass
 class MCTSNode:
-    h: torch.Tensor
-    z: torch.Tensor
-    parent: Optional["MCTSNode"] = None
-    action: Optional[int] = None
-    prior: float = 1.0
-    visits: int = 0
-    value_sum: float = 0.0
-    children: Dict[int, "MCTSNode"] = field(default_factory=dict)
+    def __init__(self, h: torch.Tensor, z: torch.Tensor, prior: float = 1.0):
+        self.h = h; self.z = z
+        self.prior = prior
+        self.visits = 0
+        self.value_sum = 0.0
+        self.children: Dict[int, MCTSNode] = {}
+        self.reward = 0.0
+        self.termination = 0.0
 
     @property
-    def Q(self) -> float:
-        return self.value_sum / self.visits if self.visits else 0.0
-
-    def ucb(self, parent_visits: int, c: float = 1.25) -> float:
-        return self.Q + c * self.prior * math.sqrt(parent_visits) / (1 + self.visits)
-
-    def is_leaf(self) -> bool:
-        return not self.children
-
-
-# ── MCTS planner ──────────────────────────────────────────────────────────────
-
+    def value(self) -> float:
+        return self.value_sum / self.visits if self.visits > 0 else 0.0
 
 class MCTSPlanner:
-    """
-    AlphaZero-style MCTS in world-model latent space.
-    The world model is the simulator — no real environment calls during search.
-    """
-
-    def __init__(
-        self,
-        rssm,
-        consequence,
-        actor: Actor,
-        action_encoder: ActionEncoder,
-        n_actions: int,
-        n_simulations: int = 50,
-        horizon: int = 15,
-        gamma: float = 0.99,
-        c_puct: float = 1.25,
-        device: torch.device = torch.device("cpu"),
-    ):
+    def __init__(self, rssm, consequence, actor, action_enc, n_actions, n_simulations: int = 30, horizon: int = 10, gamma: float = 0.99, c_puct: float = 1.5, device=None):
         self.rssm = rssm
-        self.cons = consequence
+        self.consequence = consequence
         self.actor = actor
-        self.ae = action_encoder
-        self.N = n_actions
-        self.nsim = n_simulations
-        self.H = horizon
-        self.g = gamma
-        self.c = c_puct
-        self.dev = device
-        self.episodic_bonus: float = 0.0
-
-    @property
-    def n_simulations(self):
-        return self.nsim
-
-    @n_simulations.setter
-    def n_simulations(self, v: int):
-        self.nsim = v
+        self.action_enc = action_enc
+        self.n_actions = n_actions
+        self.n_simulations = n_simulations
+        self.horizon = horizon
+        self.gamma = gamma
+        self.c_puct = c_puct
+        self.device = device
+        self.episodic_bonus = 0.0
 
     @torch.no_grad()
-    def search(self, h: torch.Tensor, z: torch.Tensor) -> tuple[int, torch.Tensor]:
-        root = MCTSNode(h=h, z=z)
-        self._expand(root)
-        for _ in range(self.nsim):
-            node, path = self._select(root)
-            if node.is_leaf() and node.visits > 0:
-                self._expand(node)
-                if node.children:
-                    node = next(iter(node.children.values()))
-                    path.append(node)
-            v = self._evaluate(node)
-            self._backup(path, v)
+    def search(self, root_h: torch.Tensor, root_z: torch.Tensor) -> Tuple[int, torch.Tensor]:
+        root = MCTSNode(root_h, root_z)
+        
+        # Inject the Digital Twin prior at the root
+        state = torch.cat([root_h, root_z], -1)
+        root_probs = self.actor(state).probs.squeeze(0).cpu().numpy()
+        
+        for action in range(self.n_actions):
+            root.children[action] = MCTSNode(None, None, prior=root_probs[action])
+
+        for _ in range(self.n_simulations):
+            node = root
+            search_path = [node]
+            action_path = []
             
-        visits = torch.tensor([root.children[a].visits for a in range(self.N)], dtype=torch.float32, device=self.dev)
-        if visits.sum() > 0:
-            probs = visits / visits.sum()
-        else:
-            probs = torch.tensor([root.children[a].prior for a in range(self.N)], dtype=torch.float32, device=self.dev)
-            probs = probs / probs.sum()
+            # Selection (PUCT)
+            for _ in range(self.horizon):
+                if not node.children: break
+                
+                best_score = -float('inf')
+                best_action = -1
+                
+                for a, child in node.children.items():
+                    u = self.c_puct * child.prior * math.sqrt(node.visits + 1) / (1 + child.visits)
+                    q = child.value
+                    score = q + u
+                    if score > best_score:
+                        best_score = score
+                        best_action = a
+                        
+                action_path.append(best_action)
+                node = node.children[best_action]
+                search_path.append(node)
+
+            # Expansion & Evaluation
+            parent = search_path[-2]
+            action = action_path[-1]
+            a_emb = self.action_enc(torch.tensor([action], device=self.device))
+            h2, z2, _ = self.rssm.imagine_step(parent.h, parent.z, a_emb)
             
-        action = int(probs.argmax().item())
-        return action, probs
+            s2 = torch.cat([h2, z2], -1)
+            cons = self.consequence(s2)
+            
+            node.h = h2
+            node.z = z2
+            node.reward = cons["reward"].item()
+            node.termination = cons["termination"].item()
+            
+            value = cons["value"].item()
+            
+            if node.termination < 0.5:
+                child_probs = self.actor(s2).probs.squeeze(0).cpu().numpy()
+                for a in range(self.n_actions):
+                    node.children[a] = MCTSNode(None, None, prior=child_probs[a])
 
-    def _select(self, node: MCTSNode):
-        path = [node]
-        while not node.is_leaf():
-            node = node.children[
-                max(
-                    node.children,
-                    key=lambda a: node.children[a].ucb(node.visits, self.c),
-                )
-            ]
-            path.append(node)
-        return node, path
+            # Backpropagation
+            for i, n in enumerate(reversed(search_path)):
+                n.visits += 1
+                n.value_sum += value
+                value = n.reward + self.gamma * (1.0 - n.termination) * value
 
-    def _expand(self, node: MCTSNode):
-        s = torch.cat([node.h, node.z], -1)
-        dist = self.actor.forward(s)
-        prior = dist.probs.squeeze(0).cpu().numpy()
-        for a in range(self.N):
-            h2, z2, _ = self.rssm.imagine_step(
-                node.h, node.z, self.ae(torch.tensor([a], device=self.dev))
-            )
-            node.children[a] = MCTSNode(
-                h=h2, z=z2, parent=node, action=a, prior=float(prior[a])
-            )
-
-    def _evaluate(self, node: MCTSNode) -> float:
-        h, z = node.h, node.z
-        R, disc = 0.0, 1.0
-        for _ in range(self.H):
-            s = torch.cat([h, z], -1)
-            c = self.cons(s)
-            R += disc * c["reward"].item()
-            disc *= self.g
-            if c["termination"].item() > 0.5:
-                break
-            a = self.actor.act(s, deterministic=True)
-            if a.dim() == 0:
-                a = a.unsqueeze(0)
-            h, z, _ = self.rssm.imagine_step(h, z, self.ae(a))
-        return (
-            R
-            + disc * self.cons(torch.cat([h, z], -1))["value"].item()
-            + self.episodic_bonus
-        )
-
-    def _backup(self, path: List[MCTSNode], v: float):
-        for node in reversed(path):
-            node.visits += 1
-            node.value_sum += v
-            v *= self.g
-
-
-# ── Imagination buffer ────────────────────────────────────────────────────────
-
-
-class ImaginationBuffer:
-    """
-    Stores imagined trajectories for TD(λ) actor-critic training.
-
-    Fix v1.3.1: lambda_returns builds G on the device of the rewards tensor,
-    not always on CPU. This eliminates a host↔device copy each AC update.
-    """
-
-    def __init__(self, gamma: float = 0.99, lam: float = 0.95):
-        self.g = gamma
-        self.l = lam
-        self.states: List[torch.Tensor] = []
-        self.actions: List[torch.Tensor] = []
-        self.rewards: List[torch.Tensor] = []
-        self.values: List[torch.Tensor] = []
-        self.log_probs: List[torch.Tensor] = []
-        self.dones: List[torch.Tensor] = []
-
-    def add(self, s, a, r, v, lp, d):
-        self.states.append(s)
-        self.actions.append(a)
-        self.rewards.append(r)
-        self.values.append(v)
-        self.log_probs.append(lp)
-        self.dones.append(d)
-
-    def lambda_returns(self) -> torch.Tensor:
-        T = len(self.rewards)
-        vs = torch.stack(self.values).detach()
-        rs = torch.stack(self.rewards).detach()
-        ds = torch.stack(self.dones).detach()
-        # Build G on same device as rs — no CPU detour
-        G = torch.zeros_like(rs)
-        Gn = vs[-1]
-        for t in reversed(range(T)):
-            nd = 1.0 - ds[t].float()
-            Gn = rs[t] + self.g * nd * ((1 - self.l) * vs[t] + self.l * Gn)
-            G[t] = Gn
-        return G
-
-    def clear(self):
-        for lst in [
-            self.states,
-            self.actions,
-            self.rewards,
-            self.values,
-            self.log_probs,
-            self.dones,
-        ]:
-            lst.clear()
+        # Action selection based on visit counts
+        visits = torch.tensor([root.children[a].visits for a in range(self.n_actions)], dtype=torch.float32, device=self.device)
+        probs = visits / visits.sum()
+        best_action = int(probs.argmax().item())
+        
+        return best_action, probs

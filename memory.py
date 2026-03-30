@@ -4,8 +4,9 @@ noosphere/memory.py
 Experience and Episodic Memory Buffers
 
 Features:
-- Dual-Control Tracking: SequenceReplayBuffer now stores both discrete macro-intents 
-  and continuous physical trajectories (xyz) to enable full-spectrum Behavioral Cloning.
+- Dual-Memory Epistemology: Separates 'raw_continuous' (Biological Intent) 
+  from 'exec_continuous' (Clamped Physical Reality) to preserve both 
+  psychological cloning and accurate physics modeling.
 """
 
 import numpy as np
@@ -21,11 +22,15 @@ class SequenceReplayBuffer:
         
         self.obs_buffer: List[Dict[str, np.ndarray]] = [{} for _ in range(capacity)]
         self.action_buffer = np.zeros(capacity, dtype=np.int64)
-        self.continuous_action_buffer = np.zeros((capacity, 3), dtype=np.float32) # New: Physical tracking
+        
+        # Dual Continuous Memory
+        self.raw_cont_buffer = np.zeros((capacity, 3), dtype=np.float32)  # What the user wanted
+        self.exec_cont_buffer = np.zeros((capacity, 3), dtype=np.float32) # What the hardware allowed
+        
         self.reward_buffer = np.zeros(capacity, dtype=np.float32)
         self.done_buffer = np.zeros(capacity, dtype=bool)
 
-    def add_step(self, obs: Dict[str, Any], action: int, continuous_action: np.ndarray, reward: float, done: bool):
+    def add_step(self, obs: Dict[str, Any], action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, reward: float, done: bool):
         numpy_obs = {}
         for k, v in obs.items():
             if isinstance(v, torch.Tensor): numpy_obs[k] = v.detach().cpu().numpy()
@@ -34,9 +39,10 @@ class SequenceReplayBuffer:
         self.obs_buffer[self.ptr] = numpy_obs
         self.action_buffer[self.ptr] = action
         
-        # Ensure correct shape for 3D continuous intent
-        if continuous_action is not None:
-            self.continuous_action_buffer[self.ptr] = np.asarray(continuous_action, dtype=np.float32).flatten()[:3]
+        if raw_cont is not None:
+            self.raw_cont_buffer[self.ptr] = np.asarray(raw_cont, dtype=np.float32).flatten()[:3]
+        if exec_cont is not None:
+            self.exec_cont_buffer[self.ptr] = np.asarray(exec_cont, dtype=np.float32).flatten()[:3]
             
         self.reward_buffer[self.ptr] = reward
         self.done_buffer[self.ptr] = done
@@ -47,7 +53,7 @@ class SequenceReplayBuffer:
     def sample(self, batch_size: int, device: torch.device) -> Dict[str, torch.Tensor]:
         if self.size < self.seq_len: return {}
 
-        batch = {"actions": [], "continuous_actions": [], "rewards": [], "dones": []}
+        batch = {"actions": [], "raw_cont": [], "exec_cont": [], "rewards": [], "dones": []}
         obs_keys = self.obs_buffer[0].keys()
         for k in obs_keys: batch[k] = []
 
@@ -58,13 +64,13 @@ class SequenceReplayBuffer:
                 valid_starts.append(i)
 
         if len(valid_starts) < batch_size: return {}
-
         start_indices = np.random.choice(valid_starts, batch_size, replace=False)
 
         for start in start_indices:
             seq_indices = [(start + i) % self.capacity for i in range(self.seq_len)]
             batch["actions"].append(self.action_buffer[seq_indices])
-            batch["continuous_actions"].append(self.continuous_action_buffer[seq_indices])
+            batch["raw_cont"].append(self.raw_cont_buffer[seq_indices])
+            batch["exec_cont"].append(self.exec_cont_buffer[seq_indices])
             batch["rewards"].append(self.reward_buffer[seq_indices])
             batch["dones"].append(self.done_buffer[seq_indices])
             for k in obs_keys:
@@ -73,7 +79,8 @@ class SequenceReplayBuffer:
 
         out = {
             "actions": torch.tensor(np.stack(batch["actions"]), dtype=torch.long, device=device),
-            "continuous_actions": torch.tensor(np.stack(batch["continuous_actions"]), dtype=torch.float32, device=device),
+            "raw_cont": torch.tensor(np.stack(batch["raw_cont"]), dtype=torch.float32, device=device),
+            "exec_cont": torch.tensor(np.stack(batch["exec_cont"]), dtype=torch.float32, device=device),
             "rewards": torch.tensor(np.stack(batch["rewards"]), dtype=torch.float32, device=device),
             "dones": torch.tensor(np.stack(batch["dones"]), dtype=torch.float32, device=device)
         }

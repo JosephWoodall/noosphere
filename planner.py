@@ -4,16 +4,15 @@ noosphere/planner.py
 Actor, Critic, and PUCT MCTS Planner
 
 Features:
-- PUCT Algorithm: The MCTSPlanner uses the Behavioral Cloning Actor to provide
-  the structural prior P(s,a) for node expansion. The AI cannot search outside 
-  the boundaries of how you personally operate.
+- Intent-Conditioned Planning: MCTS is heavily penalized for deviating from 
+  the biological intent (bci_intent). RL optimizes the path, but the human 
+  defines the destination.
 """
 
 import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Tuple, Dict, List, Optional
+from typing import Tuple, Dict, Optional
 
 class ActionEncoder(nn.Module):
     def __init__(self, n_actions: int, action_dim: int):
@@ -32,8 +31,7 @@ class Actor(nn.Module):
             nn.Linear(hidden_dim, n_actions)
         )
     def forward(self, state: torch.Tensor) -> torch.distributions.Categorical:
-        logits = self.net(state)
-        return torch.distributions.Categorical(logits=logits)
+        return torch.distributions.Categorical(logits=self.net(state))
 
 class Critic(nn.Module):
     def __init__(self, state_dim: int, hidden_dim: int = 256):
@@ -73,7 +71,7 @@ class ImaginationBuffer:
         return torch.stack(returns)
 
 class MCTSNode:
-    def __init__(self, h: torch.Tensor, z: torch.Tensor, prior: float = 1.0):
+    def __init__(self, h: Optional[torch.Tensor], z: Optional[torch.Tensor], prior: float = 1.0):
         self.h = h; self.z = z
         self.prior = prior
         self.visits = 0
@@ -98,15 +96,17 @@ class MCTSPlanner:
         self.gamma = gamma
         self.c_puct = c_puct
         self.device = device
-        self.episodic_bonus = 0.0
 
     @torch.no_grad()
-    def search(self, root_h: torch.Tensor, root_z: torch.Tensor) -> Tuple[int, torch.Tensor]:
+    def search(self, root_h: torch.Tensor, root_z: torch.Tensor, bci_intent: Optional[torch.Tensor] = None) -> Tuple[int, torch.Tensor]:
         root = MCTSNode(root_h, root_z)
-        
-        # Inject the Digital Twin prior at the root
         state = torch.cat([root_h, root_z], -1)
-        root_probs = self.actor(state).probs.squeeze(0).cpu().numpy()
+        
+        # Base prior from the RL Digital Twin Actor
+        actor_probs = self.actor(state).probs.squeeze(0).cpu().numpy()
+        
+        # If the user emits a biological intent, it overrides the root prior
+        root_probs = bci_intent.cpu().numpy() if bci_intent is not None else actor_probs
         
         for action in range(self.n_actions):
             root.children[action] = MCTSNode(None, None, prior=root_probs[action])
@@ -116,7 +116,6 @@ class MCTSPlanner:
             search_path = [node]
             action_path = []
             
-            # Selection (PUCT)
             for _ in range(self.horizon):
                 if not node.children: break
                 
@@ -125,8 +124,7 @@ class MCTSPlanner:
                 
                 for a, child in node.children.items():
                     u = self.c_puct * child.prior * math.sqrt(node.visits + 1) / (1 + child.visits)
-                    q = child.value
-                    score = q + u
+                    score = child.value + u
                     if score > best_score:
                         best_score = score
                         best_action = a
@@ -135,7 +133,6 @@ class MCTSPlanner:
                 node = node.children[best_action]
                 search_path.append(node)
 
-            # Expansion & Evaluation
             parent = search_path[-2]
             action = action_path[-1]
             a_emb = self.action_enc(torch.tensor([action], device=self.device))
@@ -144,25 +141,32 @@ class MCTSPlanner:
             s2 = torch.cat([h2, z2], -1)
             cons = self.consequence(s2)
             
-            node.h = h2
-            node.z = z2
-            node.reward = cons["reward"].item()
+            node.h = h2; node.z = z2
             node.termination = cons["termination"].item()
             
-            value = cons["value"].item()
+            # THE BIOLOGICAL ALIGNMENT PENALTY
+            # RL Path Planning evaluates the standard environmental reward...
+            base_reward = cons.get("reward", torch.zeros(1)).item()
+            
+            intent_penalty = 0.0
+            if bci_intent is not None:
+                intent_prob = bci_intent[action].item()
+                # Heavy penalty for the RL planner if it attempts to deviate from the human intent
+                intent_penalty = -5.0 * (1.0 - intent_prob)
+                
+            node.reward = base_reward + intent_penalty
+            value = cons.get("value", torch.zeros(1)).item()
             
             if node.termination < 0.5:
                 child_probs = self.actor(s2).probs.squeeze(0).cpu().numpy()
                 for a in range(self.n_actions):
                     node.children[a] = MCTSNode(None, None, prior=child_probs[a])
 
-            # Backpropagation
             for i, n in enumerate(reversed(search_path)):
                 n.visits += 1
                 n.value_sum += value
                 value = n.reward + self.gamma * (1.0 - n.termination) * value
 
-        # Action selection based on visit counts
         visits = torch.tensor([root.children[a].visits for a in range(self.n_actions)], dtype=torch.float32, device=self.device)
         probs = visits / visits.sum()
         best_action = int(probs.argmax().item())

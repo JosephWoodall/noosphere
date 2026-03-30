@@ -4,21 +4,22 @@ noosphere/agent.py
 Noosphere Agent
 
 Features:
-- Alignment Reward: ImaginationBuffer no longer builds returns from the 
-  environment's reward. It explicitly rewards the AI for staying close to the 
-  human Actor probabilities (Digital Twin) and avoiding termination.
+- Harmonized Objective: The Actor-Critic learns the optimal path (L_p + L_v) 
+  while simultaneously constrained to clone the human's style (L_bc).
+- Intent Injection: Biological intent is passed dynamically into MCTS to guide the search.
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from noosphere.actions import ActBridge, ActionSpace, Executor, NullExecutor
+from noosphere.actions import ActBridge
 from noosphere.bundle import BundleMetadata, export_bundle, load_bundle
 from noosphere.learning import LearningConfig, LearningManager
 from noosphere.memory import EpisodicMemory, SequenceReplayBuffer, WorkingMemory
@@ -66,12 +67,9 @@ class AgentConfig:
     entropy_scale: float = 3e-4
     bc_weight: float = 2.0  
     min_act_confidence: float = 0.3
-    free_nats: float = 1.0
     wm_updates: int = 5
     ac_updates: int = 5
-    train_every: int = 10
     warmup_steps: int = 1000
-    task_type: str = "multiclass"
     dry_run: bool = False
     replay_capacity: int = 500
     episodic_capacity: int = 5000
@@ -79,24 +77,20 @@ class AgentConfig:
 class _Prep:
     def __init__(self, device: torch.device):
         self.dev = device
-
     def __call__(self, obs: Dict[str, Any]) -> Dict[str, Optional[torch.Tensor]]:
         out = {}
-        def _t(k):
-            if obs.get(k) is None: return
-            x = np.asarray(obs[k], dtype=np.float32)
-            if k in ("rgb", "depth", "rgb_right"):
-                if x.max() > 1.0 and k != "depth": x /= 255.0
-                if x.ndim == 3: x = x.transpose(2, 0, 1)
-                x = x[None]
-            elif k == "eeg":
-                if x.ndim == 2: x = x[None]
-            elif k in ("structured", "kinematics"):
-                if x.ndim == 1: x = x[None, None]
-                elif x.ndim == 2: x = x[None]
-            out[k] = torch.tensor(x, device=self.dev)
-
-        for k in ["rgb", "depth", "rgb_right", "eeg", "structured", "kinematics"]: _t(k)
+        for k in ["rgb", "depth", "rgb_right", "eeg", "structured", "kinematics"]:
+            if obs.get(k) is not None:
+                x = np.asarray(obs[k], dtype=np.float32)
+                if k in ("rgb", "depth", "rgb_right"):
+                    if x.max() > 1.0 and k != "depth": x /= 255.0
+                    if x.ndim == 3: x = x.transpose(2, 0, 1)
+                    x = x[None]
+                elif k == "eeg" and x.ndim == 2: x = x[None]
+                elif k in ("structured", "kinematics"):
+                    if x.ndim == 1: x = x[None, None]
+                    elif x.ndim == 2: x = x[None]
+                out[k] = torch.tensor(x, device=self.dev)
         if "electrode_mask" in obs and obs["electrode_mask"] is not None:
             out["electrode_mask"] = torch.tensor(np.array(obs["electrode_mask"], dtype=np.float32)[None], device=self.dev)
         return out
@@ -118,6 +112,8 @@ class NoosphereAgent(nn.Module):
             det_dim=C.det_dim, stoch_cats=C.stoch_cats, stoch_classes=C.stoch_cls, hidden_dim=C.hidden_dim, dt=C.dt,
         )
         state_dim = self.rssm.state_dim
+        
+        # RL requires full Consequence modeling to path-plan effectively
         self.consequence = ConsequenceModel(state_dim, C.hidden_dim)
         self.obs_decoder = ObservationDecoder(state_dim, C.d_model, C.hidden_dim)
         self.action_enc = ActionEncoder(C.n_actions, C.action_dim)
@@ -129,11 +125,11 @@ class NoosphereAgent(nn.Module):
                 self.rssm.rssm, self.consequence, self.actor, self.action_enc,
                 C.n_actions, C.n_mcts_sims, C.mcts_horizon, C.gamma, device=device,
             )
+            
         self._imag_buf = ImaginationBuffer(C.gamma, C.lam)
         self.replay = SequenceReplayBuffer(C.replay_capacity, C.seq_len)
         self.episodic = EpisodicMemory(state_dim, 64, C.episodic_capacity)
         self.working = WorkingMemory(20)
-
         self.act_bridge: Optional[ActBridge] = None
         self.learning_manager: Optional[LearningManager] = None
         self.apparatus_predictor: Any = None 
@@ -150,10 +146,7 @@ class NoosphereAgent(nn.Module):
         ], eps=1e-8)
         self.opt_ac = optim.AdamW(self._ac_params, lr=C.lr_actor_critic, eps=1e-8)
 
-        self._h: Optional[torch.Tensor] = None
-        self._z: Optional[torch.Tensor] = None
-        self._step = 0
-        self._prep = _Prep(device)
+        self._h = None; self._z = None; self._step = 0; self._prep = _Prep(device)
         self.to(device)
 
     @property
@@ -182,30 +175,24 @@ class NoosphereAgent(nn.Module):
 
         if self._h is None: self.reset_latent()
         self._h, self._z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(self._h, self._z, a_embed, obs_embed)
-
         state = torch.cat([self._h, self._z], -1)
-        cons = self.consequence(state)
 
-        n_sims = 0
-
+        # 1. Gather Biological Intent
+        p_bci = s4_out["intent_probs"][0] if s4_out is not None else None
+        
+        # 2. Dynamic Planner Budgeting: RL compute scales with biological uncertainty
         if s4_out is not None:
-            p_bci = s4_out["intent_probs"][0]
-            action = int(p_bci.argmax().item())
-            p_final = p_bci 
-            p_ai = torch.zeros_like(p_final) 
+            uncertainty = s4_out["uncertainty"][0].item()
+            n_sims = max(2, int(self.cfg.n_mcts_sims * uncertainty))
         else:
             n_sims = self.cfg.n_mcts_sims
-            recent_r = self.working.recent_rewards(10)
-            if recent_r and float(np.mean(recent_r)) < -0.1:
-                n_sims = min(n_sims * 2, self.cfg.n_mcts_sims * 3)
 
-            if self.cfg.use_mcts and not deterministic:
-                self.planner.n_simulations = n_sims
-                _, p_ai = self.planner.search(self._h, self._z)
-            else:
-                p_ai = self.actor.forward(state).probs.squeeze(0)
-
-            p_final = p_ai
+        # 3. RL Path Planning (Conditioned on human intent if available)
+        if self.cfg.use_mcts and not deterministic:
+            self.planner.n_simulations = n_sims
+            action, p_final = self.planner.search(self._h, self._z, bci_intent=p_bci)
+        else:
+            p_final = p_bci if p_bci is not None else self.actor.forward(state).probs.squeeze(0)
             action = int(p_final.argmax().item()) if deterministic else int(torch.distributions.Categorical(probs=p_final).sample().item())
 
         h2, z2, _ = self.rssm.imagine_step(self._h, self._z, self.action_enc(torch.tensor([action], device=self.device)))
@@ -213,31 +200,21 @@ class NoosphereAgent(nn.Module):
         cons2 = self.consequence(s2)
 
         info = {
-            "pred_reward": cons["reward"].item(),
-            "pred_value": cons["value"].item(),
-            "sim_reward": cons2["reward"].item(),
             "sim_termination": cons2["termination"].item(), 
-            "termination_prob": cons["termination"].item(),
             "physics_energy": ps.energy.mean().item(),
             "n_mcts_sims": n_sims,
         }
         
         if s4_out is not None:
-            info.update({f"bci_{k}": v.mean().item() for k, v in s4_out["cognitive"].items()})
             info["s4_confidence"] = s4_out["confidence"][0].item()
             info["p_bci"] = p_bci.detach().cpu().numpy()
-            info["p_final"] = p_final.detach().cpu().numpy()
-            info["internal_uncertainty_budget"] = s4_out["planning_budget"].mean().item()
-            
-        info["p_ai"] = p_ai.detach().cpu().numpy()
 
         if self.act_bridge is not None:
             act_result = self.act_bridge.act(
-                action, predicted_value=cons["value"].item(), s4_confidence=info.get("s4_confidence"), info=info,
+                action, s4_confidence=info.get("s4_confidence"), info=info,
             )
             info["act_executed"] = act_result["executed"]
             info["act_outcome"] = act_result.get("outcome", "")
-            info["act_reward"] = act_result.get("reward", 0.0)
             if "structured" in act_result: info["_exec_structured"] = act_result["structured"]
 
         self._step += 1
@@ -268,32 +245,20 @@ class NoosphereAgent(nn.Module):
         for _ in range(self.cfg.wm_updates): metrics.update(self._update_wm())
         if self._step >= self.cfg.warmup_steps:
             for _ in range(self.cfg.ac_updates): metrics.update(self._update_ac())
-        if self.learning_manager is not None:
-            corrections = self.learning_manager.drain_corrections()
-            if corrections and self.apparatus_predictor is not None:
-                spatial_features = torch.tensor(np.stack([c["embedding"] for c in corrections]), dtype=torch.float32, device=self.device)
-                actual_tips = torch.tensor(np.stack([c["actual_tip"] for c in corrections]), dtype=torch.float32, device=self.device)
-                loss_val = self.apparatus_predictor.update(spatial_features, actual_tips)
-                if loss_val is not None: metrics.update({"apparatus/position_error": loss_val})
         return metrics
 
     def _update_wm(self) -> Dict[str, float]:
-        C = self.cfg
-        batch = self.replay.sample(C.batch_size, self.device)
+        C = self.cfg; batch = self.replay.sample(C.batch_size, self.device)
         if not batch or "actions" not in batch: return {}
 
         B, T = batch["actions"].shape
         T_eff = min(T, 20)
         obs_embed_list = []
-        gnn_sparse = torch.tensor(0.0, device=self.device)
-        L_sigreg = torch.tensor(0.0, device=self.device)
-        st_list = []
-        act_list = []
+        gnn_sparse, L_sigreg = torch.tensor(0.0, device=self.device), torch.tensor(0.0, device=self.device)
+        st_list, act_list = [], []
 
         for t in range(T_eff):
-            inp = {}
-            for mod in ("eeg", "kinematics", "structured", "rgb", "depth"):
-                if mod in batch: inp[mod] = batch[mod][:, t]
+            inp = {mod: batch[mod][:, t] for mod in ("eeg", "kinematics", "structured", "rgb", "depth") if mod in batch}
             if not inp:
                 obs_embed_list.append(torch.zeros(B, C.d_model, device=self.device))
                 continue
@@ -305,16 +270,9 @@ class NoosphereAgent(nn.Module):
                     sigreg_loss, _ = self.learning_manager.compute_unsupervised_loss(inp["eeg"], recon_encoder_fn)
                     L_sigreg = L_sigreg + sigreg_loss
 
-                gnn = perc_out.get("gnn_out")
-                if gnn is not None and "sparsity_loss" in gnn: gnn_sparse = gnn_sparse + gnn["sparsity_loss"]
-
         h = torch.zeros(B, self._det_dim, device=self.device)
         z = torch.zeros(B, self._stoch_dim, device=self.device)
-        L_kl = torch.tensor(0.0, device=self.device)
-        L_r = torch.tensor(0.0, device=self.device)
-        L_rew = torch.tensor(0.0, device=self.device)
-        L_t = torch.tensor(0.0, device=self.device)
-        L_p = torch.tensor(0.0, device=self.device)
+        L_kl, L_r, L_rew, L_t, L_p = [torch.tensor(0.0, device=self.device) for _ in range(5)]
 
         for t in range(T_eff):
             e = obs_embed_list[t]
@@ -323,18 +281,19 @@ class NoosphereAgent(nn.Module):
             s = torch.cat([h, z], -1)
             cons = self.consequence(s)
             
-            st_list.append(s.detach())
-            act_list.append(batch["actions"][:, t])
+            st_list.append(s.detach()); act_list.append(batch["actions"][:, t])
 
-            L_kl = L_kl + self.rssm.kl_loss(pp, qp, C.free_nats)
+            L_kl = L_kl + self.rssm.kl_loss(pp, qp, 1.0)
             L_r = L_r + F.mse_loss(self.obs_decoder(s), e.detach())
-            L_rew = L_rew + torch.nan_to_num(F.mse_loss(cons["reward"], batch["rewards"][:, t]), nan=0.0)
+            
+            # The RL Environment Reward restored
+            L_rew = L_rew + torch.nan_to_num(F.mse_loss(cons.get("reward", torch.zeros_like(batch["rewards"][:, t])), batch["rewards"][:, t]), nan=0.0)
             term_clamped = torch.nan_to_num(cons["termination"].clamp(0.0, 1.0), nan=0.5)
             L_t = L_t + F.binary_cross_entropy(term_clamped, batch["dones"][:, t])
             L_p = L_p + torch.nan_to_num(phys_tensor, nan=0.0)
 
         f = float(T_eff)
-        loss = (C.lambda_kl * L_kl + C.lambda_recon * L_r + C.lambda_reward * L_rew + L_t + C.lambda_physics * L_p + C.lambda_gnn_sparse * gnn_sparse + L_sigreg) / f
+        loss = (C.lambda_kl * L_kl + C.lambda_recon * L_r + C.lambda_reward * L_rew + L_t + C.lambda_physics * L_p + L_sigreg) / f
 
         self._last_st = torch.stack(st_list, dim=1)  
         self._last_act = torch.stack(act_list, dim=1) 
@@ -344,12 +303,7 @@ class NoosphereAgent(nn.Module):
         nn.utils.clip_grad_norm_(self._wm_params, C.grad_clip)
         self.opt_wm.step()
 
-        return {
-            "wm/loss": loss.item(),
-            "wm/kl": (L_kl / f).item(),
-            "wm/physics": (L_p / f).item(),
-            "wm/sigreg": (L_sigreg / f).item(),
-        }
+        return {"wm/loss": loss.item()}
 
     def _update_ac(self) -> Dict[str, float]:
         C = self.cfg
@@ -383,32 +337,26 @@ class NoosphereAgent(nn.Module):
                 s2 = torch.cat([h2, z2], -1)
                 cons = self.consequence(s2)
             
-            # THE ALIGNMENT REWARD REPLACEMENT
-            # The agent is rewarded for staying on the human's behavioral manifold (high Actor prob) 
-            # and staying physically safe, completely ignoring arbitrary environment scores.
-            alignment_reward = lp.detach().exp() * 0.1 + (1.0 - cons["termination"].float()) * 0.9
-            
-            self._imag_buf.add(s, a, alignment_reward, v, lp, (cons["termination"] > 0.5).float())
+            self._imag_buf.add(s, a, cons.get("reward", torch.zeros_like(v)), v, lp, (cons["termination"] > 0.5).float())
             h, z = h2.detach(), z2.detach()
 
         G = self._imag_buf.lambda_returns()
         st = torch.stack(self._imag_buf.states)
+        lp = torch.stack(self._imag_buf.log_probs)
         
         v1, v2 = self.critic(st.detach().view(-1, st.shape[-1]))
         L_v = F.mse_loss(v1.view(H, B), G) + F.mse_loss(v2.view(H, B), G)
         
-        loss = L_v + (C.bc_weight * L_bc)
+        A = (G - G.mean()) / (G.std() + 1e-8)
+        L_p = -(lp * A.detach()).mean()
+        ent = self.actor.entropy(st.view(-1, st.shape[-1]).detach()).mean()
+
+        # The Harmonized Objective: RL (L_p, L_v) finds the optimal path, BC (L_bc) bounds it to the human style
+        loss = L_p - C.entropy_scale * ent + L_v + (C.bc_weight * L_bc)
 
         self.opt_ac.zero_grad()
         loss.backward()
         nn.utils.clip_grad_norm_(self._ac_params, C.grad_clip)
         self.opt_ac.step()
 
-        return {"ac/critic": L_v.item(), "ac/return": G.mean().item(), "ac/bc_loss": L_bc.item()}
-
-    def export_bundle(self, path: str, domain_tags: Optional[List[str]] = None, description: str = "", author: str = "", n_training_steps: int = 0, train_metrics: Optional[Dict[str, float]] = None):
-        meta = BundleMetadata(domain_tags=domain_tags or [], description=description, author=author, n_training_steps=n_training_steps or self._step)
-        return export_bundle(self, path, meta, train_metrics)
-
-    def load_bundle(self, path: str, strict_arch: bool = True, modules: Optional[List[str]] = None) -> Dict[str, Any]:
-        return load_bundle(self, path, strict_arch, modules)
+        return {"ac/actor": L_p.item(), "ac/critic": L_v.item(), "ac/bc_loss": L_bc.item()}

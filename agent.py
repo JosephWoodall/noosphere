@@ -3,17 +3,15 @@ noosphere/agent.py
 ==================
 Noosphere Agent
 
-Wired in this version:
-1. The MCTS Latency Trap: BCI signals bypass full MCTS search entirely.
-2. 1-Step Rollout: The world model executes localized consequence verification.
-3. The Actor-Critic Fix: Actor training transitions to pure Behavioral Cloning, 
-   dropping the extrinsic RL policy gradient to enforce "Digital Twin" alignment.
+Features:
+- Alignment Reward: ImaginationBuffer no longer builds returns from the 
+  environment's reward. It explicitly rewards the AI for staying close to the 
+  human Actor probabilities (Digital Twin) and avoiding termination.
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,7 +19,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from noosphere.actions import ActBridge, ActionSpace, Executor, NullExecutor
-from noosphere.bundle import BundleMetadata, export_bundle, inspect_bundle, load_bundle
+from noosphere.bundle import BundleMetadata, export_bundle, load_bundle
 from noosphere.learning import LearningConfig, LearningManager
 from noosphere.memory import EpisodicMemory, SequenceReplayBuffer, WorkingMemory
 from noosphere.perception import HybridPerceptionModel
@@ -102,7 +100,6 @@ class _Prep:
         if "electrode_mask" in obs and obs["electrode_mask"] is not None:
             out["electrode_mask"] = torch.tensor(np.array(obs["electrode_mask"], dtype=np.float32)[None], device=self.dev)
         return out
-
 
 class NoosphereAgent(nn.Module):
     def __init__(self, cfg: AgentConfig, device: torch.device):
@@ -195,7 +192,6 @@ class NoosphereAgent(nn.Module):
             p_bci = s4_out["intent_probs"][0]
             action = int(p_bci.argmax().item())
             p_final = p_bci 
-            
             p_ai = torch.zeros_like(p_final) 
         else:
             n_sims = self.cfg.n_mcts_sims
@@ -231,9 +227,7 @@ class NoosphereAgent(nn.Module):
             info["s4_confidence"] = s4_out["confidence"][0].item()
             info["p_bci"] = p_bci.detach().cpu().numpy()
             info["p_final"] = p_final.detach().cpu().numpy()
-            
-            budget = s4_out["planning_budget"].mean().item()
-            info["internal_uncertainty_budget"] = budget
+            info["internal_uncertainty_budget"] = s4_out["planning_budget"].mean().item()
             
         info["p_ai"] = p_ai.detach().cpu().numpy()
 
@@ -388,7 +382,13 @@ class NoosphereAgent(nn.Module):
                 h2, z2, _ = self.rssm.rssm.imagine_step(h, z, self.action_enc(a))
                 s2 = torch.cat([h2, z2], -1)
                 cons = self.consequence(s2)
-            self._imag_buf.add(s, a, cons["reward"], v, lp, (cons["termination"] > 0.5).float())
+            
+            # THE ALIGNMENT REWARD REPLACEMENT
+            # The agent is rewarded for staying on the human's behavioral manifold (high Actor prob) 
+            # and staying physically safe, completely ignoring arbitrary environment scores.
+            alignment_reward = lp.detach().exp() * 0.1 + (1.0 - cons["termination"].float()) * 0.9
+            
+            self._imag_buf.add(s, a, alignment_reward, v, lp, (cons["termination"] > 0.5).float())
             h, z = h2.detach(), z2.detach()
 
         G = self._imag_buf.lambda_returns()

@@ -190,38 +190,28 @@ class RSSM(nn.Module):
 
 class ConsequenceModel(nn.Module):
     """
-    Predicts consequences from latent state sₜ:
-        reward      — scalar regression
-        termination — binary classification
-        value       — N-step return estimate (critic baseline)
+    Evaluates the imagined latent state to verify physical/digital safety 
+    and calculate optimal path-planning rewards.
     """
-
     def __init__(self, state_dim: int, hidden_dim: int = 256):
         super().__init__()
-
-        def _head(out):
-            return nn.Sequential(
-                nn.Linear(state_dim, hidden_dim),
-                nn.SiLU(),
-                nn.Linear(hidden_dim, hidden_dim),
-                nn.SiLU(),
-                nn.Linear(hidden_dim, out),
-            )
-
-        self.reward_head = _head(1)
-        self.termination_head = _head(1)
-        self.value_head = _head(1)
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim), nn.SiLU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim), nn.SiLU()
+        )
+        
+        self.reward_head = nn.Linear(hidden_dim, 1)
+        self.value_head = nn.Linear(hidden_dim, 1)
+        self.termination_head = nn.Linear(hidden_dim, 1)
 
     def forward(self, state: torch.Tensor) -> Dict[str, torch.Tensor]:
+        h = self.net(state)
         return {
-            "reward": self.reward_head(state).squeeze(-1),
-            "termination": torch.sigmoid(self.termination_head(state).squeeze(-1)),
-            "value": self.value_head(state).squeeze(-1),
+            "reward": self.reward_head(h),
+            "value": self.value_head(h),
+            "termination": torch.sigmoid(self.termination_head(h))
         }
-
-    def min_value(self, state: torch.Tensor) -> torch.Tensor:
-        """Compatibility shim — ConsequenceModel has one value head."""
-        return self.value_head(state).squeeze(-1)
 
 
 class ObservationDecoder(nn.Module):

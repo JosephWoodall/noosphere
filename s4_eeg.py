@@ -4,10 +4,8 @@ noosphere/s4_eeg.py
 State-Space Model for EEG with Evidential Intent Decoding
 
 Features:
-- S4 Sequence Modeling: Low-latency, infinite-context temporal processing.
-- Evidential Deep Learning (EDL): Dirichlet-parameterized intent classification.
-- Inverted Cognitive Load Logic: Planning budget strictly scales with uncertainty,
-  triggering maximum compute only when the biological signal is ambiguous.
+- Proprioceptive Blindness Fixed: `xyz_head` stripped out. S4 is now strictly 
+  an intent decoder, passing raw temporal embeddings up to the Fusion layer.
 """
 
 import torch
@@ -15,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Optional, Tuple
 
+# ── [DirichletEDLLoss and S4Block remain unchanged] ──
 class DirichletEDLLoss(nn.Module):
     def __init__(self, n_classes: int, annealing_step: int = 10):
         super().__init__()
@@ -24,16 +23,12 @@ class DirichletEDLLoss(nn.Module):
     def forward(self, alpha: torch.Tensor, target_one_hot: torch.Tensor, current_step: int) -> torch.Tensor:
         S = torch.sum(alpha, dim=-1, keepdim=True)
         pred_probs = alpha / S
-        
         err = (target_one_hot - pred_probs) ** 2
         var = (alpha * (S - alpha)) / (S ** 2 * (S + 1))
         loss_sos = torch.sum(err + var, dim=-1)
-
         annealing_coef = min(1.0, current_step / self.annealing_step)
         alpha_tilde = target_one_hot + (1 - target_one_hot) * alpha
-        
         kl_reg = annealing_coef * self._kl_divergence(alpha_tilde)
-        
         return torch.mean(loss_sos + kl_reg)
 
     def _kl_divergence(self, alpha: torch.Tensor) -> torch.Tensor:
@@ -41,12 +36,8 @@ class DirichletEDLLoss(nn.Module):
         beta_alpha = torch.exp(torch.lgamma(S) - torch.sum(torch.lgamma(alpha), dim=-1, keepdim=True))
         beta_ones = torch.exp(torch.lgamma(torch.tensor(self.n_classes, dtype=torch.float32)) - 
                               self.n_classes * torch.lgamma(torch.tensor(1.0)))
-        
-        kl = beta_ones / (beta_alpha + 1e-8) + torch.sum(
-            (alpha - 1) * (torch.digamma(alpha) - torch.digamma(S)), dim=-1, keepdim=True
-        )
+        kl = beta_ones / (beta_alpha + 1e-8) + torch.sum((alpha - 1) * (torch.digamma(alpha) - torch.digamma(S)), dim=-1, keepdim=True)
         return kl.squeeze(-1)
-
 
 class S4Block(nn.Module):
     def __init__(self, d_model: int, d_state: int):
@@ -68,17 +59,8 @@ class S4Block(nn.Module):
         x = self.out_proj(x)
         return x + residual
 
-
 class S4EEGEncoder(nn.Module):
-    def __init__(
-        self,
-        in_channels: int = 3,
-        d_model: int = 256,
-        d_state: int = 64,
-        n_blocks: int = 4,
-        downsample: int = 4,
-        n_actions: int = 8,
-    ):
+    def __init__(self, in_channels: int = 3, d_model: int = 256, d_state: int = 64, n_blocks: int = 4, downsample: int = 4, n_actions: int = 8):
         super().__init__()
         self.d_model = d_model
         self.n_actions = n_actions
@@ -92,21 +74,10 @@ class S4EEGEncoder(nn.Module):
             nn.GroupNorm(16, d_model)
         )
 
-        self.blocks = nn.ModuleList([
-            S4Block(d_model, d_state) for _ in range(n_blocks)
-        ])
-
-        self.xyz_head = nn.Sequential(
-            nn.Linear(d_model, d_model),
-            nn.SiLU(),
-            nn.Linear(d_model, 3) 
-        )
-
-        self.intent_proj = nn.Sequential(
-            nn.Linear(d_model, d_model),
-            nn.SiLU(),
-            nn.Linear(d_model, n_actions)
-        )
+        self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
+        
+        # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
+        self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
 
     def forward(self, eeg: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         B = eeg.shape[0]
@@ -117,13 +88,9 @@ class S4EEGEncoder(nn.Module):
 
         x = self.stem(eeg)
         x = x.transpose(1, 2)
-        
-        for block in self.blocks:
-            x = block(x)
+        for block in self.blocks: x = block(x)
             
         current_state = x[:, -1, :] 
-
-        xyz_pred = self.xyz_head(current_state)
 
         evidence = F.softplus(self.intent_proj(current_state))
         alpha = evidence + 1.0
@@ -132,16 +99,14 @@ class S4EEGEncoder(nn.Module):
         
         uncertainty = self.n_actions / S
         confidence = 1.0 - uncertainty
-        confidence = confidence.squeeze(-1)
 
         return {
             "sequence": x,                 
             "embed": current_state,        
-            "xyz_pred": xyz_pred,          
             "intent_probs": intent_probs,  
-            "confidence": confidence,      
+            "confidence": confidence.squeeze(-1),      
             "alpha": alpha,                
-            "planning_budget": uncertainty.squeeze(-1), 
+            "uncertainty": uncertainty.squeeze(-1), 
             "cognitive": {
                 "uncertainty": uncertainty.squeeze(-1),
                 "total_evidence": S.squeeze(-1)

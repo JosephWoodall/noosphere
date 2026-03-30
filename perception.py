@@ -4,9 +4,8 @@ noosphere/perception.py
 Multimodal Hybrid Perception Model
 
 Features:
-- Sensorimotor Integration: The `xyz_head` is now attached to the `fused_embed`.
-  This allows the system to predict physical trajectories conditioned on BOTH
-  the biological intent (EEG) AND the current physical reality (Vision/Kinematics).
+- Synchronized Injection: S4 only passes its collapsed, current-timestep `embed` 
+  into the Fusion Transformer, preventing temporal smearing with current visual frames.
 """
 
 import torch
@@ -61,7 +60,6 @@ class HybridPerceptionModel(nn.Module):
         
         self.out_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.LayerNorm(d_model))
         
-        # SENSORIMOTOR INTEGRATION: The continuous spatial head processes the FUSED reality
         self.xyz_head = nn.Sequential(
             nn.Linear(d_model, d_model), nn.SiLU(), 
             nn.Linear(d_model, 3), nn.Tanh()
@@ -80,7 +78,10 @@ class HybridPerceptionModel(nn.Module):
                 if mock_probs.ndim == 1: mock_probs = mock_probs.unsqueeze(0).expand(B, -1)
                 s4_out["intent_probs"] = mock_probs.to(self.device)
                 s4_out["confidence"] = torch.ones_like(s4_out["confidence"])
-            tokens.append(s4_out["sequence"] + self.modality_embed[0])
+            
+            # TEMPORAL SMEARING FIX: Inject only the current 1D cognitive state `embed`, not the `sequence`
+            eeg_token = s4_out["embed"].unsqueeze(1) + self.modality_embed[0]
+            tokens.append(eeg_token)
 
         if "kinematics" in inputs:
             gnn_out = self.gnn(inputs["kinematics"])
@@ -98,7 +99,6 @@ class HybridPerceptionModel(nn.Module):
         fused_seq = self.fusion(concat_tokens)
         fused_embed = self.out_proj(fused_seq.mean(dim=1))
         
-        # Spatial intent bounded by physical reach
         xyz_pred = self.xyz_head(fused_embed) * self.max_reach
 
         return {"embed": fused_embed, "s4_out": s4_out, "gnn_out": gnn_out, "xyz_pred": xyz_pred}

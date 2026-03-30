@@ -4,9 +4,9 @@ noosphere/agent.py
 Noosphere Agent
 
 Features:
-- Dynamic BC Scheduling: L_bc dynamically decays based on the RL Actor's entropy, 
-  allowing the path planner to explore freely when human data is sparse.
-- Null-Intent Gate: Explicitly prevents executing the argmax of pure noise.
+- Intent Momentum: Resolves the "Dead-Man's Switch" bug by gracefully decaying 
+  biological intent over ~300ms, bridging transient EEG signal gaps.
+- Differentiable Kinematic Clamp: Prevents imagination teleportation during AC updates.
 """
 
 import logging
@@ -29,7 +29,6 @@ from noosphere.rssm import ConsequenceModel, ObservationDecoder
 
 logger = logging.getLogger(__name__)
 
-# Assume Action 0 is strictly defined as "NO_OP" or "WAIT" in your action space.
 NO_OP_ACTION_INDEX = 0 
 
 @dataclass
@@ -44,7 +43,7 @@ class AgentConfig:
     gamma: float = 0.99; lam: float = 0.95; lambda_kl: float = 1.0; lambda_recon: float = 0.5
     lambda_reward: float = 1.0; lambda_physics: float = 0.5; lambda_gnn_sparse: float = 0.01
     entropy_scale: float = 3e-4; bc_weight: float = 2.0; min_act_confidence: float = 0.3
-    fast_path_threshold: float = 0.85; max_reach: float = 0.70
+    fast_path_threshold: float = 0.85; max_reach: float = 0.70; max_velocity: float = 1.0
     wm_updates: int = 5; ac_updates: int = 5; warmup_steps: int = 1000; dry_run: bool = False
     replay_capacity: int = 500; episodic_capacity: int = 5000
 
@@ -90,7 +89,10 @@ class NoosphereAgent(nn.Module):
         self.critic = Critic(state_dim, C.hidden_dim)
         
         if C.use_mcts:
-            self.planner = MCTSPlanner(self.rssm.rssm, self.consequence, self.actor, self.action_enc, C.n_actions, C.n_mcts_sims, C.mcts_horizon, C.gamma, device=device)
+            self.planner = MCTSPlanner(
+                self.rssm.rssm, self.consequence, self.actor, self.action_enc, C.n_actions, 
+                C.n_mcts_sims, C.mcts_horizon, C.gamma, max_vel=C.max_velocity, dt=C.dt, device=device
+            )
             
         self._imag_buf = ImaginationBuffer(C.gamma, C.lam)
         self.replay = SequenceReplayBuffer(C.replay_capacity, C.seq_len)
@@ -110,6 +112,11 @@ class NoosphereAgent(nn.Module):
         self.opt_ac = optim.AdamW(self._ac_params, lr=C.lr_actor_critic, eps=1e-8)
 
         self._h = None; self._z = None; self._step = 0; self._prep = _Prep(device); self.to(device)
+        
+        # State tracking for Intent Momentum
+        self._bci_momentum = 0.0
+        self._last_bci_discrete = None
+        self._last_bci_cont = None
 
     @property
     def _det_dim(self) -> int: return self.rssm.rssm.det_dim
@@ -119,13 +126,13 @@ class NoosphereAgent(nn.Module):
         init = self.rssm.initial_state(1, self.device)
         self._h, self._z = init["h"], init["z"]
         self.rssm.reset_episode()
+        self._bci_momentum = 0.0
 
     @torch.no_grad()
     def _encode_obs(self, obs: Dict) -> Tuple[torch.Tensor, Dict]:
         tensors = self._prep(obs)
         if not tensors: return torch.zeros(1, self.cfg.d_model, device=self.device), {}
-        out = self.perception(tensors)
-        return out["embed"], out
+        return self.perception(tensors)["embed"], self.perception(tensors)
 
     @torch.no_grad()
     def step(self, obs: Dict, prev_action: Optional[int] = None, prev_cont_exec: Optional[np.ndarray] = None, deterministic: bool = False) -> Tuple[int, np.ndarray, Dict]:
@@ -140,29 +147,38 @@ class NoosphereAgent(nn.Module):
         self._h, self._z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(self._h, self._z, a_embed, obs_embed)
         state = torch.cat([self._h, self._z], -1)
 
-        p_bci = s4_out["intent_probs"][0] if s4_out is not None else None
-        cont_bci = perc_out["xyz_pred"][0] if "xyz_pred" in perc_out else None
+        raw_confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
+
+        # INTENT MOMENTUM: Decay gracefully to bridge transient EEG gaps (~333ms at 60Hz)
+        self._bci_momentum = max(0.0, self._bci_momentum - 0.05) 
         
-        confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
-        bci_active = confidence >= self.cfg.min_act_confidence
+        if raw_confidence >= self.cfg.min_act_confidence:
+            self._bci_momentum = raw_confidence
+            self._last_bci_discrete = s4_out["intent_probs"][0]
+            self._last_bci_cont = perc_out["xyz_pred"][0] if "xyz_pred" in perc_out else None
+
+        bci_active = self._bci_momentum > 0.0
+        effective_confidence = max(raw_confidence, self._bci_momentum)
+        
+        p_bci = self._last_bci_discrete if bci_active else None
+        cont_bci = self._last_bci_cont if bci_active else None
 
         n_sims = 0
         fast_path_active = False
 
-        if confidence >= self.cfg.fast_path_threshold:
+        if effective_confidence >= self.cfg.fast_path_threshold:
             action = int(p_bci.argmax().item())
             p_final = p_bci
             cont_final = cont_bci
             fast_path_active = True
         elif not bci_active and not self.cfg.use_mcts:
-            # THE NULL-INTENT GATE: Do not argmax noise if RL is disabled and human is hands-off
             action = NO_OP_ACTION_INDEX
             p_final = torch.zeros(self.cfg.n_actions, device=self.device)
             p_final[NO_OP_ACTION_INDEX] = 1.0
-            actor_dist, actor_cont = self.actor(state)
+            _, actor_cont = self.actor(state)
             cont_final = actor_cont.squeeze(0)
         else:
-            uncertainty = 1.0 - confidence
+            uncertainty = 1.0 - effective_confidence
             n_sims = max(2, int(self.cfg.n_mcts_sims * uncertainty))
             if self.cfg.use_mcts and not deterministic:
                 self.planner.n_simulations = n_sims
@@ -193,8 +209,8 @@ class NoosphereAgent(nn.Module):
         }
         
         if s4_out is not None:
-            info["s4_confidence"] = confidence
-            info["p_bci"] = p_bci.detach().cpu().numpy()
+            info["s4_confidence"] = effective_confidence
+            info["p_bci"] = p_bci.detach().cpu().numpy() if p_bci is not None else None
 
         if self.act_bridge is not None:
             act_result = self.act_bridge.act(action, s4_confidence=info.get("s4_confidence"), info=info)
@@ -206,10 +222,7 @@ class NoosphereAgent(nn.Module):
         return action, info["raw_continuous_intent"], info
 
     def observe(self, obs: Dict, action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, reward: float, done: bool, info: Optional[Dict] = None):
-        if info and "_exec_structured" in info:
-            obs = dict(obs)
-            obs["structured"] = info["_exec_structured"]
-
+        if info and "_exec_structured" in info: obs = dict(obs); obs["structured"] = info["_exec_structured"]
         bci_active = info.get("bci_active", False) if info else False
         self.replay.add_step(obs, action, raw_cont, exec_cont, bci_active, reward, done)
         self.working.push(np.zeros(1), action, reward)
@@ -232,8 +245,60 @@ class NoosphereAgent(nn.Module):
         return metrics
 
     def _update_wm(self) -> Dict[str, float]:
-        # [Content identical to previous review]
-        pass # Truncated for brevity, logic remains identical to previous
+        C = self.cfg; batch = self.replay.sample(C.batch_size, self.device)
+        if not batch or "actions" not in batch: return {}
+
+        B, T = batch["actions"].shape
+        T_eff = min(T, 20)
+        obs_embed_list = []
+        gnn_sparse, L_sigreg = torch.tensor(0.0, device=self.device), torch.tensor(0.0, device=self.device)
+        st_list, act_list, raw_cont_list = [], [], []
+
+        for t in range(T_eff):
+            inp = {mod: batch[mod][:, t] for mod in ("eeg", "kinematics", "structured", "rgb", "depth") if mod in batch}
+            if not inp:
+                obs_embed_list.append(torch.zeros(B, C.d_model, device=self.device))
+                continue
+            with torch.set_grad_enabled(True):
+                perc_out = self.perception(inp)
+                obs_embed_list.append(perc_out["embed"])
+                if "eeg" in inp and self.learning_manager is not None:
+                    def recon_encoder_fn(x): return self.perception.s4(x, inp.get("electrode_mask"))["embed"]
+                    sigreg_loss, _ = self.learning_manager.compute_unsupervised_loss(inp["eeg"], recon_encoder_fn)
+                    L_sigreg = L_sigreg + sigreg_loss
+
+        h = torch.zeros(B, self._det_dim, device=self.device); z = torch.zeros(B, self._stoch_dim, device=self.device)
+        L_kl, L_r, L_rew, L_t, L_p = [torch.tensor(0.0, device=self.device) for _ in range(5)]
+
+        for t in range(T_eff):
+            e = obs_embed_list[t]
+            a = self.action_enc(batch["actions"][:, t], batch["exec_cont"][:, t])
+            h, z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(h, z, a, e)
+            s = torch.cat([h, z], -1)
+            cons = self.consequence(s)
+            
+            st_list.append(s.detach()); act_list.append(batch["actions"][:, t]); raw_cont_list.append(batch["raw_cont"][:, t])
+
+            L_kl = L_kl + self.rssm.kl_loss(pp, qp, 1.0)
+            L_r = L_r + F.mse_loss(self.obs_decoder(s), e.detach())
+            L_rew = L_rew + torch.nan_to_num(F.mse_loss(cons.get("reward", torch.zeros_like(batch["rewards"][:, t])), batch["rewards"][:, t]), nan=0.0)
+            term_clamped = torch.nan_to_num(cons["termination"].clamp(0.0, 1.0), nan=0.5)
+            L_t = L_t + F.binary_cross_entropy(term_clamped, batch["dones"][:, t])
+            L_p = L_p + torch.nan_to_num(phys_tensor, nan=0.0)
+
+        f = float(T_eff)
+        loss = (C.lambda_kl * L_kl + C.lambda_recon * L_r + C.lambda_reward * L_rew + L_t + C.lambda_physics * L_p + L_sigreg) / f
+
+        self._last_st = torch.stack(st_list, dim=1)  
+        self._last_act = torch.stack(act_list, dim=1) 
+        self._last_raw_cont = torch.stack(raw_cont_list, dim=1)
+
+        self.opt_wm.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self._wm_params, C.grad_clip)
+        self.opt_wm.step()
+
+        return {"wm/loss": loss.item()}
 
     def _update_ac(self) -> Dict[str, float]:
         C = self.cfg; B = C.batch_size; H = C.imag_horizon
@@ -260,20 +325,33 @@ class NoosphereAgent(nn.Module):
             L_bc_base = torch.tensor(0.0, device=self.device)
 
         self._imag_buf.clear()
+        
+        # Track previous cont for differentiable kinematic clamping
+        prev_cont = flat_raw_cont if hasattr(self, "_last_st") else torch.zeros(B, 3, device=self.device)
+        max_delta = C.max_velocity * C.dt
 
         for step_i in range(H):
             s = torch.cat([h, z], -1)
             dist, cont = self.actor(s)
+            
+            # DIFFERENTIABLE KINEMATIC CLAMP
+            delta = cont - prev_cont
+            norm = torch.norm(delta, p=2, dim=-1, keepdim=True)
+            clamped_delta = torch.where(norm > max_delta, delta * (max_delta / (norm + 1e-8)), delta)
+            clamped_cont = prev_cont + clamped_delta
+            prev_cont = clamped_cont
+            
             a = dist.sample()
             lp = dist.log_prob(a)
             v = self.critic.min_value(s)
+            
             with torch.no_grad():
-                a_emb = self.action_enc(a, cont)
-                h2, z2, _ = self.rssm.rssm.imagine_step(h, z, a_emb)
+                a_emb = self.action_enc(a, clamped_cont)
+                h2, z2, _ = self.rssm.imagine_step(h, z, a_emb)
                 s2 = torch.cat([h2, z2], -1)
                 cons = self.consequence(s2)
             
-            self._imag_buf.add(s, a, cont, cons.get("reward", torch.zeros_like(v)), v, lp, (cons["termination"] > 0.5).float())
+            self._imag_buf.add(s, a, clamped_cont, cons.get("reward", torch.zeros_like(v)), v, lp, (cons["termination"] > 0.5).float())
             h, z = h2.detach(), z2.detach()
 
         G = self._imag_buf.lambda_returns()
@@ -287,12 +365,7 @@ class NoosphereAgent(nn.Module):
         L_p = -(lp * A.detach()).mean()
         ent = self.actor.entropy(st.view(-1, st.shape[-1]).detach()).mean()
 
-        # DYNAMIC BC SCHEDULING: 
-        # If the Actor's entropy is high (it is unsure what to do because it's in a novel state), 
-        # we scale DOWN the BC weight to let the RL explore and find a path via L_p.
-        # If entropy is low (it recognizes the human's manifold), we enforce strict cloning.
         dynamic_bc_weight = C.bc_weight * torch.exp(-ent.detach())
-        
         loss = L_p - C.entropy_scale * ent + L_v + (dynamic_bc_weight * L_bc_base)
 
         self.opt_ac.zero_grad()
@@ -301,3 +374,10 @@ class NoosphereAgent(nn.Module):
         self.opt_ac.step()
 
         return {"ac/actor": L_p.item(), "ac/critic": L_v.item(), "ac/bc_loss": L_bc_base.item()}
+
+    def export_bundle(self, path: str, domain_tags: Optional[List[str]] = None, description: str = "", author: str = "", n_training_steps: int = 0, train_metrics: Optional[Dict[str, float]] = None):
+        meta = BundleMetadata(domain_tags=domain_tags or [], description=description, author=author, n_training_steps=n_training_steps or self._step)
+        return export_bundle(self, path, meta, train_metrics)
+
+    def load_bundle(self, path: str, strict_arch: bool = True, modules: Optional[List[str]] = None) -> Dict[str, Any]:
+        return load_bundle(self, path, strict_arch, modules)

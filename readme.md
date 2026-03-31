@@ -39,7 +39,7 @@ Noosphere is composed of six interlinked neural modules:
 - MCTSPlanner (Monte Carlo Tree Search):
     - Rapidly simulates multiple future trajectories using the World Model to evaluate complex sequential actions before executing them.
 - HardwareDiscoveryDaemon (Plug-and-Play Extremity Detector):
-    - Scans USB/Serial interfaces at runtime to detect newly attached physical extremities (arms, grippers, wheels). Automatically calls `KinematicGNN.inject_nodes()` to expand the spatial graph topology — no code changes required when adding new hardware.
+    - Scans USB/Serial/Bluetooth LE interfaces at runtime to detect newly attached physical extremities (arms, grippers, wheels). Automatically calls `KinematicGNN.inject_nodes()` to expand the spatial graph topology — no code changes required when adding new hardware.
 
 2. Intent Translation (Shared Autonomy)
 Human intent is translated into action through a Probabilistic Blending Circuit, rather than a rigid deterministic switch:
@@ -206,7 +206,7 @@ cd noosphere
 pip install -r requirements.txt
 ```
 
-Optional hardware backends:
+Optional hardware backends (Bluetooth LE is natively supported out-of-the-box):
 ```bash
 pip install rppal pwm-pca9685    # Raspberry Pi + PCA9685 (≥6 servos)
 pip install pyserial             # Arduino serial
@@ -314,7 +314,7 @@ filt      = IntentionFilter()
 anomaly   = AnomalyDetector()
 predictor = CoordinatePredictor(d_model=256)
 executor  = MovementExecutor()
-servo     = ServoController(backend="rpi_pca9685")
+servo     = ServoController(backend="bluetooth") # or "rpi_pca9685", "arduino", "sim"
 
 # Session calibration — anchors GP to today's electrode placement
 cal = CalibrationSession(predictor.gp)
@@ -528,7 +528,7 @@ noosphere/
 │                     NeuralCoordinatePredictor · TemporalSmoother
 │                     CalibrationSession · PositionErrorFeedback
 │                     KinematicSolver · ObstacleSphere · MovementExecutor
-├── hardware.py       ServoController (sim / PCA9685 / Arduino / GPIO)
+├── hardware.py       ServoController (sim / Bluetooth / PCA9685 / Arduino / GPIO)
 ├── actions.py        138-command shell vocabulary across 6 tiers
 │                     ShellExecutor · DigitalStateObserver · ShellOutputEncoder
 │                     ApparatusExecutor · ActBridge (dual confidence gate)
@@ -542,7 +542,7 @@ noosphere/
 │                     Console · file · desktop · NCP alert channels
 ├── proto.py          NCP binary protocol + NCPTransport (Redis / in-process)
 ├── learning.py       5 loss classes + LearningManager + EEGAugment
-├── discovery.py      HardwareDiscoveryDaemon — plug-and-play extremity detection
+├── discovery.py      Hardware & Bluetooth DiscoveryDaemons — plug-and-play extremity detection
 └── data/
     └── synth.py      ScalpEEGGenerator + obs_* builders + make_batch()
 

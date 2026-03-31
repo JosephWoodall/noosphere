@@ -146,6 +146,69 @@ class _GPIOBackend:
             pwm.change_duty_cycle(0.0)
 
 
+class _BluetoothBackend:
+    """Bluetooth LE communication to a smart robotic node (e.g. ESP32). Non-blocking background sync."""
+    def __init__(self, n: int, service_uuid: str = "0000ffe0-0000-1000-8000-00805f9b34fb", char_uuid: str = "0000ffe1-0000-1000-8000-00805f9b34fb"):
+        self.n = n
+        self.service_uuid = service_uuid
+        self.char_uuid = char_uuid
+        self._target_angles = np.zeros(n, dtype=np.float32)
+        self._shutdown = False
+        
+        try:
+            import threading
+            self._thread = threading.Thread(target=self._daemon_loop, daemon=True)
+            self._thread.start()
+            logger.info(f"[Hardware] Bluetooth DAEMON Backend initialized ({n} channels)")
+        except Exception as e:
+            logger.error(f"Failed to start Bluetooth daemon: {e}. Falling back to Sim.")
+            self._thread = None
+
+    def _daemon_loop(self):
+        import asyncio
+        asyncio.run(self._async_loop())
+
+    async def _async_loop(self):
+        try:
+            from bleak import BleakClient, BleakScanner
+        except ImportError:
+            logger.error("bleak missing for Bluetooth. Disable or pip install bleak.")
+            return
+
+        while not self._shutdown:
+            try:
+                # Find any device advertising our service
+                device = await BleakScanner.find_device_by_filter(
+                    lambda d, ad: self.service_uuid.lower() in [u.lower() for u in ad.service_uuids], timeout=2.0
+                )
+                if not device:
+                    await asyncio.sleep(0.5)
+                    continue
+                    
+                async with BleakClient(device) as client:
+                    logger.info(f"[Bluetooth] Streaming to connected node {device.address}")
+                    while not self._shutdown and client.is_connected:
+                        # Send position targets
+                        parts = ",".join(f"{a + 90.0:.2f}" for a in self._target_angles)
+                        msg = f"A{parts}\\n".encode('utf-8')
+                        try:
+                            await client.write_gatt_char(self.char_uuid, msg, response=False)
+                        except Exception:
+                            break  # Connection likely dropped, break to reconnect
+                        await asyncio.sleep(0.02)  # Stream at 50Hz
+            except Exception as e:
+                logger.debug(f"[Bluetooth] Disconnected or error: {e}. Searching...")
+                await asyncio.sleep(1.0)
+
+    def set_all_angles(self, angles: np.ndarray):
+        # Instantly updates shared state; does not block the RL loop!
+        self._target_angles = np.copy(angles)
+
+    def disable_all(self):
+        self._shutdown = True
+        logger.info("[Bluetooth] Daemon shutdown requested.")
+
+
 # ── Unified Controller ────────────────────────────────────────────────────────
 
 class ServoController:
@@ -166,6 +229,8 @@ class ServoController:
             self._hw = _ArduinoBackend(n_channels)
         elif backend == "rpi_gpio":
             self._hw = _GPIOBackend(n_channels)
+        elif backend == "bluetooth":
+            self._hw = _BluetoothBackend(n_channels)
         else:
             logger.warning(f"Unknown backend '{backend}', defaulting to 'sim'")
             self._hw = _SimBackend(n_channels)

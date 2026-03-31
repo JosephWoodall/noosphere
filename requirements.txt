@@ -9,6 +9,7 @@ scikit-learn>=1.3.0
 # rppal             # Raspberry Pi GPIO / I2C
 # pwm-pca9685       # PCA9685 servo driver (recommended for 6+ servos)
 # pyserial          # Arduino serial protocol
+bleak>=0.21.1       # Bluetooth LE support
 
 # Transport (optional — NCP frames work over any byte stream)
 # redis>=4.0.0

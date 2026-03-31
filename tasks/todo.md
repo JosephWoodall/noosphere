@@ -82,3 +82,11 @@
 ## Phase 8: Generalizable Physics & Plug-and-Play Architecture
 - [x] **Step A: Neural Residual Physics Engine**: Upgrade `physics.py` to use a continuous-time residual MLP mapped over the rigid Hamiltonian to naturally simulate soft robotics and turbulent fluids.
 - [x] **Step B: Hardware Discovery Daemon**: Build `discovery.py` to mock a physical USB/Serial scan. Update `gnn.py` to dynamically resize its topology matrix and inject arbitrary N extremeties on the fly!
+
+## Phase 9: Bluetooth Integration (Destructor Plan)
+Your plan has 3 false dependencies, 2 legacy assumptions, and 2 items that should not be on your plate at all. Here's what's actually going on.
+
+- [x] `hardware.py`: Add `_BluetoothBackend` running in a dedicated background daemon thread via `bleak`.
+- [x] `hardware.py`: Add `"bluetooth"` option to `ServoController`.
+- [x] `discovery.py`: Add `BluetoothDiscoveryDaemon` utilizing `BleakScanner` to dynamically detect nodes without blocking the RL loop.
+- [x] `requirements.txt`: Add `bleak>=0.21.1`.

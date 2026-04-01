@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 import numpy as np
+import concurrent.futures
 
 class Tier:
     SAFE_READ = 0
@@ -156,6 +157,10 @@ class ActBridge:
         self.min_conf = min_confidence
         self.dry_run = dry_run
         self._history: List[Dict] = []
+        
+        # Latency Eradication: Asynchronous Execution Worker Pool
+        self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+        self._pending_tasks = {}
 
     def act(self, action_idx: int, predicted_value: float = 1.0, s4_confidence: Optional[float] = None, info: Optional[Dict] = None) -> Dict[str, Any]:
         if s4_confidence is None and info is not None: s4_confidence = info.get("s4_confidence")
@@ -183,15 +188,19 @@ class ActBridge:
             out = {"executed": False, "reason": "dry_run", "reward": 0.0, "action": action}
             self._history.append(out); return out
 
-        exec_result = self.executor.execute(action)
+        # DESTROY LATENCY: Fire and Forget Asynchronous Dispatch
+        task_id = f"{id(action)}_{time.time_ns()}"
+        future = self._thread_pool.submit(self.executor.execute, action)
+        self._pending_tasks[task_id] = future
+
         out = {
-            "executed": True,
+            "executed": "pending",
             "action": action,
-            "result": exec_result,
-            "reward": exec_result.get("reward", 0.0),
-            "outcome": exec_result.get("outcome", ""),
+            "result": {"status": "dispatched_to_background"},
+            "reward": 0.0,
+            "outcome": f"[Async] Dispatched {action.name} to background worker...",
             "confidence": effective,
+            "task_id": task_id
         }
-        if "structured" in exec_result: out["structured"] = exec_result["structured"]
         self._history.append(out)
         return out

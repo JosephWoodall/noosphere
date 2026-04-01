@@ -114,6 +114,17 @@ class NoosphereAgent(nn.Module):
 
         self._h = None; self._z = None; self._step = 0; self._prep = _Prep(device); self.to(device)
         
+        # SOTA INFERENCE COMPRESSION
+        if hasattr(torch, "compile") and device.type == "cuda":
+            import os
+            if os.name != 'nt': # compile unsupported on Windows
+                logger.info("Initializing TorchInductor JIT Compilation for latency eradication...")
+                self.perception = torch.compile(self.perception, mode="reduce-overhead")
+                self.rssm = torch.compile(self.rssm, mode="reduce-overhead")
+                self.actor = torch.compile(self.actor, mode="reduce-overhead")
+                self.action_enc = torch.compile(self.action_enc, mode="reduce-overhead")
+                self.consequence = torch.compile(self.consequence, mode="reduce-overhead")
+        
         # State tracking for Intent Momentum
         self._bci_momentum = 0.0
         self._last_bci_discrete = None
@@ -137,18 +148,22 @@ class NoosphereAgent(nn.Module):
 
     @torch.no_grad()
     def step(self, obs: Dict, prev_action: Optional[int] = None, prev_cont_exec: Optional[np.ndarray] = None, deterministic: bool = False) -> Tuple[int, np.ndarray, Dict]:
-        obs_embed, perc_out = self._encode_obs(obs)
-        s4_out = perc_out.get("s4_out")
+        # Latency Eradication: Mixed precision FP16 blocks mathematical bloat
+        autocast_dtype = torch.bfloat16 if (self.device.type == "cuda" and torch.cuda.is_bf16_supported()) else torch.float16
+        if hasattr(torch.compiler, "cudagraph_mark_step_begin"): torch.compiler.cudagraph_mark_step_begin()
+        with torch.autocast(device_type=self.device.type, dtype=autocast_dtype, enabled=self.device.type in ["cuda", "mps"]):
+            obs_embed, perc_out = self._encode_obs(obs)
+            s4_out = perc_out.get("s4_out")
 
-        prev_act_t = torch.tensor([prev_action if prev_action is not None else 0], device=self.device)
-        prev_cont_t = torch.tensor(prev_cont_exec, device=self.device).unsqueeze(0) if prev_cont_exec is not None else torch.zeros(1, 3, device=self.device)
-        a_embed = self.action_enc(prev_act_t, prev_cont_t) if prev_action is not None else torch.zeros(1, self.cfg.action_dim, device=self.device)
+            prev_act_t = torch.tensor([prev_action if prev_action is not None else 0], device=self.device)
+            prev_cont_t = torch.tensor(prev_cont_exec, device=self.device).unsqueeze(0) if prev_cont_exec is not None else torch.zeros(1, 3, device=self.device)
+            a_embed = self.action_enc(prev_act_t, prev_cont_t) if prev_action is not None else torch.zeros(1, self.cfg.action_dim, device=self.device)
 
-        if self._h is None: self.reset_latent()
-        self._h, self._z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(self._h, self._z, a_embed, obs_embed)
-        state = torch.cat([self._h, self._z], -1)
+            if self._h is None: self.reset_latent()
+            self._h, self._z, pp, qp, ps, phys_tensor, phys_log = self.rssm.observe_step(self._h, self._z, a_embed, obs_embed)
+            state = torch.cat([self._h, self._z], -1)
 
-        raw_confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
+            raw_confidence = s4_out["confidence"][0].item() if s4_out is not None else 0.0
 
         # INTENT MOMENTUM: Decay gracefully to bridge transient EEG gaps (~333ms at 60Hz)
         self._bci_momentum = max(0.0, self._bci_momentum - 0.05) 
@@ -190,24 +205,24 @@ class NoosphereAgent(nn.Module):
                 cont_final = cont_bci if bci_active else actor_cont.squeeze(0)
                 action = int(p_final.argmax().item()) if deterministic else int(torch.distributions.Categorical(probs=p_final).sample().item())
 
-        a_test_emb = self.action_enc(torch.tensor([action], device=self.device), cont_final.unsqueeze(0))
-        h2, z2, _ = self.rssm.imagine_step(self._h, self._z, a_test_emb)
-        s2 = torch.cat([h2, z2], -1)
-        cons2 = self.consequence(s2)
-        
-        sim_termination = cons2["termination"].item()
+            a_test_emb = self.action_enc(torch.tensor([action], device=self.device), cont_final.unsqueeze(0))
+            h2, z2, _ = self.rssm.imagine_step(self._h, self._z, a_test_emb)
+            s2 = torch.cat([h2, z2], -1)
+            cons2 = self.consequence(s2)
+            
+            sim_termination = cons2["termination"].item()
 
-        if sim_termination > 0.90:
-            cont_final = prev_cont_t.squeeze(0) if prev_cont_exec is not None else torch.zeros_like(cont_final)
+            if sim_termination > 0.90:
+                cont_final = prev_cont_t.squeeze(0) if prev_cont_exec is not None else torch.zeros_like(cont_final)
 
-        info = {
-            "sim_termination": sim_termination, 
-            "physics_energy": ps.energy.mean().item(),
-            "n_mcts_sims": n_sims,
-            "raw_continuous_intent": cont_final.detach().cpu().numpy(),
-            "fast_path_active": fast_path_active,
-            "bci_active": bci_active
-        }
+            info = {
+                "sim_termination": sim_termination, 
+                "physics_energy": ps.energy.mean().item(),
+                "n_mcts_sims": n_sims,
+                "raw_continuous_intent": cont_final.detach().float().cpu().numpy(),
+                "fast_path_active": fast_path_active,
+                "bci_active": bci_active
+            }
         
         if s4_out is not None:
             info["s4_confidence"] = effective_confidence

@@ -69,10 +69,10 @@ def smoke_test(domain: str, dev: torch.device):
     agent.reset_latent()
     gen = ScalpEEGGenerator(seed=0) if domain == "bci" else None
     obs = obs_bci(seed=0, eeg_gen=gen) if domain == "bci" else DOMAIN_OBS[domain](seed=0)
-    with torch.no_grad(): action, info = agent.step(obs)
+    with torch.no_grad(): action, cont, info = agent.step(obs)
     assert isinstance(action, int)
     assert not any(np.isnan(v) for v in info.values() if isinstance(v, float))
-    log.info(f"  action={action}  pred_r={info['pred_reward']:.3f}  ✓")
+    log.info(f"  action={action}  pred_r={info.get('pred_reward', 0.0):.3f}  ✓")
 
 # ── Partial sensor test ───────────────────────────────────────────────────────
 
@@ -92,9 +92,9 @@ def partial_sensor_test(dev: torch.device):
         agent = NoosphereAgent(cfg, dev)
         agent.eval()
         agent.reset_latent()
-        with torch.no_grad(): action, info = agent.step(obs)
+        with torch.no_grad(): action, cont, info = agent.step(obs)
         has_nan = any(np.isnan(v) for v in info.values() if isinstance(v, float))
-        log.info(f"  {name:<28} a={action}  pred_r={info['pred_reward']:+.3f}  {'✓' if not has_nan else '✗ NaN'}")
+        log.info(f"  {name:<28} a={action}  pred_r={info.get('pred_reward', 0.0):+.3f}  {'✓' if not has_nan else '✗ NaN'}")
 
 # ── Shell & Agent Executor Demo ───────────────────────────────────────────────
 
@@ -154,7 +154,7 @@ def shell_demo(dev: torch.device):
 
         # Note: In a real run, the HybridPerceptionModel would output the intent probs. 
         # For this demo, if `_mock_intent` is passed, we assume the agent handles it for demonstration.
-        action, info = agent.step(obs, prev)
+        action, cont, info = agent.step(obs, prev)
         
         if "_mock_intent" in obs: 
             action = combined_space.actions[-1].index

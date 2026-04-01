@@ -45,216 +45,130 @@ import numpy as np
 # ── EEG: 3-electrode neck placement ──────────────────────────────────────────
 
 
+class KuramotoNetwork:
+    """Phase-coupled oscillators mimicking regional neural synchrony."""
+    def __init__(self, n_nodes: int, freq_mean: float, freq_std: float, dt: float, rng):
+        self.n_nodes = n_nodes; self.dt = dt
+        self.omega = rng.normal(freq_mean * 2 * math.pi, freq_std * 2 * math.pi, n_nodes)
+        self.theta = rng.uniform(0, 2 * math.pi, n_nodes)
+        self.K = np.ones((n_nodes, n_nodes)) * 2.0
+        np.fill_diagonal(self.K, 0)
+        
+    def step(self, K_matrix_override: Optional[np.ndarray] = None) -> np.ndarray:
+        K = K_matrix_override if K_matrix_override is not None else self.K
+        diff = self.theta[None, :] - self.theta[:, None]
+        coupling = np.sum(K * np.sin(diff), axis=1) / self.n_nodes
+        self.theta += (self.omega + coupling) * self.dt
+        self.theta = np.mod(self.theta, 2 * np.pi)
+        return np.sin(self.theta)
+
+def generate_pink_noise(n_samples: int, dt: float, rng) -> np.ndarray:
+    """Generate authentic 1/f power-law aperiodic noise."""
+    freqs = np.fft.rfftfreq(n_samples, d=dt)
+    freqs[0] = freqs[1]  # Anti-zero-div
+    amp = 1.0 / np.sqrt(freqs)
+    phase = rng.uniform(0, 2 * np.pi, len(freqs))
+    noise = np.fft.irfft(amp * np.exp(1j * phase), n=n_samples)
+    return noise / (np.std(noise) + 1e-8)
+
 class ScalpEEGGenerator:
     """
-    Realistic synthetic EEG from 3 scalp electrodes.
-
-    Electrode layout (motor cortex):
-        Ch0: C3 (Left motor cortex)
-        Ch1: Cz (Central midline)
-        Ch2: C4 (Right motor cortex)
-
-    Key physiological properties of scalp EEG:
-        - Alpha/Mu (8–13 Hz): dominant at rest, desynchronizes during intent
-        - Eye blinks: 1-3 Hz, very high amplitude (100+ μV) frontally, propagates to Cz
-        - Muscle artifacts (jaw/neck EMG): 20–150 Hz, high amplitude noise
-        - Line noise: 60 Hz, amplitude 8–15 μV
-        - DC drift: slow, 10–50 μV amplitude
-        - Baseline noise: ~3-5 μV RMS
-
-    Mirrors mechanicus RealWorldEEG adapted for 3-ch motor cortex placement.
+    SOTA Synthetic Brainwave Engine.
+    Employs Kuramoto Non-Linear Phase-Coupled Oscillators (mu/alpha ERD rhythms),
+    1/f Aperiodic Pink Noise, and a Spatial Volume Conduction Leadfield projection 
+    from 5 internal cortical sources -> 3 active scalp sensors.
     """
+    SAMPLE_RATE = 256
 
-    SAMPLE_RATE = 256  # Hz
+    LABEL_CLEAN_BRAIN, LABEL_EYE_BLINK, LABEL_MUSCLE, LABEL_LINE_NOISE = 0, 1, 2, 3
+    LABEL_SLOW_DRIFT, LABEL_CARDIAC, LABEL_MIXED, LABEL_SENSOR_NOISE = 4, 5, 6, 7
 
-    # Root artifact labels (matches mechanicus RootArtifactLabel)
-    LABEL_CLEAN_BRAIN = 0
-    LABEL_EYE_BLINK = 1
-    LABEL_MUSCLE = 2
-    LABEL_LINE_NOISE = 3
-    LABEL_SLOW_DRIFT = 4
-    LABEL_CARDIAC = 5
-    LABEL_MIXED = 6
-    LABEL_SENSOR_NOISE = 7
-
-    # Muscle intent labels (matches mechanicus MuscleArtifactMuscleIntent)
-    INTENT_REST = 0
-    INTENT_RIGHT_HAND = 1
-    INTENT_LEFT_HAND = 2
-    INTENT_BOTH_HANDS = 3
-    INTENT_JAW_CLENCH = 4
-    INTENT_HEAD_TILT = 5
-    INTENT_SHOULDER_SHRUG = 6
-    INTENT_FINGER_FLEX = 7
-    INTENT_WRIST_EXT = 8
-    INTENT_EYEBROW_RAISE = 9
+    INTENT_REST, INTENT_RIGHT_HAND, INTENT_LEFT_HAND, INTENT_BOTH_HANDS = 0, 1, 2, 3
+    INTENT_JAW_CLENCH, INTENT_HEAD_TILT, INTENT_SHOULDER_SHRUG = 4, 5, 6
+    INTENT_FINGER_FLEX, INTENT_WRIST_EXT, INTENT_EYEBROW_RAISE = 7, 8, 9
 
     def __init__(self, seed: Optional[int] = 42):
         self.rng = np.random.default_rng(seed)
-        self.t = 0.0
-        self.dt = 1.0 / self.SAMPLE_RATE
-
-        # State
-        self._env_alpha = np.zeros(3)
-        self._blink_phase = 128
-        self._muscle_remaining = 0
-        self._muscle_freq = 50.0
-        self._muscle_intent = self.INTENT_REST
-        self._next_blink = 2.0
-
-        # Per-channel parameters (scalp-adapted)
-        self._line_amp = self.rng.uniform(8.0, 15.0, size=3)  # μV
-        self._drift_amp = self.rng.uniform(10.0, 50.0, size=3)  # μV
-        self._noise_std = self.rng.uniform(3.0, 6.0, size=3)  # μV (cleaner on scalp)
-        self._muscle_amp = np.array([40.0, 30.0, 40.0])  # μV (jaw/neck noise)
-
-        # Blink buffer (Gaussian kernel)
-        sigma = 0.08 * self.SAMPLE_RATE / 6.0
-        buf = np.exp(-0.5 * ((np.arange(128) - 64) / sigma) ** 2)
-        self._blink_buf = buf
-        # Blink amplitude is strong frontally, moderate at C3/Cz/C4
-        self._blink_amp_scalp = np.array([60.0, 80.0, 60.0])  # μV
-
-    def _next_sample(self) -> np.ndarray:
-        raw = np.zeros(3)
-        t = self.t
-        self.t += self.dt
-
-        for ch in range(3):
-            # 1. Slow electrode drift
-            drift = self._drift_amp[ch] * 0.4 * math.sin(t / 20.0)
-
-            # 2. 60 Hz line noise
-            line = self._line_amp[ch] * math.sin(2 * math.pi * 60 * t)
-
-            # 3. Eye blink (strongest on Cz)
-            blink = 0.0
-            if self._blink_phase < 128:
-                blink = self._blink_amp_scalp[ch] * self._blink_buf[self._blink_phase]
-                if ch == 2:
-                    self._blink_phase += 1  # advance once per sample
-            if t >= self._next_blink:
-                self._blink_phase = 0
-                self._next_blink = t + float(
-                    np.clip(self.rng.exponential(1.0 / 0.2), 0.8, 12.0)
-                )
-
-            # 4. Jaw/Neck muscle artifact (Intermittent high-freq noise)
-            muscle = 0.0
-            if self._muscle_remaining == 0 and self.rng.random() < 0.01:
-                self._muscle_remaining = self.rng.integers(10, 50)
-                self._muscle_freq = self.rng.uniform(40.0, 100.0)
-            if self._muscle_remaining > 0:
-                self._muscle_remaining -= 1
-                muscle = self._muscle_amp[ch] * math.sin(
-                    2 * math.pi * self._muscle_freq * t
-                )
-
-            # 5. Mu/Alpha rhythm (Desynchronizes during motor imagery/intent)
-            self._env_alpha[ch] += self.rng.uniform(-0.8, 0.8)
-            self._env_alpha[ch] *= 0.995
-            
-            is_intentional = (self._muscle_intent != self.INTENT_REST)
-            
-            # Desynchronization: Alpha drops significantly during active intent
-            alpha_scale = 0.1 if is_intentional else 1.0
-            alpha = (
-                15.0
-                * alpha_scale
-                * self._env_alpha[ch]
-                * math.sin(2 * math.pi * 11.0 * t)
-            )
-
-            # 6. Sensor noise (higher at neck due to hair/skin)
-            noise = self.rng.standard_normal() * self._noise_std[ch]
-
-            raw[ch] = drift + line + blink + muscle + alpha + noise
-
-        return raw
-
-    def next_segment(
-        self,
-        intent: Optional[int] = None,
-        n_samples: int = 256,
-    ) -> Dict:
-        """
-        Generate one labeled EEG segment (n_samples at 256 Hz = 1 second).
-
-        Parameters
-        ----------
-        intent: Optional[int]
-            If set, forces this muscle intent during the segment (simulation
-            of intentional movement). If None, random organic dynamics.
-        n_samples: int
-            Samples per segment. Default 256 = 1 second.
-
-        Returns
-        -------
-        dict with keys matching SegmentLabel from mechanicus:
-            raw_microvolts  np.ndarray (3,)       — per-channel mean
-            eeg             np.ndarray (3, T)      — raw signal for S4 encoder
-            root_label      int
-            hierarchical    dict
-            probabilities   np.ndarray (8,)
-            timestamp       float
-        """
-        if intent is not None and intent != self.INTENT_REST:
-            self._muscle_intent = intent
-        else:
-            self._muscle_intent = self.INTENT_REST
-
-        buf = np.zeros((3, n_samples))
-        for i in range(n_samples):
-            buf[:, i] = self._next_sample()
-
-        t_mid = self.t - n_samples * self.dt / 2.0
-        avg = buf.mean(axis=1)
-
-        # Feature extraction for label assignment
-        var = buf[1].var()  # central channel variance
-        kurt = (((buf[1] - buf[1].mean()) ** 4).mean()) / max(var**2, 1.0)
-        line_power = buf.mean(axis=0)  # rough proxy
-
-        # Identify dominant artifact label
-        probs = np.zeros(8)
-        probs[self.LABEL_MUSCLE] = min(0.6, var / 1000.0)
-        probs[self.LABEL_EYE_BLINK] = min(0.8, max(0.0, avg[1] / 60.0))
-        probs[self.LABEL_LINE_NOISE] = min(0.8, self._line_amp.mean() / 20.0)
+        self.t = 0.0; self.dt = 1.0 / self.SAMPLE_RATE
+        self.n_sources = 5; self.n_channels = 3
         
-        # If low var and no blinks, it's CleanBrain
+        # Simulated Volume Conduction Matrix (Leadfield)
+        self.leadfield = np.array([
+            [0.6, 0.2, 0.1,  0.4, 0.2],  # C3 external sensor
+            [0.2, 0.5, 0.2,  0.6, 0.2],  # Cz external sensor
+            [0.1, 0.2, 0.6,  0.4, 0.2]   # C4 external sensor
+        ])
+        
+        self.kuramoto = KuramotoNetwork(3, 11.0, 0.5, self.dt, self.rng)
+        self.K_rest = np.ones((3, 3)) * 4.0; np.fill_diagonal(self.K_rest, 0)
+        self.K_desync_right = self.K_rest.copy()
+        self.K_desync_right[0, :], self.K_desync_right[:, 0] = 0.5, 0.5 # Left C3 ERD
+        self.K_desync_left = self.K_rest.copy()
+        self.K_desync_left[2, :], self.K_desync_left[:, 2] = 0.5, 0.5   # Right C4 ERD
+        
+        self._muscle_intent = self.INTENT_REST
+        self._next_blink = 2.0 + self.rng.exponential(1.5)
+        self._muscle_burst = 0; self._muscle_freqs = None
+
+    def next_segment(self, intent: Optional[int] = None, n_samples: int = 256) -> Dict:
+        self._muscle_intent = intent if intent is not None else self.INTENT_REST
+        sources = np.zeros((self.n_sources, n_samples), dtype=np.float32)
+        
+        for i in range(self.n_sources):
+            sources[i, :] = generate_pink_noise(n_samples, self.dt, self.rng) * 15.0
+        
+        K_active = self.K_rest
+        if self._muscle_intent == self.INTENT_RIGHT_HAND: K_active = self.K_desync_right
+        elif self._muscle_intent == self.INTENT_LEFT_HAND: K_active = self.K_desync_left
+        elif self._muscle_intent != self.INTENT_REST: K_active = self.K_rest * 0.1
+        
+        for i in range(n_samples):
+            sources[0:3, i] += self.kuramoto.step(K_active) * 20.0
+            
+        t_batch = self.t + np.arange(n_samples) * self.dt
+        if t_batch[-1] > self._next_blink:
+            idx = np.searchsorted(t_batch, self._next_blink)
+            sources[3, :] += np.exp(-((np.arange(n_samples) - idx)**2) / 100.0) * 120.0
+            self._next_blink = t_batch[-1] + np.clip(self.rng.exponential(3.0), 1.0, 15.0)
+            
+        if self._muscle_burst == 0 and self.rng.random() < 0.05:
+            self._muscle_burst = self.rng.integers(10, 80)
+            self._muscle_freqs = self.rng.uniform(30.0, 100.0, size=3)
+            
+        if self._muscle_burst > 0:
+            burst_len = min(n_samples, self._muscle_burst)
+            t_emg = t_batch[:burst_len]
+            sources[4, :burst_len] += np.sum([np.sin(2*math.pi*f*t_emg) for f in self._muscle_freqs], axis=0) * 20.0
+            self._muscle_burst -= burst_len
+            
+        eeg_channels = self.leadfield @ sources
+        
+        for ch in range(self.n_channels):
+            eeg_channels[ch, :] += math.sin(t_batch[0]/50.0)*30.0 + np.sin(2*math.pi*60*t_batch)*10.0 + self.rng.standard_normal(n_samples)*3.0
+
+        self.t = t_batch[-1] + self.dt
+        avg = eeg_channels.mean(axis=1)
+        
+        var = eeg_channels[1].var()
+        probs = np.zeros(8)
+        probs[self.LABEL_MUSCLE] = min(0.6, var / 1500.0)
+        probs[self.LABEL_EYE_BLINK] = min(0.8, max(0.0, avg[1] / 60.0))
         if probs[self.LABEL_MUSCLE] < 0.3 and probs[self.LABEL_EYE_BLINK] < 0.3:
             probs[self.LABEL_CLEAN_BRAIN] = 1.0
-            
-        probs[self.LABEL_SLOW_DRIFT] = min(0.6, abs(buf[0, 0] - buf[0, -1]) / 60.0)
-        s = probs.sum()
-        if s > 0:
-            probs /= s
-
+        if probs.sum() > 0: probs /= probs.sum()
         dom = int(probs.argmax())
 
-        # Kinematic labels are decoupled from EEG now; but we'll return intent if CleanBrain
-        kinematic = None
-        m_intent = None
-        action = None
-
-        if dom == self.LABEL_CLEAN_BRAIN and self._muscle_intent != self.INTENT_REST:
-            m_intent = self._muscle_intent
-            action = "Intentional"
-
+        action = "Intentional" if (dom == self.LABEL_CLEAN_BRAIN and self._muscle_intent != self.INTENT_REST) else None
+        
         return {
             "raw_microvolts": avg,
-            "eeg": buf.astype(np.float32),  # (3, T) for S4 encoder
+            "eeg": eeg_channels.astype(np.float32),
             "root_label": dom,
-            "hierarchical": {
-                "root": dom,
-                "muscle_intent": m_intent,
-                "action": action,
-                "kinematic": kinematic,
-                "custom_tag": "ScalpElectrode",
-            },
+            "hierarchical": {"root": dom, "muscle_intent": self._muscle_intent if action else None, "action": action, "kinematic": None, "custom_tag": "SOTA_Kuramoto_1f_EEG"},
             "probabilities": probs,
-            "timestamp": t_mid,
+            "timestamp": t_batch[n_samples//2]
         }
+
 
 
 # ── Vision: RGB + depth ───────────────────────────────────────────────────────

@@ -22,25 +22,17 @@ from noosphere.s4_eeg     import S4EEGEncoder
 from noosphere.gnn        import KinematicGNN
 from noosphere.tokenizer  import UnifiedTokenizer, build_tokenizer
 from noosphere.apparatus  import (
-    MovementExecutor, KinematicSolver, ObstacleSphere,
-    IntentionFilter, AnomalyDetector,
-    CoordinatePredictor, SparseGPPredictor, NeuralCoordinatePredictor,
-    TemporalSmoother, CalibrationSession, PositionErrorFeedback,
-    ArmConfig, JointState,
+    ArmConfig, JointState, ObstacleSphere,
+    TemporalSmoother, KinematicSolver, MovementExecutor
 )
 from noosphere.hardware   import ServoController
 from noosphere.proto      import NCPEncoder, NCPDecoder, Channel, MsgType, NCPTransport
 from noosphere.learning   import (
     LearningManager, LearningConfig, LearningSignal,
     SupervisedCoordinateLoss, PositionErrorLoss,
-    StepNFTPolicy, StepNFTLoss, EEGAugment,
+    SIGRegLoss, EEGAugment, JEPALoss, TS2VecLoss,
 )
-from noosphere.actions    import (
-    Action, ActionSpace, ActBridge, Executor, Tier,
-    NullExecutor, ShellExecutor, ApparatusExecutor,
-    DigitalStateObserver, ShellOutputEncoder,
-    make_apparatus_space, make_shell_space, make_binary_space,
-)
+from noosphere.actions    import ActBridge
 from noosphere.trainer    import (
     Trainer, TrainerConfig, Env,
     BCIApparatusEnv, SyntheticBCIEnv,
@@ -68,11 +60,8 @@ __all__ = [
     # Memory
     "SequenceReplayBuffer", "EpisodicMemory", "WorkingMemory",
     # Apparatus
-    "MovementExecutor", "KinematicSolver", "ObstacleSphere",
-    "IntentionFilter", "AnomalyDetector",
-    "CoordinatePredictor", "SparseGPPredictor", "NeuralCoordinatePredictor",
-    "TemporalSmoother", "CalibrationSession", "PositionErrorFeedback",
-    "ArmConfig", "JointState",
+    "ArmConfig", "JointState", "ObstacleSphere",
+    "TemporalSmoother", "KinematicSolver", "MovementExecutor",
     # Hardware
     "ServoController",
     # Protocol
@@ -80,12 +69,9 @@ __all__ = [
     # Learning
     "LearningManager", "LearningConfig", "LearningSignal",
     "SupervisedCoordinateLoss", "PositionErrorLoss",
-    "StepNFTPolicy", "StepNFTLoss", "EEGAugment",
+    "SIGRegLoss", "EEGAugment", "JEPALoss", "TS2VecLoss",
     # Actions
-    "Action", "ActionSpace", "ActBridge", "Executor", "Tier",
-    "NullExecutor", "ShellExecutor", "ApparatusExecutor",
-    "DigitalStateObserver", "ShellOutputEncoder",
-    "make_apparatus_space", "make_shell_space", "make_binary_space",
+    "ActBridge",
     # Training
     "Trainer", "TrainerConfig", "Env",
     "BCIApparatusEnv", "SyntheticBCIEnv", "reach_reward",

@@ -51,7 +51,7 @@ class HybridPerceptionModel(nn.Module):
         self.rgb_enc = VisionEncoder(in_channels=3, d_model=d_model, patch_size=patch_size)
         self.depth_enc = VisionEncoder(in_channels=1, d_model=d_model, patch_size=patch_size)
         
-        self.structured_proj = nn.Sequential(nn.Linear(64, d_model), nn.GELU(), nn.Linear(d_model, d_model), nn.LayerNorm(d_model))
+        self.structured_proj = nn.Sequential(nn.LazyLinear(d_model), nn.GELU(), nn.Linear(d_model, d_model), nn.LayerNorm(d_model))
 
         self.modality_embed = nn.Parameter(torch.randn(5, d_model) * 0.02)
         
@@ -89,7 +89,7 @@ class HybridPerceptionModel(nn.Module):
 
         if "rgb" in inputs: tokens.append(self.rgb_enc(inputs["rgb"]) + self.modality_embed[2])
         if "depth" in inputs: tokens.append(self.depth_enc(inputs["depth"]) + self.modality_embed[3])
-        if "structured" in inputs: tokens.append(self.structured_proj(inputs["structured"]).unsqueeze(1) + self.modality_embed[4])
+        if "structured" in inputs: tokens.append(self.structured_proj(inputs["structured"].flatten(start_dim=1)).unsqueeze(1) + self.modality_embed[4])
 
         if not tokens:
             empty = torch.zeros(B, 1, self.d_model, device=self.device)

@@ -11,6 +11,7 @@ Features:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import copy
 from typing import Dict, Optional, Tuple
 
 # ── [DirichletEDLLoss and S4Block remain unchanged] ──
@@ -78,6 +79,31 @@ class S4EEGEncoder(nn.Module):
         
         # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
         self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
+        
+        self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
+        self.momentum_stem = None
+        self.momentum_blocks = None
+
+    def init_momentum_encoder(self):
+        if self.momentum_stem is None:
+            self.momentum_stem = copy.deepcopy(self.stem)
+            self.momentum_blocks = copy.deepcopy(self.blocks)
+            for p in self.momentum_stem.parameters(): p.requires_grad = False
+            for p in self.momentum_blocks.parameters(): p.requires_grad = False
+
+    @torch.no_grad()
+    def update_momentum(self, m: float = 0.99):
+        if self.momentum_stem is None: self.init_momentum_encoder()
+        for p, p_m in zip(self.stem.parameters(), self.momentum_stem.parameters()): p_m.data.mul_(m).add_(p.data, alpha=1 - m)
+        for p, p_m in zip(self.blocks.parameters(), self.momentum_blocks.parameters()): p_m.data.mul_(m).add_(p.data, alpha=1 - m)
+
+    @torch.no_grad()
+    def forward_momentum(self, eeg: torch.Tensor) -> torch.Tensor:
+        if self.momentum_stem is None: self.init_momentum_encoder()
+        x = self.momentum_stem(eeg)
+        x = x.transpose(1, 2)
+        for block in self.momentum_blocks: x = block(x)
+        return x[:, -1, :]
 
     def forward(self, eeg: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         B = eeg.shape[0]
@@ -106,7 +132,8 @@ class S4EEGEncoder(nn.Module):
             "intent_probs": intent_probs,  
             "confidence": confidence.squeeze(-1),      
             "alpha": alpha,                
-            "uncertainty": uncertainty.squeeze(-1), 
+            "uncertainty": uncertainty.squeeze(-1),
+            "pred_z": self.predictor(current_state),
             "cognitive": {
                 "uncertainty": uncertainty.squeeze(-1),
                 "total_evidence": S.squeeze(-1)

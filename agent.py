@@ -20,7 +20,7 @@ import torch.optim as optim
 
 from noosphere.actions import ActBridge
 from noosphere.bundle import BundleMetadata, export_bundle, load_bundle
-from noosphere.learning import LearningConfig, LearningManager
+from noosphere.learning import LearningConfig, LearningManager, JEPALoss, TS2VecLoss, EEGAugment
 from noosphere.memory import EpisodicMemory, SequenceReplayBuffer, WorkingMemory
 from noosphere.perception import HybridPerceptionModel
 from noosphere.physics import PhysicsAugmentedRSSM
@@ -56,6 +56,7 @@ class _Prep:
                 x = np.asarray(obs[k], dtype=np.float32)
                 if k in ("rgb", "depth", "rgb_right"):
                     if x.max() > 1.0 and k != "depth": x /= 255.0
+                    if x.ndim == 2: x = np.expand_dims(x, axis=-1)
                     if x.ndim == 3: x = x.transpose(2, 0, 1)
                     x = x[None]
                 elif k == "eeg" and x.ndim == 2: x = x[None]
@@ -266,6 +267,18 @@ class NoosphereAgent(nn.Module):
                     def recon_encoder_fn(x): return self.perception.s4(x, inp.get("electrode_mask"))["embed"]
                     sigreg_loss, _ = self.learning_manager.compute_unsupervised_loss(inp["eeg"], recon_encoder_fn)
                     L_sigreg = L_sigreg + sigreg_loss
+                    
+                    eeg = inp["eeg"]
+                    v1, v2 = EEGAugment.augment(eeg)
+                    out1 = self.perception.s4(v1); z1 = out1["embed"]; pred_z2 = out1["pred_z"]
+                    out2 = self.perception.s4(v2); z2 = out2["embed"]; pred_z1 = out2["pred_z"]
+                    with torch.no_grad():
+                        target_z1 = self.perception.s4.forward_momentum(v1)
+                        target_z2 = self.perception.s4.forward_momentum(v2)
+                    ts2vec_loss, _ = TS2VecLoss()(z1, z2)
+                    jepa_loss1, _ = JEPALoss()(pred_z1, target_z1)
+                    jepa_loss2, _ = JEPALoss()(pred_z2, target_z2)
+                    L_sigreg = L_sigreg + ts2vec_loss + jepa_loss1 + jepa_loss2
 
         h = torch.zeros(B, self._det_dim, device=self.device); z = torch.zeros(B, self._stoch_dim, device=self.device)
         L_kl, L_r, L_rew, L_t, L_p = [torch.tensor(0.0, device=self.device) for _ in range(5)]
@@ -281,8 +294,9 @@ class NoosphereAgent(nn.Module):
 
             L_kl = L_kl + self.rssm.kl_loss(pp, qp, 1.0)
             L_r = L_r + F.mse_loss(self.obs_decoder(s), e.detach())
-            L_rew = L_rew + torch.nan_to_num(F.mse_loss(cons.get("reward", torch.zeros_like(batch["rewards"][:, t])), batch["rewards"][:, t]), nan=0.0)
-            term_clamped = torch.nan_to_num(cons["termination"].clamp(0.0, 1.0), nan=0.5)
+            reward_pred = cons.get("reward", torch.zeros_like(batch["rewards"][:, t].unsqueeze(-1)))
+            L_rew = L_rew + torch.nan_to_num(F.mse_loss(reward_pred.squeeze(-1), batch["rewards"][:, t]), nan=0.0)
+            term_clamped = torch.nan_to_num(cons["termination"].clamp(0.0, 1.0).squeeze(-1), nan=0.5)
             L_t = L_t + F.binary_cross_entropy(term_clamped, batch["dones"][:, t])
             L_p = L_p + torch.nan_to_num(phys_tensor, nan=0.0)
 
@@ -297,6 +311,7 @@ class NoosphereAgent(nn.Module):
         loss.backward()
         nn.utils.clip_grad_norm_(self._wm_params, C.grad_clip)
         self.opt_wm.step()
+        self.perception.s4.update_momentum(m=0.996)
 
         return {"wm/loss": loss.item()}
 
@@ -315,8 +330,7 @@ class NoosphereAgent(nn.Module):
             flat_act = self._last_act.view(-1)
             flat_raw_cont = self._last_raw_cont.view(-1, 3)
             dist_bc, cont_bc = self.actor(flat_st)
-            
-            mask = batch["bci_active"].view(-1)
+            mask = batch["bci_active"][:, :self._last_st.shape[1]].contiguous().view(-1)
             L_bc_discrete = -dist_bc.log_prob(flat_act)
             L_bc_cont = F.mse_loss(cont_bc, flat_raw_cont, reduction='none').mean(dim=-1)
             L_bc_base = ((L_bc_discrete + L_bc_cont) * mask).sum() / (mask.sum() + 1e-8)
@@ -363,7 +377,8 @@ class NoosphereAgent(nn.Module):
         
         A = (G - G.mean()) / (G.std() + 1e-8)
         L_p = -(lp * A.detach()).mean()
-        ent = self.actor.entropy(st.view(-1, st.shape[-1]).detach()).mean()
+        dist_ent, _ = self.actor(st.view(-1, st.shape[-1]).detach())
+        ent = dist_ent.entropy().mean()
 
         dynamic_bc_weight = C.bc_weight * torch.exp(-ent.detach())
         loss = L_p - C.entropy_scale * ent + L_v + (dynamic_bc_weight * L_bc_base)
@@ -374,6 +389,55 @@ class NoosphereAgent(nn.Module):
         self.opt_ac.step()
 
         return {"ac/actor": L_p.item(), "ac/critic": L_v.item(), "ac/bc_loss": L_bc_base.item()}
+
+    def run_sleep_phase(self, n_dreams: int = 16) -> Dict[str, float]:
+        """Adversarial Sleep-Phase Consolidation (Dream Daemon)
+        Actively targets high-uncertainty latents for deep MCTS search and consolidation."""
+        if not hasattr(self, "_last_st") or self._last_st is None: return {}
+        if not self.cfg.use_mcts or self.planner is None: return {}
+        
+        flat_st = self._last_st.view(-1, self._last_st.shape[-1])
+        if flat_st.shape[0] == 0: return {}
+        
+        # Identify Epistemic Uncertainty using Critic Disagreement
+        with torch.no_grad():
+            v1, v2 = self.critic(flat_st)
+            disagreement = (v1 - v2).abs().squeeze(-1)
+        
+        k = min(n_dreams, disagreement.shape[0])
+        _, topk_idx = torch.topk(disagreement, k)
+        
+        uncertain_states = flat_st[topk_idx]
+        h_roots = uncertain_states[..., :self._det_dim]
+        z_roots = uncertain_states[..., self._det_dim:]
+        
+        total_loss = torch.tensor(0.0, device=self.device)
+        orig_sims = self.planner.n_simulations
+        self.planner.n_simulations = orig_sims * 2  # Deep search for Dream Daemon
+        
+        for i in range(k):
+            h_i, z_i = h_roots[i:i+1], z_roots[i:i+1]
+            # TD-MPC2 / Go-Explore target search
+            _, p_target, cont_target = self.planner.search(h_i, z_i)
+            
+            dist, cont = self.actor(uncertain_states[i:i+1])
+            target_p_tensor = torch.tensor(p_target, device=self.device)
+            target_cont_tensor = cont_target.to(self.device).squeeze(0)
+            
+            # InfoNCE contrast against improved MCTS target
+            l_pi = -(target_p_tensor * F.log_softmax(dist.logits, dim=-1)).sum(dim=-1).mean()
+            l_cont = F.mse_loss(cont.squeeze(0), target_cont_tensor)
+            total_loss = total_loss + l_pi + l_cont
+            
+        self.planner.n_simulations = orig_sims
+        
+        if k > 0:
+            self.opt_ac.zero_grad()
+            (total_loss / k).backward()
+            nn.utils.clip_grad_norm_(self._ac_params, self.cfg.grad_clip)
+            self.opt_ac.step()
+            
+        return {"sleep/dreams": float(k), "sleep/consolidation_loss": (total_loss / max(k, 1)).item()}
 
     def export_bundle(self, path: str, domain_tags: Optional[List[str]] = None, description: str = "", author: str = "", n_training_steps: int = 0, train_metrics: Optional[Dict[str, float]] = None):
         meta = BundleMetadata(domain_tags=domain_tags or [], description=description, author=author, n_training_steps=n_training_steps or self._step)

@@ -6,9 +6,14 @@
 
 ## What it is
 
-Noosphere is a closed-loop neural interface system that translates human intent — captured as electrical signals from three electrodes on the scalp — into physical or digital action, and learns continuously from the consequences.
+**Noosphere does not adapt to the world; it forces the world to adapt to the operator.** It is not an interface to a generic external AI. It is the Foundation Model itself, locally and idiosyncratically aligned to the single human operator.
 
-When you think about moving your arm, or think about running a command, your motor cortex fires a pattern that travels down through your nervous system. Noosphere reads the true neural signals at the scalp at 256 Hz, infers what you intended, explicitly executes your intention, and uses imagination strictly to predict and verify the consequence of your command before execution. It repeats this cycle continuously, without stopping between episodes, without requiring resets, and without sending any data off the device.
+Noosphere is an **Obedient consequence Engine** and a **Personalized Cognitive Foundation Model** that translates human intent — captured as electrical signals from three electrodes on the scalp — into physical or digital action, using an Autonomous RL Agent purely as a *Subjugated Path-Planner*.
+
+When you think about moving your arm, or running a command, your motor cortex fires a pattern. Noosphere reads true neural signals at the scalp at 256 Hz, infers your macro-intent, explicitly executes your intention, and uses imagination strictly to predict and verify the consequence of your command before execution. 
+
+**Zero-to-One Autogenous Independence:**
+The system is explicitly forbidden from outsourcing biological mapping or representation learning to external third-party foundation models. All bootstrapping is strictly autogenous: Noosphere forges its own topological manifolds through continuous resting-state predictive coding and offline adversarial imagination. It guarantees total independence using strictly local data.
 
 **Core loop:**
 
@@ -16,7 +21,7 @@ When you think about moving your arm, or think about running a command, your mot
 Perceive (Intent & Context) → Simulate Consequence → Act (Obey & Gate) → Observe → Learn → Repeat
 ```
 
-The same trained world model can drive a physical robotic arm or execute Linux shell commands. The architecture is domain-agnostic. Only the action vocabulary and executor change.
+The same trained world model can drive a physical robotic arm, execute Linux shell commands, or train entirely synthetically without hardware via SOTA physics simulation. Only the action vocabulary and executor change.
 
 ---
 
@@ -101,9 +106,11 @@ EEG directly modulates visual interpretation and vice versa.
 
 **Stream A — Patch Tokenizer:** ViT-style patch embedding for spatial data. New modalities register at runtime via `register_modality()` with no architectural changes required.
 
-**Stream B — S4 EEG Encoder:** EEG processed sample-by-sample with no windowing. The S4 continuous-time ODE uses HiPPO-LegS initialisation, which is mathematically optimal for memorising oscillatory signals. GroupNorm replaces BatchNorm so inference at batch size 1 works correctly. A numerically stable log-space kernel avoids floating-point error accumulation at 256 samples per segment. Outputs eleven values: a `summary` embedding, a full `sequence` for cross-attention, coarse `intent_logits` (5 classes), a continuous `continuous_xyz` coordinate prediction, a calibrated `confidence` scalar, five cognitive state dimensions (workload, attention, arousal, valence, fatigue), and a `planning_budget` that scales MCTS simulation count.
+**Stream B — S4 EEG Encoder:** EEG processed sample-by-sample with no windowing. The S4 continuous-time ODE uses HiPPO-LegS initialisation, which is mathematically optimal for memorising oscillatory signals. Outputs eleven values: a `summary` embedding, a full `sequence` for cross-attention, coarse `intent_logits` (5 classes), a continuous `continuous_xyz` coordinate prediction, a calibrated `confidence` scalar, five cognitive state dimensions (workload, attention, arousal, valence, fatigue), and a `planning_budget` that scales MCTS simulation count.
 
-**EEG electrode placement:** Three electrodes on the scalp targeting the motor cortex (C3, Cz, C4). True neural activity (such as Event-Related Desynchronization during motor imagery) is the intentional signal. Standard EEG artifact rejection is applied: `MuscleArtifact` is discarded as noise, while `CleanBrain` segments containing intentional cognitive activity are published downstream.
+**Synthetic Validation Engine:** Representation learning and architectural continuous integration do not require a physical headset. The environment integrates a SOTA Synthetic Generator featuring a non-linear phase-coupled **Kuramoto Oscillator Network**, 1/f aperiodic spatial pink noise, and a mathematically rigorous **Leadfield Volume Conduction Matrix** that projects 5 cortical source topologies onto the 3 external C3/Cz/C4 sensors.
+
+**EEG electrode placement:** Three electrodes on the scalp targeting the motor cortex (C3, Cz, C4). True neural activity (such as Event-Related Desynchronization during motor imagery) is the intentional signal. Standard EEG artifact rejection is applied.
 
 **Stream C — Learned-Adjacency GNN:** Joint states as graph nodes. Adjacency is learned per layer from data with L1 sparsity regularisation. Normalisation uses element-wise diagonal scaling — O(N²) not O(N³). Topology converges toward actual physical coupling structure over training.
 

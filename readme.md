@@ -216,14 +216,11 @@ This test artificially blinds the agent. It runs an inference step providing *on
 This runs the full `Trainer` loop. It synthesizes a continuous 256Hz EEG feed using the Kuramoto non-linear oscillator network, pumps it into the Replay Buffer, and continuously runs physics-augmented RSSM backpropagation.
 *   **The Argument to Stakeholders:** "This is the Zero-to-One Autogenous Bootstrap. We are not pinging an API. The system independently maps the unique biological frequency of a theoretical human into a physics-constrained latent space. It learns the user, not a generic average of humanity, and it runs continuously on local hardware."
 
-### Additional Pending Demos
-These pipelines will be fully reactivated in upcoming system reconstructions:
-```bash
-python demo.py --shell              # EEG → world model → Linux commands (Execution Bridge reconstruction pending)
-python demo.py --apparatus          # full BCI → IK → motor pipeline
-python demo.py --proto              # NCP round-trip test
-python demo.py --profile            # per-stream latency breakdown
-```
+### 4. The Unified Cognitive Latency Benchmark
+**Command:** `python demo.py --all`
+
+This executes a contiguous sweep of all architectural modules—Sensor Dropouts, Multi-Domain Smoke, Simulated Shell/LLM orchestration, Inverse Kinematics (Apparatus), the Binary Transport Protocol (NCP), and the Synthetic Training bootstrapper. It wraps every execution path in strict `time.perf_counter()` metrics.
+*   **The Argument to Stakeholders:** "There is no theoretical argument. Here are the exact sub-200ms constraints of the system running locally. The Foundation Model operates seamlessly, integrating and rejecting simulated data, and we mathematically isolate every bottleneck."
 
 ---
 

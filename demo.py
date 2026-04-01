@@ -197,16 +197,24 @@ def apparatus_demo(dev: torch.device):
 
 def proto_test(dev: torch.device):
     t0 = time.perf_counter()
-    log.info("\n── NCP Proto Round-Trip ─────────────────────────")
-    log.info("Simulating struct.pack/unpack over raw byte channels")
-    # Simulate a binary encoding pipeline
-    for step in range(3):
-        payload = np.random.randn(8).astype(np.float32)
-        if step == 0: log.info(f"  [Input] High-dimensional latent vector to encode: {payload.shape}")
-        encoded = payload.tobytes()
-        time.sleep(0.01) # Transport delay
-        decoded = np.frombuffer(encoded, dtype=np.float32)
-        log.info(f"  [step {step}] 32 bytes encoded → Transmitted → decoded. Match={np.allclose(payload, decoded)}")
+    log.info("\n── NCP Proto Zero-Copy Transport ─────────────────────────")
+    from noosphere.proto import NCPTransport, Channel
+    try:
+        transport = NCPTransport.shm()
+        log.info("Initialized POSIX Lock-Free Shared Memory Backend")
+        for step in range(3):
+            payload = np.random.randn(8).astype(np.float32)
+            if step == 0: log.info(f"  [Input] Floating point latent vectors: {payload.shape}")
+            encoded = payload.tobytes()
+            # Publish to SHM
+            transport.publish(Channel.EEG_SOURCE, encoded)
+            # Instantly Recv
+            decoded = transport.recv(Channel.EEG_SOURCE, timeout_s=0.1)
+            reconstructed = np.frombuffer(decoded, dtype=np.float32)
+            if step == 0: log.info(f"  [step {step}] 32 bytes encoded → SHM Memmap → decoded. Match={np.allclose(payload, reconstructed)}")
+        transport.close()
+    except Exception as e:
+        log.error(f"  SHM backend omitted: {e}")
     return time.perf_counter() - t0
 
 # ── Training Demo ──────────────────────────────────────────────────

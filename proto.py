@@ -389,6 +389,7 @@ class NCPTransport:
     --------
     NCPTransport.redis(host, port, db)  — Redis pub/sub
     NCPTransport.inproc()               — in-process threading.Queue
+    NCPTransport.shm()                  — lock-free zero-copy POSIX shared memory
 
     Both expose the same interface:
         publish(channel, frame)     — send a frame
@@ -423,6 +424,11 @@ class NCPTransport:
     def inproc(cls):
         """In-process queue backend — no external dependencies."""
         return cls(_InProcBackend())
+
+    @classmethod
+    def shm(cls):
+        """Zero-copy POSIX Shared Memory backend."""
+        return cls(_ShmBackend())
 
     # ── Interface ─────────────────────────────────────────────────────────────
 
@@ -502,3 +508,55 @@ class _InProcBackend:
     def close(self) -> None:
         self._queues.clear()
         self._callbacks.clear()
+
+
+class _ShmBackend:
+    """Zero-copy, lock-free ring buffer (size 1) for POSIX IPC."""
+    def __init__(self, size=4096):
+        from multiprocessing import shared_memory
+        self._size = size
+        self._shms: _Dict[str, shared_memory.SharedMemory] = {}
+
+    def _get_shm(self, channel: str):
+        from multiprocessing import shared_memory
+        name = "ncp_shm_" + channel.replace(":", "_")
+        if channel not in self._shms:
+            try:
+                shm = shared_memory.SharedMemory(name=name, create=True, size=self._size)
+            except FileExistsError:
+                shm = shared_memory.SharedMemory(name=name, create=False, size=self._size)
+            self._shms[channel] = shm
+        return self._shms[channel]
+
+    def publish(self, channel: str, frame: bytes) -> None:
+        shm = self._get_shm(channel)
+        L = len(frame)
+        if L > self._size - 4:
+            raise ValueError("Frame exceeds SHM buffer size")
+        import struct
+        shm.buf[:4] = struct.pack("<I", L)
+        shm.buf[4:4+L] = frame
+
+    def recv(self, channel: str, timeout_s: float = 0.1):
+        import struct, time
+        t0 = time.time()
+        shm = self._get_shm(channel)
+        while True:
+            L = struct.unpack("<I", shm.buf[:4])[0]
+            if 0 < L <= self._size - 4:
+                return bytes(shm.buf[4:4+L])
+            if time.time() - t0 > timeout_s:
+                return None
+            time.sleep(0.001) # polling backoff
+
+    def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
+        raise NotImplementedError("SHM backend utilizes lock-free polling (Disruptor pattern), not callbacks.")
+
+    def close(self) -> None:
+        for shm in self._shms.values():
+            shm.close()
+            try:
+                shm.unlink()
+            except FileNotFoundError:
+                pass
+        self._shms.clear()

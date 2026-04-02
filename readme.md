@@ -32,9 +32,9 @@ The same trained world model can drive a physical robotic arm, execute Linux she
 1. Neural Models & Roles
 Noosphere is composed of six interlinked neural modules:
 - S4EEGEncoder (State-Space Signal Processor): 
-    - Processes raw, noisy EEG time-series data. Uses **Evidential Deep Learning (EDL)** to map biological brain activity into Dirichlet-bounded intent probabilities (`intent_probs`), mathematically rigorous epistemic uncertainty, and cognitive states (fatigue, workload). EDL replaces uncalibrated logits with probabilities that are provably bounded and carry principled uncertainty estimates.
+    - Processes raw, noisy EEG time-series data. Uses **Evidential Deep Learning (EDL)** to map biological brain activity into Dirichlet-bounded intent probabilities (`intent_probs`), mathematically rigorous epistemic uncertainty, and cognitive states (fatigue, workload). EDL replaces uncalibrated logits with probabilities that are provably bounded and carry principled uncertainty estimates. Embedded **TopologyExtractor** computes Vietoris-Rips Persistent Homology directly over the sequence to detect topological manifolds (flow states vs. task-switching turbulence).
 - NoosphereGNN (Graph Neural Network): 
-    - Handles variable brain electrode topologies. It routes the extracted spatial features across the brain graph.    
+    - Handles variable brain electrode topologies and kinematic routing. It routes the extracted spatial features across the brain graph, now augmented with dynamic cross-attention constraints informed by Betti-0 and Betti-1 topological priors.
 - PhysicsAugmentedRSSM (World Model): 
     - A Recurrent State-Space Model fused with strict Hamiltonian physics priors. Its job is to simulate the environment and predict the future latent state based on the current state and a given action.
 - ConsequenceModel (The Critic):
@@ -106,7 +106,7 @@ EEG directly modulates visual interpretation and vice versa.
 
 **Stream A — Patch Tokenizer:** ViT-style patch embedding for spatial data. New modalities register at runtime via `register_modality()` with no architectural changes required.
 
-**Stream B — S4 EEG Encoder:** EEG processed sample-by-sample with no windowing. The S4 continuous-time ODE uses HiPPO-LegS initialisation, which is mathematically optimal for memorising oscillatory signals. Outputs eleven values: a `summary` embedding, a full `sequence` for cross-attention, coarse `intent_logits` (5 classes), a continuous `continuous_xyz` coordinate prediction, a calibrated `confidence` scalar, five cognitive state dimensions (workload, attention, arousal, valence, fatigue), and a `planning_budget` that scales MCTS simulation count.
+**Stream B — S4 EEG Encoder:** EEG processed sample-by-sample with no windowing. The S4 continuous-time ODE uses HiPPO-LegS initialisation, which is mathematically optimal for memorising oscillatory signals. Outputs twelve values: a `summary` embedding, a full `sequence` for cross-attention, a topological manifold calculation (`topological`), coarse `intent_logits` (5 classes), a continuous `continuous_xyz` coordinate prediction, a calibrated `confidence` scalar, five cognitive state dimensions (workload, attention, arousal, valence, fatigue), and a `planning_budget` that scales MCTS simulation count.
 
 **Synthetic Validation Engine:** Representation learning and architectural continuous integration do not require a physical headset. The environment integrates a SOTA Synthetic Generator featuring a non-linear phase-coupled **Kuramoto Oscillator Network**, 1/f aperiodic spatial pink noise, and a mathematically rigorous **Leadfield Volume Conduction Matrix** that projects 5 cortical source topologies onto the 3 external C3/Cz/C4 sensors.
 
@@ -188,11 +188,12 @@ Noosphere improves automatically while the user operates it. It does not require
 - **Imagination Training & Imitation Prior (Phase B):** The `Actor` and `Critic` train rapidly *inside* the frozen World Model's imagination. The `Actor` is heavily penalized (`L_bc`) if it diverges from the actual commands the human historically executed. This ensures the AI culturally aligns with the user rather than drifting.
 - **Contrastive Learning (Phase C):** Always running, no labels. NT-Xent on four EEG augmentations to cluster neural embeddings continuously.
 
-### Future State-of-the-Art Trajectory (Approved Directives)
+### Current State-of-the-Art Capabilities (Recently Implemented)
 
-1. **Predictive S4-Driven Intent Pre-fetching:** Rather than reacting to finalized cognitive commands, the S4 sequence model decodes the neurological "run-up" to an action. The agent pre-fetches resources and stages OS commands *before* the operator consciously finalizes the macro-intent, achieving perceived negative-latency execution.
-2. **Local OS Contrastive Grounding (UI-CLIP):** A custom, strictly-local contrastive learning model that embeds system states (DOM trees, terminal buffers) directly into the same latent space as BCI signals. This bypasses rigid OCR, allowing the agent to continuously correlate abstract neural intent to exact spatial UI elements without calling external APIs.
-3. **Hamiltonian Cognitive Dynamics:** The operator's fatigue and workload are modeled mathematically as physical energy decaying in a closed dynamical Hamiltonian system. If the equation detects critical neural fatigue via the S4 stream, Noosphere dynamically assumes higher background autonomy, safely reducing the MCTS confirmation thresholds.
+1. **Topological Data Analysis (TDA) for Cognitive Manifolds:** A persistent homology layer directly calculates Betti-0 and Betti-1 numbers on the output sequence of the S4 sequence model, tracking structural "holes" and connected components. This allows Noosphere to mathematically distinguish between a "flow state" and "task-switching turbulence" before any behavioral deviation occurs.
+2. **Predictive S4-Driven Intent Pre-fetching:** Rather than reacting to finalized cognitive commands, the S4 sequence model decodes the neurological "run-up" to an action. The agent pre-fetches resources and stages OS commands *before* the operator consciously finalizes the macro-intent, achieving perceived negative-latency execution.
+3. **Local OS Contrastive Grounding (UI-CLIP):** A custom, strictly-local contrastive learning model that embeds system states (DOM trees, terminal buffers) directly into the same latent space as BCI signals. This bypasses rigid OCR, allowing the agent to continuously correlate abstract neural intent to exact spatial UI elements without calling external APIs.
+4. **Hamiltonian Cognitive Dynamics:** The operator's fatigue and workload are modeled mathematically as physical energy decaying in a closed dynamical Hamiltonian system. If the equation detects critical neural fatigue via the S4 stream, Noosphere dynamically assumes higher background autonomy, safely reducing the MCTS confirmation thresholds.
 
 ---
 

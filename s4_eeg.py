@@ -14,6 +14,12 @@ import torch.nn.functional as F
 import copy
 from typing import Dict, Optional, Tuple
 
+import numpy as np
+try:
+    from ripser import ripser
+except ImportError:
+    ripser = None
+
 # ── [DirichletEDLLoss and S4Block remain unchanged] ──
 class DirichletEDLLoss(nn.Module):
     def __init__(self, n_classes: int, annealing_step: int = 10):
@@ -60,6 +66,43 @@ class S4Block(nn.Module):
         x = self.out_proj(x)
         return x + residual
 
+class TopologyExtractor(nn.Module):
+    def __init__(self, d_model: int, max_points: int = 64):
+        super().__init__()
+        self.max_points = max_points
+        self.proj = nn.Linear(2, d_model)
+        
+    def forward(self, seq: torch.Tensor) -> torch.Tensor:
+        B, T, d = seq.shape
+        device = seq.device
+        
+        betti_features = torch.zeros(B, 2, device=device)
+        
+        if ripser is None:
+            return self.proj(betti_features)
+            
+        if T > self.max_points:
+            seq_np = seq[:, -self.max_points:, :].detach().cpu().numpy()
+        else:
+            seq_np = seq.detach().cpu().numpy()
+            
+        for b in range(B):
+            try:
+                dgns = ripser(seq_np[b], maxdim=1)['dgms']
+                
+                h0_lifetimes = dgns[0][:-1, 1] - dgns[0][:-1, 0] if len(dgns[0]) > 1 else np.array([0.0])
+                betti_0_sum = np.sum(h0_lifetimes)
+                
+                h1_lifetimes = dgns[1][:, 1] - dgns[1][:, 0] if len(dgns[1]) > 0 else np.array([0.0])
+                betti_1_sum = np.sum(h1_lifetimes)
+                
+                betti_features[b, 0] = float(betti_0_sum)
+                betti_features[b, 1] = float(betti_1_sum)
+            except Exception:
+                pass
+                
+        return self.proj(betti_features)
+
 class S4EEGEncoder(nn.Module):
     def __init__(self, in_channels: int = 3, d_model: int = 256, d_state: int = 64, n_blocks: int = 4, downsample: int = 4, n_actions: int = 8):
         super().__init__()
@@ -76,6 +119,8 @@ class S4EEGEncoder(nn.Module):
         )
 
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
+        
+        self.tda = TopologyExtractor(d_model)
         
         # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
         self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
@@ -125,10 +170,13 @@ class S4EEGEncoder(nn.Module):
         
         uncertainty = self.n_actions / S
         confidence = 1.0 - uncertainty
+        
+        topo_embed = self.tda(x)
 
         return {
             "sequence": x,                 
             "embed": current_state,        
+            "topological": topo_embed,
             "intent_probs": intent_probs,  
             "confidence": confidence.squeeze(-1),      
             "alpha": alpha,                

@@ -218,6 +218,8 @@ class Monitor:
             self._prom_ac_bc_loss = Gauge("noosphere_ac_bc_loss", "Actor Behavioral Cloning Loss")
             self._prom_bci_confidence = Gauge("noosphere_bci_confidence", "BCI Evidential Confidence")
             self._prom_reward = Gauge("noosphere_reward", "Environment Reach Reward")
+            self._prom_e2e_latency = Gauge("noosphere_e2e_latency_ms", "End-to-End Latency in MS")
+            self._prom_ncp_latency = Gauge("noosphere_ncp_latency_us", "NCP Transport IPC Latency in Microseconds")
 
         if cfg.alert_file:
             try:
@@ -269,6 +271,10 @@ class Monitor:
                 self._wm_losses.append(float(train_metrics["wm/loss"]))
                 if self._prom_wm_loss is not None:
                     self._prom_wm_loss.set(float(train_metrics["wm/loss"]))
+            if "e2e_latency_ms" in train_metrics and self._prom_e2e_latency is not None:
+                self._prom_e2e_latency.set(float(train_metrics["e2e_latency_ms"]))
+            if "ncp_latency_us" in train_metrics and self._prom_ncp_latency is not None:
+                self._prom_ncp_latency.set(float(train_metrics["ncp_latency_us"]))
             if "wm/kl" in train_metrics:
                 self._kl_vals.append(float(train_metrics["wm/kl"]))
                 if self._prom_wm_kl is not None:

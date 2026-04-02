@@ -6,3 +6,6 @@
 - [x] Implement Predictive S4 Intent Pre-fetching (Staging executors before intent-confidence crosses the gate threshold).
 - [x] Train local OS-Level Contrastive Grounding (UI-CLIP) to map window-buffers to the BCI latent space.
 - [x] Encode `bci/fatigue` and `bci/workload` into a Hamiltonian neural equation to dynamically scale the MCTS horizon.
+- [x] Implement a Vietoris-Rips Persistent Homology calculator on the output sequence of `S4EEGEncoder`.
+- [x] Extract the Betti-0 and Betti-1 numbers to quantify cognitive manifold connectivity (flow state vs. turbulence).
+- [x] Pipe the topological features directly into the `NoosphereGNN` cross-attention tokens.

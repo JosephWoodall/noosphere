@@ -16,3 +16,6 @@ bleak>=0.21.1       # Bluetooth LE support
 
 # Additional environments
 # gymnasium>=0.29.0
+
+# Topological Data Analysis
+ripser>=0.6.8

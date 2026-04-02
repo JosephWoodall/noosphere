@@ -152,8 +152,12 @@ class KinematicGNN(nn.Module):
         self.global_proj = nn.Linear(d_model, d_model)
         self.drop        = nn.Dropout(dropout)
 
-    def forward(self, node_features: torch.Tensor) -> Dict:
+    def forward(self, node_features: torch.Tensor, topo_prior: Optional[torch.Tensor] = None) -> Dict:
         h            = self.node_enc(node_features)
+        
+        if topo_prior is not None:
+            h = h + topo_prior.unsqueeze(1)
+            
         adjs         = []
         total_sparse = torch.tensor(0.0, device=h.device)
 

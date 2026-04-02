@@ -87,7 +87,8 @@ class HybridPerceptionModel(nn.Module):
             tokens.append(eeg_token)
 
         if "kinematics" in inputs:
-            gnn_out = self.gnn(inputs["kinematics"])
+            topo_prior = s4_out["topological"] if s4_out is not None and "topological" in s4_out else None
+            gnn_out = self.gnn(inputs["kinematics"], topo_prior=topo_prior)
             tokens.append(gnn_out["graph_sequence"] + self.modality_embed[1])
 
         if "rgb" in inputs: tokens.append(self.rgb_enc(inputs["rgb"]) + self.modality_embed[2])

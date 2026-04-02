@@ -188,6 +188,12 @@ Noosphere improves automatically while the user operates it. It does not require
 - **Imagination Training & Imitation Prior (Phase B):** The `Actor` and `Critic` train rapidly *inside* the frozen World Model's imagination. The `Actor` is heavily penalized (`L_bc`) if it diverges from the actual commands the human historically executed. This ensures the AI culturally aligns with the user rather than drifting.
 - **Contrastive Learning (Phase C):** Always running, no labels. NT-Xent on four EEG augmentations to cluster neural embeddings continuously.
 
+### Future State-of-the-Art Trajectory (Approved Directives)
+
+1. **Predictive S4-Driven Intent Pre-fetching:** Rather than reacting to finalized cognitive commands, the S4 sequence model decodes the neurological "run-up" to an action. The agent pre-fetches resources and stages OS commands *before* the operator consciously finalizes the macro-intent, achieving perceived negative-latency execution.
+2. **Local OS Contrastive Grounding (UI-CLIP):** A custom, strictly-local contrastive learning model that embeds system states (DOM trees, terminal buffers) directly into the same latent space as BCI signals. This bypasses rigid OCR, allowing the agent to continuously correlate abstract neural intent to exact spatial UI elements without calling external APIs.
+3. **Hamiltonian Cognitive Dynamics:** The operator's fatigue and workload are modeled mathematically as physical energy decaying in a closed dynamical Hamiltonian system. If the equation detects critical neural fatigue via the S4 stream, Noosphere dynamically assumes higher background autonomy, safely reducing the MCTS confirmation thresholds.
+
 ---
 
 ## Proving Noosphere: Quick Start & Demonstration Guide

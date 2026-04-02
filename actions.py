@@ -189,6 +189,11 @@ class ActBridge:
         action = self.space[action_idx]
 
         if effective < self.min_conf:
+            # PREDICTIVE INTENT PRE-FETCHING
+            if effective >= self.min_conf * 0.5:
+                prefetch_id = f"prefetch_{id(action)}_{time.time_ns()}"
+                self._thread_pool.submit(self._prefetch_executor, action)
+
             out = {"executed": False, "reason": f"conf {effective:.2f} < {self.min_conf}", "reward": 0.0, "action": action}
             self._history.append(out); return out
 
@@ -221,3 +226,9 @@ class ActBridge:
         }
         self._history.append(out)
         return out
+
+    def _prefetch_executor(self, action: Action):
+        if hasattr(self.executor, "prefetch"):
+            self.executor.prefetch(action)
+        else:
+            pass # Stub: load cache, warmup DB connections, stage binaries

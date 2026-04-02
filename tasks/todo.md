@@ -3,3 +3,6 @@
 - [x] Implement `io_uring` based hardware acceleration for BCI sensor ingestion.
 - [x] Integrate Gaze/Eye-Tracking vectors into `HybridPerceptionModel` to accelerate 0-to-1 spatial parameterization.
 - [x] Hook the `ActBridge` to local ZFS/Btrfs snapshot mechanisms to enforce retroactive consequence rollbacks.
+- [x] Implement Predictive S4 Intent Pre-fetching (Staging executors before intent-confidence crosses the gate threshold).
+- [x] Train local OS-Level Contrastive Grounding (UI-CLIP) to map window-buffers to the BCI latent space.
+- [x] Encode `bci/fatigue` and `bci/workload` into a Hamiltonian neural equation to dynamically scale the MCTS horizon.

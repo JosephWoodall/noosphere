@@ -50,11 +50,13 @@ class HybridPerceptionModel(nn.Module):
         
         self.rgb_enc = VisionEncoder(in_channels=3, d_model=d_model, patch_size=patch_size)
         self.depth_enc = VisionEncoder(in_channels=1, d_model=d_model, patch_size=patch_size)
+        # UI-CLIP Contrastive Grounding: RGBA active window buffers
+        self.uiclip_enc = VisionEncoder(in_channels=4, d_model=d_model, patch_size=patch_size) 
         
         self.structured_proj = nn.Sequential(nn.LazyLinear(d_model), nn.GELU(), nn.Linear(d_model, d_model), nn.LayerNorm(d_model))
         self.gaze_proj = nn.Sequential(nn.Linear(2, d_model), nn.LayerNorm(d_model))
 
-        self.modality_embed = nn.Parameter(torch.randn(6, d_model) * 0.02)
+        self.modality_embed = nn.Parameter(torch.randn(7, d_model) * 0.02)
         
         fusion_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=n_heads, dim_feedforward=d_model * 4, dropout=0.1, activation='gelu', batch_first=True)
         self.fusion = nn.TransformerEncoder(fusion_layer, num_layers=n_layers)
@@ -92,6 +94,7 @@ class HybridPerceptionModel(nn.Module):
         if "depth" in inputs: tokens.append(self.depth_enc(inputs["depth"]) + self.modality_embed[3])
         if "structured" in inputs: tokens.append(self.structured_proj(inputs["structured"].flatten(start_dim=1)).unsqueeze(1) + self.modality_embed[4])
         if "gaze" in inputs: tokens.append(self.gaze_proj(inputs["gaze"].float()).unsqueeze(1) + self.modality_embed[5])
+        if "os_window" in inputs: tokens.append(self.uiclip_enc(inputs["os_window"]) + self.modality_embed[6])
 
         if not tokens:
             empty = torch.zeros(B, 1, self.d_model, device=self.device)

@@ -1,4 +1,5 @@
-- [ ] Inject granular, sub-millisecond hardware latency timers into `demo.py`, IPC transports (`proto.py`), and neural steps (`agent.py`).
-- [ ] Instrument `monitor.py` to continuously export `e2e_latency_ms` to Prometheus.
-- [ ] Enforce CPU core pinning / real-time OS scheduling logic in the documentation.
-- [ ] Verify execution of new metric instrumentation via the demo suite.
+- [x] Inject granular, sub-millisecond hardware latency timers (`demo.py`, `proto.py`, `agent.py`).
+- [x] Instrument `monitor.py` to continuously export `e2e_latency_ms` to Prometheus.
+- [x] Implement `io_uring` based hardware acceleration for BCI sensor ingestion.
+- [x] Integrate Gaze/Eye-Tracking vectors into `HybridPerceptionModel` to accelerate 0-to-1 spatial parameterization.
+- [x] Hook the `ActBridge` to local ZFS/Btrfs snapshot mechanisms to enforce retroactive consequence rollbacks.

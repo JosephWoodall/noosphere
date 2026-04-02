@@ -195,7 +195,19 @@ class NoosphereAgent(nn.Module):
             cont_final = actor_cont.squeeze(0)
         else:
             uncertainty = 1.0 - effective_confidence
-            n_sims = max(2, int(self.cfg.n_mcts_sims * uncertainty))
+            
+            # HAMILTONIAN COGNITIVE DYNAMICS
+            hamiltonian_budget = 1.0
+            if s4_out is not None and "cognitive_state" in s4_out:
+                cog = s4_out["cognitive_state"]
+                # Mathematical energy mapping: E = 0.5(W^2) + F
+                W = float(cog.get("workload", 0.0))
+                F = float(cog.get("fatigue", 0.0))
+                E = 0.5 * (W ** 2) + F
+                hamiltonian_budget = max(0.1, 1.0 - E)
+                
+            n_sims = max(2, int(self.cfg.n_mcts_sims * hamiltonian_budget * uncertainty))
+            
             if self.cfg.use_mcts and not deterministic:
                 self.planner.n_simulations = n_sims
                 action, p_final, cont_final = self.planner.search(self._h, self._z, bci_discrete=p_bci, bci_continuous=cont_bci)

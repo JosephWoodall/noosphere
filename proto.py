@@ -430,6 +430,11 @@ class NCPTransport:
         """Zero-copy POSIX Shared Memory backend."""
         return cls(_ShmBackend())
 
+    @classmethod
+    def uring(cls, device_path: str = "/dev/eeg0"):
+        """Hardware-Accelerated io_uring BCI ingestion daemon backend."""
+        return cls(_UringBackend(device_path))
+
     # ── Interface ─────────────────────────────────────────────────────────────
 
     def publish(self, channel: str, frame: bytes) -> None:
@@ -560,3 +565,64 @@ class _ShmBackend:
             except FileNotFoundError:
                 pass
         self._shms.clear()
+
+class _UringBackend:
+    """Zero-latency hardware ingestion daemon bypassing kernel Syscall blockers via io_uring."""
+    def __init__(self, device_path: str = "/dev/eeg0"):
+        self.device_path = device_path
+        self._fd = None
+        self._ring = None
+        self._buf = bytearray(8192)
+        import os
+        try:
+            import liburing
+            self._fd = os.open(self.device_path, os.O_RDONLY | os.O_NONBLOCK)
+            self._ring = liburing.io_uring()
+            liburing.io_uring_queue_init(32, self._ring, 0)
+        except Exception:
+            self._fd = None
+
+    def publish(self, channel: str, frame: bytes) -> None:
+        raise NotImplementedError("Uring ingestion daemon is strictly read-only from hardware macro-intent sources.")
+
+    def recv(self, channel: str, timeout_s: float = 0.1):
+        if not self._fd: return None
+        import time
+        try:
+            import liburing
+        except ImportError:
+            return None
+        t0 = time.time()
+        while time.time() - t0 < timeout_s:
+            sqe = liburing.io_uring_get_sqe(self._ring)
+            if not sqe: continue
+            
+            iov = liburing.iovec(self._buf)
+            liburing.io_uring_prep_readv(sqe, self._fd, iov, 1, 0)
+            liburing.io_uring_submit(self._ring)
+            
+            cqe = liburing.io_uring_cqe()
+            res = liburing.io_uring_wait_cqe(self._ring, cqe)
+            if res < 0: continue
+            
+            bytes_read = cqe.res
+            liburing.io_uring_cqe_seen(self._ring, cqe)
+            
+            if bytes_read > 0:
+                return bytes(self._buf[:bytes_read])
+            time.sleep(0.001)
+        return None
+
+    def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
+        raise NotImplementedError("Uring backend utilizes lock-free polling, not callbacks.")
+
+    def close(self) -> None:
+        if self._ring:
+            try:
+                import liburing
+                liburing.io_uring_queue_exit(self._ring)
+            except Exception:
+                pass
+        if self._fd:
+            import os
+            os.close(self._fd)

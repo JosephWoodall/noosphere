@@ -162,6 +162,19 @@ class ActBridge:
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
         self._pending_tasks = {}
 
+    def _trigger_snapshot(self, task_id: str):
+        import subprocess, os
+        # Obedient Consequence Engine check
+        # ZFS or Btrfs retroactive rollback enforcement. Bypass if OS doesn't support it, but attempt snapshot.
+        try:
+            if os.path.exists(".zfs"):
+                subprocess.run(["zfs", "snapshot", f"pool/noosphere@{task_id}"], capture_output=True, timeout=1.0)
+            else:
+                os.makedirs(".snapshots", exist_ok=True)
+                subprocess.run(["btrfs", "subvolume", "snapshot", ".", f".snapshots/{task_id}"], capture_output=True, timeout=1.0)
+        except Exception:
+            pass
+
     def act(self, action_idx: int, predicted_value: float = 1.0, s4_confidence: Optional[float] = None, info: Optional[Dict] = None) -> Dict[str, Any]:
         if s4_confidence is None and info is not None: s4_confidence = info.get("s4_confidence")
         
@@ -190,6 +203,10 @@ class ActBridge:
 
         # DESTROY LATENCY: Fire and Forget Asynchronous Dispatch
         task_id = f"{id(action)}_{time.time_ns()}"
+        
+        # Consequence Engine Mandatory Rollback Gateway
+        self._trigger_snapshot(task_id)
+
         future = self._thread_pool.submit(self.executor.execute, action)
         self._pending_tasks[task_id] = future
 

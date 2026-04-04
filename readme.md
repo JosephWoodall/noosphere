@@ -594,10 +594,14 @@ All computation runs onboard. No data leaves the device. No network connection r
 ---
 
 ## License
-Noosphere is released under a custom non-commercial source-available license (see LICENSE file). 
-It is open for individual collaboration and academic/research use. Commercial use requires a separate agreement with the author.
 
-Contributions are welcome under the terms of the license.
+Noosphere is released under a custom non-commercial source-available license.  
+See [LICENSE.md](LICENSE.md) for the full terms.
+
+The project is open for individual collaboration, academic research, and non-commercial use.  
+Commercial use or incorporation into for-profit products/services requires a separate agreement with the author (Joseph Woodall).
+
+This work forms part of the author's PhD thesis.
 
 ## Citation
 

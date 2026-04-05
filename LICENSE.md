@@ -57,7 +57,7 @@ The following acts constitute Commercial Use and are prohibited without such agr
 (e)  Providing consulting, support, or integration services whose value derives substantially from the Software;
 (f)  Internal commercial deployment within a for-profit organization where the deployment generates revenue, reduces costs, or creates competitive advantage.
 
-To obtain a Commercial License, contact the Author at: josephwoodall1@gmail.com
+To obtain a Commercial License, contact the Author at: josephlw4@gmail.com
 
 This restriction is permanent. There is no change date or sunset clause. The commercial restriction survives any transfer of the Software and applies equally to Derivative Works.
 
@@ -158,7 +158,7 @@ Contact and Commercial Licensing
 For Commercial License inquiries, partnership discussions, or questions about permitted use:
 
 Author:   Joseph Woodall
-Email:    josephwoodall1@gmail.com
+Email:    josephlw4@gmail.com
 Repository:   https://github.com/JosephWoodall/noosphere
 
 Commercial licenses are available on terms negotiated directly with the Author. Academic institutions, non-profit organizations, and open-source projects are encouraged to reach out to discuss their use case.

@@ -1,212 +1,168 @@
+NOOSPHERE
+Source-Available Non-Commercial License with Contributor Agreement
+Version 1.0  —  Effective Date: April 5, 2026
+Copyright © 2026 Joseph Woodall. All rights reserved.
 
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
 
-   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+Preamble
+This License governs use of the Noosphere software, including its source code, trained model weights, WorldModelBundles, documentation, and all associated artifacts (collectively, the "Software"). It is designed to achieve two goals simultaneously:
 
-   1. Definitions.
+(1)  Protect the author's commercial rights — no person or entity may sell, sublicense, or commercialize the Software or its derivatives without explicit written permission from the author.
+(2)  Enable open contribution — individuals may study, modify, and contribute to the Software freely, and are protected from legal repercussion for doing so in good faith under the terms below.
 
-      "License" shall mean the terms and conditions for use, reproduction,
-      and distribution as defined by Sections 1 through 9 of this document.
+This License is built on the Apache License 2.0 with a permanent non-commercial restriction. Unlike the Business Source License, there is no change date — the commercial restriction does not expire. Commercial use requires a separate written agreement with the author.
 
-      "Licensor" shall mean the copyright owner or entity authorized by
-      the copyright owner that is granting the License.
 
-      "Legal Entity" shall mean the union of the acting entity and all
-      other entities that control, are controlled by, or are under common
-      control with that entity. For the purposes of this definition,
-      "control" means (i) the power, direct or indirect, to cause the
-      direction or management of such entity, whether by contract or
-      otherwise, or (ii) ownership of fifty percent (50%) or more of the
-      outstanding shares, or (iii) beneficial ownership of such entity.
+Section 1 — Definitions
 
-      "You" (or "Your") shall mean an individual or Legal Entity
-      exercising permissions granted by this License.
+"Software" means the Noosphere codebase in any form (source, compiled, or otherwise), all trained model weights, WorldModelBundle files (.pt artifacts), documentation, configuration files, and any derivative works thereof.
 
-      "Source" form shall mean the preferred form for making modifications,
-      including but not limited to software source code, documentation
-      source, and configuration files.
+"Author" means Joseph Woodall, the sole copyright holder of the Software.
 
-      "Object" form shall mean any form resulting from mechanical
-      transformation or translation of a Source form, including but
-      not limited to compiled object code, generated documentation,
-      and conversions to other media types.
+"You" means any individual or Legal Entity exercising permissions under this License.
 
-      "Work" shall mean the work of authorship, whether in Source or
-      Object form, made available under the License, as indicated by a
-      copyright notice that is included in or attached to the work
-      (an example is provided in the Appendix below).
+"Derivative Work" means any work based on, incorporating, or derived from the Software, in whole or in part, including modifications, adaptations, translations, and works that link to or are compiled with the Software.
 
-      "Derivative Works" shall mean any work, whether in Source or Object
-      form, that is based on (or derived from) the Work and for which the
-      editorial revisions, annotations, elaborations, or other modifications
-      represent, as a whole, an original work of authorship. For the purposes
-      of this License, Derivative Works shall not include works that remain
-      separable from, or merely link (or bind by name) to the interfaces of,
-      the Work and Derivative Works thereof.
+"Commercial Use" means any use of the Software, directly or indirectly, in exchange for monetary compensation, subscription fees, licensing fees, consulting fees, or any other form of consideration — including but not limited to: selling access to the Software or a product substantially powered by it, providing hosted or managed services based on the Software, incorporating the Software into a for-profit product, and offering support or consulting services whose value derives substantially from the Software.
 
-      "Contribution" shall mean any work of authorship, including
-      the original version of the Work and any modifications or additions
-      to that Work or Derivative Works thereof, that is intentionally
-      submitted to Licensor for inclusion in the Work by the copyright owner
-      or by an individual or Legal Entity authorized to submit on behalf of
-      the copyright owner. For the purposes of this definition, "submitted"
-      means any form of electronic, verbal, or written communication sent
-      to the Licensor or its representatives, including but not limited to
-      communication on electronic mailing lists, source code control systems,
-      and issue tracking systems that are managed by, or on behalf of, the
-      Licensor for the purpose of discussing and improving the Work, but
-      excluding communication that is conspicuously marked or otherwise
-      designated in writing by the copyright owner as "Not a Contribution."
+"Non-Commercial Use" means personal, educational, academic research, and open-source use where no monetary consideration is exchanged. Use by a non-profit organization for its stated charitable mission qualifies as Non-Commercial Use, subject to Section 3.
 
-      "Contributor" shall mean Licensor and any individual or Legal Entity
-      on behalf of whom a Contribution has been received by Licensor and
-      subsequently incorporated within the Work.
+"Contributor" means any individual or Legal Entity that submits a Contribution to the Author for inclusion in the Software.
 
-   2. Grant of Copyright License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      copyright license to reproduce, prepare Derivative Works of,
-      publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source or Object form.
+"Contribution" means any original work of authorship submitted to the Author, including source code, model weights, documentation, bug fixes, or enhancements.
 
-   3. Grant of Patent License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      (except as stated in this section) patent license to make, have made,
-      use, offer to sell, sell, import, and otherwise transfer the Work,
-      where such license applies only to those patent claims licensable
-      by such Contributor that are necessarily infringed by their
-      Contribution(s) alone or by combination of their Contribution(s)
-      with the Work to which such Contribution(s) was submitted. If You
-      institute patent litigation against any entity (including a
-      cross-claim or counterclaim in a lawsuit) alleging that the Work
-      or a Contribution incorporated within the Work constitutes direct
-      or contributory patent infringement, then any patent licenses
-      granted to You under this License for that Work shall terminate
-      as of the date such litigation is filed.
 
-   4. Redistribution. You may reproduce and distribute copies of the
-      Work or Derivative Works thereof in any medium, with or without
-      modifications, and in Source or Object form, provided that You
-      meet the following conditions:
+Section 2 — Grant of Rights (Non-Commercial Only)
 
-      (a) You must give any other recipients of the Work or
-          Derivative Works a copy of this License; and
+Subject to the terms of this License, the Author grants You a worldwide, royalty-free, non-exclusive, non-sublicensable license to:
 
-      (b) You must cause any modified files to carry prominent notices
-          stating that You changed the files; and
+(a)  Reproduce and use the Software for Non-Commercial Use;
+(b)  Prepare Derivative Works of the Software for Non-Commercial Use;
+(c)  Publicly display and distribute the Software and Derivative Works under this same License;
+(d)  Submit Contributions to the Author under the terms of Section 5.
 
-      (c) You must retain, in the Source form of any Derivative Works
-          that You distribute, all copyright, patent, trademark, and
-          attribution notices from the Source form of the Work,
-          excluding those notices that do not pertain to any part of
-          the Derivative Works; and
+This grant explicitly excludes Commercial Use. No right to sell, sublicense, or commercialize the Software is granted by this License under any circumstances.
 
-      (d) If the Work includes a "NOTICE" text file as part of its
-          distribution, then any Derivative Works that You distribute must
-          include a readable copy of the attribution notices contained
-          within such NOTICE file, excluding those notices that do not
-          pertain to any part of the Derivative Works, in at least one
-          of the following places: within a NOTICE text file distributed
-          as part of the Derivative Works; within the Source form or
-          documentation, if provided along with the Derivative Works; or,
-          within a display generated by the Derivative Works, if and
-          wherever such third-party notices normally appear. The contents
-          of the NOTICE file are for informational purposes only and
-          do not modify the License. You may add Your own attribution
-          notices within Derivative Works that You distribute, alongside
-          or as an addendum to the NOTICE text from the Work, provided
-          that such additional attribution notices cannot be construed
-          as modifying the License.
 
-      You may add Your own copyright statement to Your modifications and
-      may provide additional or different license terms and conditions
-      for use, reproduction, or distribution of Your modifications, or
-      for any such Derivative Works as a whole, provided Your use,
-      reproduction, and distribution of the Work otherwise complies with
-      the conditions stated in this License.
+Section 3 — Commercial Use Restriction (Permanent)
 
-   5. Submission of Contributions. Unless You explicitly state otherwise,
-      any Contribution intentionally submitted for inclusion in the Work
-      by You to the Licensor shall be under the terms and conditions of
-      this License, without any additional terms or conditions.
-      Notwithstanding the above, nothing herein shall supersede or modify
-      the terms of any separate license agreement you may have executed
-      with Licensor regarding such Contributions.
+Commercial Use of the Software is strictly prohibited without a separate written Commercial License Agreement executed with the Author.
 
-   6. Trademarks. This License does not grant permission to use the trade
-      names, trademarks, service marks, or product names of the Licensor,
-      except as required for reasonable and customary use in describing the
-      origin of the Work and reproducing the content of the NOTICE file.
+The following acts constitute Commercial Use and are prohibited without such agreement:
 
-   7. Disclaimer of Warranty. Unless required by applicable law or
-      agreed to in writing, Licensor provides the Work (and each
-      Contributor provides its Contributions) on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied, including, without limitation, any warranties or conditions
-      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-      PARTICULAR PURPOSE. You are solely responsible for determining the
-      appropriateness of using or redistributing the Work and assume any
-      risks associated with Your exercise of permissions under this License.
+(a)  Selling, licensing, or sublicensing the Software or any Derivative Work;
+(b)  Offering the Software or a Derivative Work as a hosted, managed, or cloud service for a fee;
+(c)  Distributing WorldModelBundle files (.pt artifacts) or trained model weights for monetary consideration;
+(d)  Incorporating the Software into a for-profit product or service, regardless of the proportion of the Software's contribution to that product's value;
+(e)  Providing consulting, support, or integration services whose value derives substantially from the Software;
+(f)  Internal commercial deployment within a for-profit organization where the deployment generates revenue, reduces costs, or creates competitive advantage.
 
-   8. Limitation of Liability. In no event and under no legal theory,
-      whether in tort (including negligence), contract, or otherwise,
-      unless required by applicable law (such as deliberate and grossly
-      negligent acts) or agreed to in writing, shall any Contributor be
-      liable to You for damages, including any direct, indirect, special,
-      incidental, or consequential damages of any character arising as a
-      result of this License or out of the use or inability to use the
-      Work (including but not limited to damages for loss of goodwill,
-      work stoppage, computer failure or malfunction, or any and all
-      other commercial damages or losses), even if such Contributor
-      has been advised of the possibility of such damages.
+To obtain a Commercial License, contact the Author at: josephwoodall1@gmail.com
 
-   9. Accepting Warranty or Additional Liability. While redistributing
-      the Work or Derivative Works thereof, You may choose to offer,
-      and charge a fee for, acceptance of support, warranty, indemnity,
-      or other liability obligations and/or rights consistent with this
-      License. However, in accepting such obligations, You may act only
-      on Your own behalf and on Your sole responsibility, not on behalf
-      of any other Contributor, and only if You agree to indemnify,
-      defend, and hold each Contributor harmless for any liability
-      incurred by, or claims asserted against, such Contributor by reason
-      of your accepting any such warranty or additional liability.
+This restriction is permanent. There is no change date or sunset clause. The commercial restriction survives any transfer of the Software and applies equally to Derivative Works.
 
-   END OF TERMS AND CONDITIONS
 
-   APPENDIX: How to apply the Apache License to your work.
+Section 4 — Redistribution Conditions
 
-      To apply the Apache License to your work, attach the following
-      boilerplate notice, with the fields enclosed by brackets "[]"
-      replaced with your own identifying information. (Don't include
-      the brackets!)  The text should be enclosed in the appropriate
-      comment syntax for the file format. We also recommend that a
-      file or class name and description of purpose be included on the
-      same "printed page" as the copyright notice for easier
-      identification within third-party archives.
+You may reproduce and distribute copies of the Software or Derivative Works for Non-Commercial Use, provided that You meet all of the following conditions:
 
-   Copyright [2026] [Joseph Woodall]
+(a)  You must include a complete copy of this License with every distribution;
+(b)  You must retain all copyright, patent, trademark, and attribution notices present in the original Software;
+(c)  Any modified files must carry a prominent notice stating that You changed the files and the date of the change;
+(d)  Any Derivative Work must be distributed under this same License — You may not impose additional restrictions or grant broader permissions than those provided here;
+(e)  You must not remove or obscure the "NOOSPHERE" name, the Author's copyright notice, or any attribution to Joseph Woodall;
+(f)  WorldModelBundle files (.pt artifacts) distributed as part of a Derivative Work are subject to all terms of this License, including the commercial restriction in Section 3.
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+Section 5 — Contributor Agreement
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+By submitting a Contribution (including but not limited to pull requests, patches, issues with proposed code, or direct code submissions) to the Author or the Noosphere repository, You agree to the following:
 
-Commons Clause License Condition v1.0
+5.1  Grant of Rights to Author
+You grant the Author a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, reproduce, modify, sublicense, and distribute Your Contribution as part of the Software under any license terms the Author chooses, including future Commercial Licenses. This grant allows the Author to commercialize the Software (including Your Contribution) without further consent or compensation to You.
 
-The Software is provided to you by the Licensor under the License, as defined below, subject to the following condition.
+5.2  Ownership of Contributions
+You retain copyright ownership of Your Contribution. This License does not transfer ownership of Your intellectual property to the Author. The grant in Section 5.1 is a license, not an assignment.
 
-Without limiting other conditions in the License, the grant of rights under the License will not include, and the License does not grant to you, the right to Sell the Software. For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you under the License to provide to third parties, for a fee or other consideration (including without limitation fees for hosting or consulting/support services related to the Software), a product or service whose value derives, entirely or substantially, from the functionality of the Software.
+5.3  Representations
+By submitting a Contribution, You represent and warrant that:
 
-Software: Noosphere
-License: Apache 2.0
-Licensor: Joseph Woodall
+(a)  You have the legal right to submit the Contribution and to grant the license in Section 5.1;
+(b)  The Contribution is Your original work, or You have sufficient rights to submit it;
+(c)  The Contribution does not, to the best of Your knowledge, infringe any third-party intellectual property rights;
+(d)  If Your Contribution includes code developed in the course of employment or under a contract, You have obtained all necessary permissions from Your employer or contracting party.
+
+5.4  No Obligation to Include
+The Author is under no obligation to accept, review, or incorporate any Contribution. The Author may reject, modify, or delay any Contribution at their sole discretion.
+
+5.5  Protection of Contributors
+The Author agrees not to pursue legal action against Contributors for good-faith Contributions submitted under this License, except in cases of fraud, bad faith, or material misrepresentation in the Contributor's representations under Section 5.3.
+
+
+Section 6 — Patent License
+
+Subject to the terms of this License, each Contributor grants You a perpetual, worldwide, non-exclusive, royalty-free patent license to make, use, and otherwise exploit the Software for Non-Commercial Use, where such license applies only to patent claims licensable by that Contributor that are necessarily infringed by their Contribution alone or in combination with the Software.
+
+If You institute patent litigation against any entity alleging that the Software or a Contribution constitutes patent infringement, all patent licenses granted to You under this License terminate as of the date such litigation is filed.
+
+
+Section 7 — Trademarks
+
+This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Author, including "Noosphere," except as required for reasonable and customary use in describing the origin of the Software (e.g., citing the Software in academic papers or documentation).
+
+
+Section 8 — Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. THE AUTHOR MAKES NO WARRANTY THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS OR OPERATE WITHOUT INTERRUPTION OR ERROR.
+
+YOU ASSUME ALL RISKS ASSOCIATED WITH YOUR USE OR DISTRIBUTION OF THE SOFTWARE. THIS DISCLAIMER APPLIES TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+
+
+Section 9 — Limitation of Liability
+
+IN NO EVENT SHALL THE AUTHOR OR ANY CONTRIBUTOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR RELATED TO THIS LICENSE OR THE USE OF THE SOFTWARE, INCLUDING BUT NOT LIMITED TO LOSS OF GOODWILL, WORK STOPPAGE, COMPUTER FAILURE, PHYSICAL INJURY, OR ANY OTHER DAMAGES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+THIS LIMITATION APPLIES TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW AND REGARDLESS OF THE LEGAL THEORY (CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR OTHERWISE) UNDER WHICH SUCH LIABILITY IS CLAIMED.
+
+
+Section 10 — Termination
+
+Your rights under this License terminate automatically and without notice if You materially breach any of its terms.
+
+Material breaches include but are not limited to: any Commercial Use without a Commercial License Agreement; distributing the Software without including this License; removing or obscuring copyright notices or attribution; and misrepresentation in Contributor representations under Section 5.3.
+
+Upon termination, You must immediately cease all use and distribution of the Software and destroy all copies in Your possession or control. Termination does not affect any rights the Author has accrued prior to termination, and Sections 3, 8, 9, and 11 survive termination.
+
+
+Section 11 — Governing Law and Dispute Resolution
+
+This License shall be governed by and construed in accordance with the laws of the United States of America and the State of Texas, without regard to conflict of law principles.
+
+Any dispute arising under this License shall first be submitted to good-faith negotiation. If negotiation fails within 30 days, disputes shall be resolved by binding arbitration under the rules of the American Arbitration Association, conducted in English. Judgment on any arbitration award may be entered in any court of competent jurisdiction.
+
+Notwithstanding the above, the Author may seek injunctive or other equitable relief in any court of competent jurisdiction to prevent unauthorized Commercial Use or misappropriation of intellectual property.
+
+
+Section 12 — Miscellaneous
+
+12.1.  Entire Agreement. This License constitutes the entire agreement between the parties with respect to the Software and supersedes all prior agreements, representations, and understandings relating to its subject matter.
+12.2.  Severability. If any provision of this License is held invalid or unenforceable, that provision shall be enforced to the maximum extent permissible, and the remaining provisions shall continue in full force and effect.
+12.3.  No Waiver. The Author's failure to enforce any provision of this License shall not constitute a waiver of the Author's right to enforce that provision in the future.
+12.4.  No Implied License. No license is granted by implication, estoppel, or otherwise. All rights not expressly granted in this License are reserved by the Author.
+12.5.  Amendments. The Author may publish revised versions of this License. A new version does not automatically apply to copies of the Software already distributed under an earlier version. You may choose to use the Software under any version of this License under which it was originally distributed.
+12.6.  Academic Citation. Academic use of the Software must include a citation to: Woodall, J. (2026). Noosphere: Physics-Informed World Model Agent with BCI Control. https://github.com/JosephWoodall/noosphere
+
+
+Contact and Commercial Licensing
+
+For Commercial License inquiries, partnership discussions, or questions about permitted use:
+
+Author:   Joseph Woodall
+Email:    josephwoodall1@gmail.com
+Repository:   https://github.com/JosephWoodall/noosphere
+
+Commercial licenses are available on terms negotiated directly with the Author. Academic institutions, non-profit organizations, and open-source projects are encouraged to reach out to discuss their use case.
+
+
+END OF LICENSE
+Copyright © 2026 Joseph Woodall — Noosphere License v1.0

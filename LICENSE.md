@@ -1,6 +1,6 @@
 NOOSPHERE
 Source-Available Non-Commercial License with Contributor Agreement
-Version 1.0  —  Effective Date: April 5, 2026
+Version 1.0  —  Effective Date: January 1, 2026
 Copyright © 2026 Joseph Woodall. All rights reserved.
 
 

@@ -694,45 +694,13 @@ def compute_dataset_metrics(
     probability distributions for AUC, calibration, and ITR computation.
     """
     from noosphere.s4_eeg import S4EEGEncoder
-
-    meta = DATASET_CATALOGUE[name]
-    n_classes = meta["n_classes"]
-
-    s4 = S4EEGEncoder(in_channels=3, d_model=128, n_actions=n_classes).to(dev)
-    
-    # ── Phase C Contrastive Pre-training ──────────────────────────────────────
+    from sklearn.svm import SVC
+    from sklearn.preprocessing import StandardScaler
+    from collections import defaultdict
     from noosphere.learning import EEGAugment, TS2VecLoss
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
-    
-    s4.train()
-    criterion = TS2VecLoss(temperature=0.1)
-    optimizer = optim.AdamW(s4.parameters(), lr=3e-4, weight_decay=1e-4)
-    
-    X_all = np.array([s.data for s in segments]) # (N, 3, T)
-    dataset = TensorDataset(torch.tensor(X_all, dtype=torch.float32))
-    loader = DataLoader(dataset, batch_size=128, shuffle=True, drop_last=True)
-    
-    # Force 15 epochs of pure unsupervised topological learning
-    for epoch in range(15):
-        for (batch_x,) in loader:
-            batch_x = batch_x.to(dev)
-            v1, v2 = EEGAugment.augment(batch_x)
-            
-            optimizer.zero_grad()
-            z1 = s4(v1)["embed"]
-            z2 = s4(v2)["embed"]
-            loss, _ = criterion(z1, z2)
-            loss.backward()
-            optimizer.step()
-            
-    s4.eval()
-    # ──────────────────────────────────────────────────────────────────────────
 
-    from sklearn.linear_model import LogisticRegression
-    from collections import defaultdict
-
-    # ── Collect predictions ───────────────────────────────────────────────────
     y_true, y_pred, y_prob = [], [], []
     confidences, latencies = [], []
     subjects_seen = set()
@@ -744,6 +712,31 @@ def compute_dataset_metrics(
 
     for subject, segs in subject_segments.items():
         subjects_seen.add(subject)
+        
+        # ── Phase C Autogenous Pre-training (Per-Subject) ─────────────────────
+        # Enforcing Golden Axiom: S4 parametrizes strictly to the local operator
+        s4 = S4EEGEncoder(in_channels=3, d_model=128, n_actions=n_classes).to(dev)
+        s4.train()
+        criterion = TS2VecLoss(temperature=0.1)
+        optimizer = optim.AdamW(s4.parameters(), lr=1e-3, weight_decay=1e-4)
+        
+        X_subj = np.array([s.data for s in segs]) # (N, 3, T)
+        dataset = TensorDataset(torch.tensor(X_subj, dtype=torch.float32))
+        loader = DataLoader(dataset, batch_size=min(64, len(segs)), shuffle=True, drop_last=False)
+        
+        for epoch in range(15):
+            for (batch_x,) in loader:
+                batch_x = batch_x.to(dev)
+                v1, v2 = EEGAugment.augment(batch_x)
+                optimizer.zero_grad()
+                z1 = s4(v1)["embed"]
+                z2 = s4(v2)["embed"]
+                loss, _ = criterion(z1, z2)
+                loss.backward()
+                optimizer.step()
+                
+        s4.eval()
+        # ──────────────────────────────────────────────────────────────────────────
         
         # 1. Extract Embeddings
         embeds, labels = [], []
@@ -814,16 +807,25 @@ def compute_dataset_metrics(
         ts_est = TangentSpace(metric='riemann')
         ts_train = ts_est.fit_transform(covs_train)
         
-        X_train = np.concatenate([X_train, ts_train], axis=1)
+        # Normalize to prevent the 128D temporal embeddings from drowning out the 6D spatial curvature
+        sc_emb = StandardScaler()
+        sc_ts = StandardScaler()
+        
+        X_train_emb = sc_emb.fit_transform(X_train)
+        ts_train = sc_ts.fit_transform(ts_train)
+        
+        X_train = np.concatenate([X_train_emb, ts_train], axis=1)
         
         if len(test_idx) > 0:
             covs_test = cov_est.transform(X_test_raw)
             ts_test = ts_est.transform(covs_test)
-            X_test = np.concatenate([X_test, ts_test], axis=1)
+            X_test_emb = sc_emb.transform(X_test)
+            ts_test = sc_ts.transform(ts_test)
+            X_test = np.concatenate([X_test_emb, ts_test], axis=1)
         # ----------------------------------------
         
         # 3. Fit Linear Probe
-        clf = LogisticRegression(max_iter=1000, class_weight='balanced')
+        clf = SVC(kernel='linear', C=1.0, class_weight='balanced', probability=True)
         clf.fit(X_train, y_train)
         
         # 4. Predict on Test Set

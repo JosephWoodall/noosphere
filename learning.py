@@ -71,34 +71,29 @@ class SIGRegLoss(nn.Module):
             "unsupervised/mu_norm": loss_mu.item()
         }
 
-class EEGAugment:
-    @staticmethod
-    def augment(eeg: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        B, C, T = eeg.shape
-        v1, v2 = eeg.clone(), eeg.clone()
-        # Random electrode drop for v2 (30% chance per channel)
-        mask = (torch.rand(B, C, 1, device=eeg.device) > 0.3).float()
-        v2 = v2 * mask
-        # Gaussian noise for v1
-        v1 = v1 + torch.randn_like(v1) * 0.1
-        return v1, v2
-
-class JEPALoss(nn.Module):
-    def forward(self, pred_latents: torch.Tensor, target_latents: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, float]]:
-        loss = 1.0 - F.cosine_similarity(pred_latents, target_latents.detach(), dim=-1).mean()
-        return loss, {"unsupervised/jepa_loss": loss.item()}
-
-class TS2VecLoss(nn.Module):
-    def __init__(self, temperature: float = 0.1):
+class SpatialTopologyLoss(nn.Module):
+    def __init__(self, d_model: int, n_channels: int = 3):
         super().__init__()
-        self.temp = temperature
+        self.adj_predictor = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, n_channels * n_channels)
+        )
         
-    def forward(self, z1: torch.Tensor, z2: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, float]]:
-        z1 = F.normalize(z1, dim=-1); z2 = F.normalize(z2, dim=-1)
-        sim = torch.matmul(z1, z2.T) / self.temp
-        labels = torch.arange(z1.size(0), device=z1.device)
-        loss = (F.cross_entropy(sim, labels) + F.cross_entropy(sim.T, labels)) / 2.0
-        return loss, {"unsupervised/ts2vec_loss": loss.item()}
+    def forward(self, topo_embed: torch.Tensor, raw_eeg: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, float]]:
+        B, C, T = raw_eeg.shape
+        # Compute empirical spatial cross-correlation
+        eeg_centered = raw_eeg - raw_eeg.mean(dim=-1, keepdim=True)
+        eeg_std = raw_eeg.std(dim=-1, keepdim=True) + 1e-8
+        eeg_norm = eeg_centered / eeg_std
+        true_adj = torch.bmm(eeg_norm, eeg_norm.transpose(1, 2)) / (T - 1)
+        
+        # Predict spatial adjacency from the topological embedding
+        pred_adj = self.adj_predictor(topo_embed).view(B, C, C)
+        pred_adj = (pred_adj + pred_adj.transpose(1, 2)) / 2.0
+        
+        loss = F.mse_loss(pred_adj, true_adj)
+        return loss, {"unsupervised/spatial_topo_loss": loss.item()}
 
 @dataclass
 class LearningConfig:

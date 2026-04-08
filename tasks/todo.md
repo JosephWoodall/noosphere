@@ -1,5 +1,3 @@
-# Destructor Roadmap: Riemannian Manifold Reconstruction
-
-- [ ] **1. Manifold Realignment (Riemannian Tangent Space).** S4 Temporal embeddings currently project into a flat Euclidean space. Migrate the 10-shot probe to map covariance matrices onto a non-Euclidean Symmetric Positive Definite (SPD) Riemannian manifold before applying a linear SVM. (Compression constraint: Do not build an entirely new CNN; use spatial mathematics prior to sequence decoding).
-- [ ] **2. Contrastive Phase C Force-Activation.** The README states NT-Xent contrastive learning exists as a background process. Force the S4 encoder weights to pre-train exclusively via this self-supervised NT-Xent loss on unlabelled resting-state data *before* the 10-shot calibration ever runs. This shapes the latent space around invariant biological features.
-- [ ] **3. Betti-Curve Feature Weighting.** We are statically concatenating the Topological Data Analysis (`out["topological"]`) with temporal embeddings. Implement an adaptive gating mechanism (e.g., Squeeze-and-Excitation) strictly limited to 2 extra parameter layers to dynamically weigh Betti-0 and Betti-1 based on the subject's instantaneous noise level.
+- [ ] Replace `Conv1d` stem in `S4EEGEncoder` with a Differentiable `SpectralStem` utilizing `torch.stft`.
+- [ ] Set `n_fft=64` and `hop_length=4` to lock in the `downsample=4` temporal resolution matching the S4 blocks' expectations.
+- [ ] Maintain `SpatialTopologyLoss` but allow S4 to map topological dynamics operating explicitly on Fourier spectrograms.

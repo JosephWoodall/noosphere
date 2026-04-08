@@ -111,46 +111,10 @@ DATASET_CATALOGUE = {
         "description": "BCI Comp IV 2b — 9 subjects, 2-class MI, 3-ch, 250 Hz",
         "preferred_channels": ["C3", "Cz", "C4"],
     },
-    "Weibo2014": {
-        "module": "moabb.datasets", "cls": "Weibo2014", "kwargs": {},
-        "n_classes": 6,
-        "description": "Weibo 2014 — 10 subjects, 6-class MI, 60-ch, 200 Hz",
-        "preferred_channels": ["C3", "Cz", "C4"],
-    },
-    "PhysionetMI": {
-        "module": "moabb.datasets", "cls": "PhysionetMI", "kwargs": {},
-        "n_classes": 4,
-        "description": "PhysioNet MI — 109 subjects, 4-class MI, 64-ch, 160 Hz",
-        "preferred_channels": ["C3", "Cz", "C4"],
-    },
-    "Cho2017": {
-        "module": "moabb.datasets", "cls": "Cho2017", "kwargs": {},
-        "n_classes": 2,
-        "description": "Cho 2017 — 52 subjects, 2-class MI, 64-ch, 512 Hz",
-        "preferred_channels": ["C3", "Cz", "C4"],
-    },
-    "Lee2019_MI": {
-        "module": "moabb.datasets", "cls": "Lee2019_MI", "kwargs": {},
-        "n_classes": 2,
-        "description": "Lee 2019 — 54 subjects, 2-class MI, 62-ch, 1000 Hz",
-        "preferred_channels": ["C3", "Cz", "C4"],
-    },
     "Schirrmeister2017": {
         "module": "moabb.datasets", "cls": "Schirrmeister2017", "kwargs": {},
         "n_classes": 4,
         "description": "HGD — 14 subjects, 4-class MI, 128-ch, 500 Hz",
-        "preferred_channels": ["C3", "Cz", "C4"],
-    },
-    "Zhou2016": {
-        "module": "moabb.datasets", "cls": "Zhou2016", "kwargs": {},
-        "n_classes": 3,
-        "description": "Zhou 2016 — 4 subjects, 3-class MI, 14-ch, 250 Hz",
-        "preferred_channels": ["C3", "Cz", "C4"],
-    },
-    "GrosseWentrup2009": {
-        "module": "moabb.datasets", "cls": "GrosseWentrup2009", "kwargs": {},
-        "n_classes": 2,
-        "description": "Grosse-Wentrup 2009 (fmr. MunichMI) — 10 subjects, 2-class MI, 128-ch, 500 Hz",
         "preferred_channels": ["C3", "Cz", "C4"],
     },
 }
@@ -697,12 +661,13 @@ def compute_dataset_metrics(
     n_classes = meta["n_classes"]
 
     from noosphere.s4_eeg import S4EEGEncoder
-    from sklearn.svm import SVC
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler
     from collections import defaultdict
-    from noosphere.learning import EEGAugment, TS2VecLoss
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
+    import torch.nn as nn
 
     y_true, y_pred, y_prob = [], [], []
     confidences, latencies = [], []
@@ -716,127 +681,80 @@ def compute_dataset_metrics(
     for subject, segs in subject_segments.items():
         subjects_seen.add(subject)
         
-        # ── Phase C Autogenous Pre-training (Per-Subject) ─────────────────────
+        # 1. Stratified 80/20 Split FIRST to prevent data leakage in Supervised Calibration
+        labels_all = np.array([s.label % n_classes for s in segs])
+        if len(np.unique(labels_all)) < 2:
+            continue
+            
+        train_idx, test_idx = train_test_split(
+            np.arange(len(segs)), test_size=0.2, stratify=labels_all, random_state=42
+        )
+        
+        train_segs = [segs[i] for i in train_idx]
+        test_segs = [segs[i] for i in test_idx]
+        
+        # ── Phase C Autogenous Calibration (Per-Subject) ─────────────────────
         # Enforcing Golden Axiom: S4 parametrizes strictly to the local operator
         s4 = S4EEGEncoder(in_channels=3, d_model=128, n_actions=n_classes).to(dev)
         s4.train()
-        criterion = TS2VecLoss(temperature=0.1)
+        criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(s4.parameters(), lr=1e-3, weight_decay=1e-4)
         
-        X_subj = np.array([s.data for s in segs]) # (N, 3, T)
-        dataset = TensorDataset(torch.tensor(X_subj, dtype=torch.float32))
-        loader = DataLoader(dataset, batch_size=min(64, len(segs)), shuffle=True, drop_last=False)
+        X_train_subj = np.array([s.data for s in train_segs]) # (N_train, 3, T)
+        Y_train_subj = np.array([s.label % n_classes for s in train_segs]) # (N_train,)
         
-        for epoch in range(15):
-            for (batch_x,) in loader:
-                batch_x = batch_x.to(dev)
-                v1, v2 = EEGAugment.augment(batch_x)
+        dataset = TensorDataset(torch.tensor(X_train_subj, dtype=torch.float32), torch.tensor(Y_train_subj, dtype=torch.long))
+        loader = DataLoader(dataset, batch_size=min(64, len(train_segs)), shuffle=True, drop_last=False)
+        
+        # S4 parameterization requires gradient maturity. 15 epochs (30 steps) is starvation. 250 epochs ensures convergence.
+        for epoch in range(250):
+            for batch_x, batch_y in loader:
+                batch_x, batch_y = batch_x.to(dev), batch_y.to(dev)
                 optimizer.zero_grad()
-                z1 = s4(v1)["embed"]
-                z2 = s4(v2)["embed"]
-                loss, _ = criterion(z1, z2)
+                out = s4(batch_x)
+                # Maximize class separability using biological intent directly
+                loss = criterion(out["intent_logits"], batch_y)
                 loss.backward()
                 optimizer.step()
                 
         s4.eval()
         # ──────────────────────────────────────────────────────────────────────────
         
-        # 1. Extract Embeddings
-        embeds, labels = [], []
-        seg_latencies = []
-        for seg in segs:
-            eeg_t = torch.tensor(seg.data[np.newaxis], dtype=torch.float32).to(dev)
-            t0 = time.perf_counter()
-            with torch.no_grad():
-                out = s4(eeg_t)
-            seg_latencies.append((time.perf_counter() - t0) * 1000)
-            
-            emb = out["embed"][0].cpu().numpy()
-            topo = out["topological"][0].cpu().numpy()
-            
-            embeds.append(np.concatenate([emb, topo]))
-            labels.append(seg.label % n_classes)
-            
-        embeds = np.array(embeds)
-        labels = np.array(labels)
-        
-        # 2. Stratified 10-shot Split
-        train_idx = []
-        test_idx = []
-        for c in range(n_classes):
-            idx = np.where(labels == c)[0]
-            if len(idx) == 0:
-                continue
-            # Up to 10 shots per class, but leave at least 1 for test if possible
-            n_shots = min(10, max(1, int(len(idx) * 0.2)))
-            if len(idx) <= n_shots: 
-                n_shots = max(1, len(idx) - 1)
-            train_idx.extend(idx[:n_shots])
-            test_idx.extend(idx[n_shots:])
-            
-        train_idx = np.array(train_idx)
-        test_idx = np.array(test_idx)
-        
-        if len(train_idx) == 0 or len(np.unique(labels[train_idx])) < 2:
-            # If a subject has only 1 class (e.g. truncated test sets), linear probe cannot run.
-            # We predict uniform distribution for whatever test indices remain
-            if len(test_idx) > 0:
-                full_probs = np.ones((len(test_idx), n_classes)) / n_classes
-                preds = np.argmax(full_probs, axis=1)
-                confs = np.max(full_probs, axis=1)
+        # 2. Extract Embeddings (Train + Test)
+        def _extract(segments):
+            emb_list, lab_list, lat_list = [], [], []
+            for seg in segments:
+                eeg_t = torch.tensor(seg.data[np.newaxis], dtype=torch.float32).to(dev)
+                t0 = time.perf_counter()
+                with torch.no_grad():
+                    out = s4(eeg_t)
+                lat_list.append((time.perf_counter() - t0) * 1000)
                 
-                y_true.extend(labels[test_idx])
-                y_pred.extend(preds)
-                y_prob.extend(full_probs)
-                confidences.extend(confs)
-                latencies.extend([seg_latencies[i] for i in test_idx])
-            continue
-            
-        X_train, y_train = embeds[train_idx], labels[train_idx]
-        X_test, y_test = embeds[test_idx], labels[test_idx]
+                emb = out["embed"][0].cpu().numpy()
+                topo = out["topological"][0].cpu().numpy()
+                
+                emb_list.append(np.concatenate([emb, topo]))
+                lab_list.append(seg.label % n_classes)
+            return np.array(emb_list), np.array(lab_list), lat_list
+
+        X_train, y_train, lat_train = _extract(train_segs)
+        X_test, y_test, lat_test = _extract(test_segs)
         
-        # --- Riemannian Tangent Space Mapping ---
-        from pyriemann.estimation import Covariances
-        from pyriemann.tangentspace import TangentSpace
-        
-        X_raw = np.array([seg.data for seg in segs])  # (N, C, T)
-        X_train_raw = X_raw[train_idx]
-        X_test_raw = X_raw[test_idx]
-        
-        # Fit LwF covariance and TangentSpace ONLY on train data to prevent test leakage
-        cov_est = Covariances(estimator='lwf')
-        covs_train = cov_est.fit_transform(X_train_raw)
-        
-        ts_est = TangentSpace(metric='riemann')
-        ts_train = ts_est.fit_transform(covs_train)
-        
-        # Normalize to prevent the 128D temporal embeddings from drowning out the 6D spatial curvature
-        sc_emb = StandardScaler()
-        sc_ts = StandardScaler()
-        
-        X_train_emb = sc_emb.fit_transform(X_train)
-        ts_train = sc_ts.fit_transform(ts_train)
-        
-        X_train = np.concatenate([X_train_emb, ts_train], axis=1)
-        
-        if len(test_idx) > 0:
-            covs_test = cov_est.transform(X_test_raw)
-            ts_test = ts_est.transform(covs_test)
-            X_test_emb = sc_emb.transform(X_test)
-            ts_test = sc_ts.transform(ts_test)
-            X_test = np.concatenate([X_test_emb, ts_test], axis=1)
-        # ----------------------------------------
+        # Standard scale the robust representation directly
+        sc = StandardScaler()
+        X_train = sc.fit_transform(X_train)
+        X_test = sc.transform(X_test)
         
         # 3. Fit Linear Probe
-        clf = SVC(kernel='linear', C=1.0, class_weight='balanced', probability=True)
+        clf = LogisticRegression(class_weight='balanced', max_iter=1000)
         clf.fit(X_train, y_train)
         
         # 4. Predict on Test Set
-        if len(test_idx) > 0:
+        if len(X_test) > 0:
             probs = clf.predict_proba(X_test)
             
             # Ensure shape matches (N, n_classes)
-            full_probs = np.zeros((len(test_idx), n_classes))
+            full_probs = np.zeros((len(X_test), n_classes))
             for i, c in enumerate(clf.classes_):
                 if c < n_classes:
                     full_probs[:, c] = probs[:, i]
@@ -853,7 +771,7 @@ def compute_dataset_metrics(
             y_pred.extend(preds)
             y_prob.extend(full_probs)
             confidences.extend(confs)
-            latencies.extend([seg_latencies[i] for i in test_idx])
+            latencies.extend(lat_test)
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)

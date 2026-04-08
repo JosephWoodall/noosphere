@@ -103,20 +103,50 @@ class TopologyExtractor(nn.Module):
                 
         return self.proj(betti_features)
 
+class SpectralStem(nn.Module):
+    def __init__(self, in_channels: int, d_model: int, n_fft: int = 64, hop_length: int = 4):
+        super().__init__()
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+        # Hard biological constraint: ERD exists ONLY in 8-32Hz.
+        # At 250Hz sampling and n_fft=64, bins 2 through 8 correspond precisely to ~7.8Hz - 31.25Hz.
+        self.bin_start = 2
+        self.bin_end = 9
+        freq_bins = self.bin_end - self.bin_start
+        self.proj = nn.Sequential(
+            nn.Linear(in_channels * freq_bins, d_model),
+            nn.GELU(),
+            nn.LayerNorm(d_model)
+        )
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, T = x.shape
+        x_flat = x.view(B * C, T)
+        window = torch.hann_window(self.n_fft, device=x.device)
+        stft = torch.stft(x_flat, n_fft=self.n_fft, hop_length=self.hop_length, 
+                          window=window, return_complex=True, center=True, pad_mode='reflect').abs()
+        F_bins_total = stft.shape[1]
+        T_prime = stft.shape[2]
+        
+        # SLICE the STFT output tensor [B, C*33, T] across channels 
+        # to strictly retain bins [2:9] for each channel.
+        # Reshape to (B, C, F_bins_total, T)
+        stft_c = stft.reshape(B, C, F_bins_total, T_prime)
+        # Slicing the ERD band
+        stft_erd = stft_c[:, :, self.bin_start:self.bin_end, :]
+        
+        stft_erd_flat = stft_erd.reshape(B, C * (self.bin_end - self.bin_start), T_prime).transpose(1, 2)
+        out = self.proj(stft_erd_flat)
+        return out.transpose(1, 2)
+
 class S4EEGEncoder(nn.Module):
     def __init__(self, in_channels: int = 3, d_model: int = 256, d_state: int = 64, n_blocks: int = 4, downsample: int = 4, n_actions: int = 8):
         super().__init__()
         self.d_model = d_model
         self.n_actions = n_actions
         
-        self.stem = nn.Sequential(
-            nn.Conv1d(in_channels, d_model // 2, kernel_size=15, stride=2, padding=7),
-            nn.GELU(),
-            nn.GroupNorm(8, d_model // 2),
-            nn.Conv1d(d_model // 2, d_model, kernel_size=7, stride=downsample // 2, padding=3),
-            nn.GELU(),
-            nn.GroupNorm(16, d_model)
-        )
+        # Explicit STFT spectral transform mapping ERD/ERS directly
+        self.stem = SpectralStem(in_channels, d_model, n_fft=64, hop_length=downsample)
 
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
         
@@ -156,7 +186,7 @@ class S4EEGEncoder(nn.Module):
         x = self.momentum_stem(eeg)
         x = x.transpose(1, 2)
         for block in self.momentum_blocks: x = block(x)
-        return x[:, -1, :]
+        return x.mean(dim=1)
 
     def forward(self, eeg: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         B = eeg.shape[0]
@@ -169,9 +199,10 @@ class S4EEGEncoder(nn.Module):
         x = x.transpose(1, 2)
         for block in self.blocks: x = block(x)
             
-        current_state = x[:, -1, :] 
+        current_state = x.mean(dim=1) 
 
-        evidence = F.softplus(self.intent_proj(current_state))
+        intent_logits = self.intent_proj(current_state)
+        evidence = F.softplus(intent_logits)
         alpha = evidence + 1.0
         S = torch.sum(alpha, dim=-1, keepdim=True)
         intent_probs = alpha / S
@@ -189,6 +220,7 @@ class S4EEGEncoder(nn.Module):
             "sequence": x,                 
             "embed": current_state,        
             "topological": topo_embed,
+            "intent_logits": intent_logits,
             "intent_probs": intent_probs,  
             "confidence": confidence.squeeze(-1),      
             "alpha": alpha,                

@@ -122,6 +122,14 @@ class S4EEGEncoder(nn.Module):
         
         self.tda = TopologyExtractor(d_model)
         
+        # Adaptive Squeeze-and-Excitation router for Betti features based on sequence entropy
+        self.topo_gate = nn.Sequential(
+            nn.Linear(d_model, max(1, d_model // 4)),
+            nn.GELU(),
+            nn.Linear(max(1, d_model // 4), d_model),
+            nn.Sigmoid()
+        )
+        
         # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
         self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
         
@@ -171,7 +179,11 @@ class S4EEGEncoder(nn.Module):
         uncertainty = self.n_actions / S
         confidence = 1.0 - uncertainty
         
-        topo_embed = self.tda(x)
+        topo_embed_raw = self.tda(x)
+        # Weight Betti features depending on sequence entropy (temporal variance)
+        seq_entropy = x.var(dim=1)
+        gate = self.topo_gate(seq_entropy)
+        topo_embed = topo_embed_raw * gate
 
         return {
             "sequence": x,                 

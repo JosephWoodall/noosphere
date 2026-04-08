@@ -1,11 +1,5 @@
-- [x] Inject granular, sub-millisecond hardware latency timers (`demo.py`, `proto.py`, `agent.py`).
-- [x] Instrument `monitor.py` to continuously export `e2e_latency_ms` to Prometheus.
-- [x] Implement `io_uring` based hardware acceleration for BCI sensor ingestion.
-- [x] Integrate Gaze/Eye-Tracking vectors into `HybridPerceptionModel` to accelerate 0-to-1 spatial parameterization.
-- [x] Hook the `ActBridge` to local ZFS/Btrfs snapshot mechanisms to enforce retroactive consequence rollbacks.
-- [x] Implement Predictive S4 Intent Pre-fetching (Staging executors before intent-confidence crosses the gate threshold).
-- [x] Train local OS-Level Contrastive Grounding (UI-CLIP) to map window-buffers to the BCI latent space.
-- [x] Encode `bci/fatigue` and `bci/workload` into a Hamiltonian neural equation to dynamically scale the MCTS horizon.
-- [x] Implement a Vietoris-Rips Persistent Homology calculator on the output sequence of `S4EEGEncoder`.
-- [x] Extract the Betti-0 and Betti-1 numbers to quantify cognitive manifold connectivity (flow state vs. turbulence).
-- [x] Pipe the topological features directly into the `NoosphereGNN` cross-attention tokens.
+# Destructor Roadmap: Riemannian Manifold Reconstruction
+
+- [ ] **1. Manifold Realignment (Riemannian Tangent Space).** S4 Temporal embeddings currently project into a flat Euclidean space. Migrate the 10-shot probe to map covariance matrices onto a non-Euclidean Symmetric Positive Definite (SPD) Riemannian manifold before applying a linear SVM. (Compression constraint: Do not build an entirely new CNN; use spatial mathematics prior to sequence decoding).
+- [ ] **2. Contrastive Phase C Force-Activation.** The README states NT-Xent contrastive learning exists as a background process. Force the S4 encoder weights to pre-train exclusively via this self-supervised NT-Xent loss on unlabelled resting-state data *before* the 10-shot calibration ever runs. This shapes the latent space around invariant biological features.
+- [ ] **3. Betti-Curve Feature Weighting.** We are statically concatenating the Topological Data Analysis (`out["topological"]`) with temporal embeddings. Implement an adaptive gating mechanism (e.g., Squeeze-and-Excitation) strictly limited to 2 extra parameter layers to dynamically weigh Betti-0 and Betti-1 based on the subject's instantaneous noise level.

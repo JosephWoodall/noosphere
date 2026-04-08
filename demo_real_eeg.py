@@ -693,6 +693,9 @@ def compute_dataset_metrics(
     Uses the S4EEGEncoder directly (not the full agent) so we get clean
     probability distributions for AUC, calibration, and ITR computation.
     """
+    meta = DATASET_CATALOGUE[name]
+    n_classes = meta["n_classes"]
+
     from noosphere.s4_eeg import S4EEGEncoder
     from sklearn.svm import SVC
     from sklearn.preprocessing import StandardScaler

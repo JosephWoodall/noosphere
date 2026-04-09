@@ -16,9 +16,9 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 try:
-    from ripser import ripser
+    from torch_geometric.nn import DenseGCNConv
 except ImportError:
-    ripser = None
+    DenseGCNConv = None
 
 # ── [DirichletEDLLoss and S4Block remain unchanged] ──
 class DirichletEDLLoss(nn.Module):
@@ -67,43 +67,6 @@ class S4Block(nn.Module):
         x = self.dropout(self.out_proj(x))
         return x + residual
 
-class TopologyExtractor(nn.Module):
-    def __init__(self, d_model: int, max_points: int = 64):
-        super().__init__()
-        self.max_points = max_points
-        self.proj = nn.Linear(2, d_model)
-        
-    def forward(self, seq: torch.Tensor) -> torch.Tensor:
-        B, T, d = seq.shape
-        device = seq.device
-        
-        betti_features = torch.zeros(B, 2, device=device)
-        
-        if ripser is None:
-            return self.proj(betti_features)
-            
-        if T > self.max_points:
-            seq_np = seq[:, -self.max_points:, :].detach().cpu().numpy()
-        else:
-            seq_np = seq.detach().cpu().numpy()
-            
-        for b in range(B):
-            try:
-                dgns = ripser(seq_np[b], maxdim=1)['dgms']
-                
-                h0_lifetimes = dgns[0][:-1, 1] - dgns[0][:-1, 0] if len(dgns[0]) > 1 else np.array([0.0])
-                betti_0_sum = np.sum(h0_lifetimes)
-                
-                h1_lifetimes = dgns[1][:, 1] - dgns[1][:, 0] if len(dgns[1]) > 0 else np.array([0.0])
-                betti_1_sum = np.sum(h1_lifetimes)
-                
-                betti_features[b, 0] = float(betti_0_sum)
-                betti_features[b, 1] = float(betti_1_sum)
-            except Exception:
-                pass
-                
-        return self.proj(betti_features)
-
 class SpectralStem(nn.Module):
     def __init__(self, in_channels: int, d_model: int, n_fft: int = 128, hop_length: int = 4):
         super().__init__()
@@ -133,11 +96,19 @@ class SpectralStem(nn.Module):
         # CSP relies on phase coherence. Spatial filtering MUST happen in time-domain 
         # BEFORE Fourier magnitude extraction destroys relative phase between C3 and C4.
         
-        # Time-domain spatial filter: (B, 3, T) -> (B, 9, T)
-        x_mixed = self.spatial_mixer(x)
         
-        # DESTROYED: self.spatial_norm. LayerNorm across channels equalizes the power 
-        # across hemispheres, mathematically erasing ERD lateralization.
+        # [DYNAMIC GRAPH CONVOLUTION]
+        # Construct the adjacency matrix dynamically using raw sequence covariance
+        # This allows the model to learn the geodesic topology of the scalp for any array density
+        x_centered = x - x.mean(dim=-1, keepdim=True)
+        cov = torch.bmm(x_centered, x_centered.transpose(1, 2)) / (T - 1)
+        adj = F.softmax(cov, dim=-1) # (B, C, C) Normalized adjacency mapping
+        
+        # Native message propagation across the electrode graph
+        x_gcn = torch.bmm(adj, x)
+        
+        # Time-domain spatial filter: (B, C, T) -> (B, spatial_dim, T)
+        x_mixed = self.spatial_mixer(x_gcn)
         
         B_mix, C_mix, T_mix = x_mixed.shape
         x_flat = x_mixed.reshape(B_mix * C_mix, T_mix)
@@ -173,18 +144,8 @@ class S4EEGEncoder(nn.Module):
 
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
         
-        self.tda = TopologyExtractor(d_model)
-        
-        # Adaptive Squeeze-and-Excitation router for Betti features based on sequence entropy
-        self.topo_gate = nn.Sequential(
-            nn.Linear(d_model, max(1, d_model // 4)),
-            nn.GELU(),
-            nn.Linear(max(1, d_model // 4), d_model),
-            nn.Sigmoid()
-        )
-        
-        # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
-        self.intent_proj = nn.Sequential(nn.Linear(d_model * 2, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
+        # Explicit Spatial topology is handled dynamically in the stem
+        self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
         
         self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
         self.momentum_stem = None
@@ -224,14 +185,7 @@ class S4EEGEncoder(nn.Module):
             
         current_state = x.mean(dim=1) 
 
-        topo_embed_raw = self.tda(x)
-        # Weight Betti features depending on sequence entropy (temporal variance)
-        seq_entropy = x.var(dim=1)
-        gate = self.topo_gate(seq_entropy)
-        topo_embed = topo_embed_raw * gate
-        
-        combined_state = torch.cat([current_state, topo_embed], dim=-1)
-        intent_logits = self.intent_proj(combined_state)
+        intent_logits = self.intent_proj(current_state)
         
         evidence = F.softplus(intent_logits)
         alpha = evidence + 1.0

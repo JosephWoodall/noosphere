@@ -16,9 +16,9 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 try:
-    from ripser import ripser
+    from torch_geometric.nn import DenseGCNConv
 except ImportError:
-    ripser = None
+    DenseGCNConv = None
 
 # ── [DirichletEDLLoss and S4Block remain unchanged] ──
 class DirichletEDLLoss(nn.Module):
@@ -53,6 +53,7 @@ class S4Block(nn.Module):
         self.conv = nn.Conv1d(d_model * 2, d_model * 2, kernel_size=3, padding=1, groups=d_model * 2)
         self.out_proj = nn.Linear(d_model, d_model)
         self.norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(0.3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         residual = x
@@ -63,45 +64,74 @@ class S4Block(nn.Module):
         x = x.transpose(1, 2)
         x1, x2 = x.chunk(2, dim=-1)
         x = x1 * torch.sigmoid(x2) 
-        x = self.out_proj(x)
+        x = self.dropout(self.out_proj(x))
         return x + residual
 
-class TopologyExtractor(nn.Module):
-    def __init__(self, d_model: int, max_points: int = 64):
+class SpectralStem(nn.Module):
+    def __init__(self, in_channels: int, d_model: int, n_fft: int = 128, hop_length: int = 4):
         super().__init__()
-        self.max_points = max_points
-        self.proj = nn.Linear(2, d_model)
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+        # Hard biological constraint: ERD exists ONLY in 8-32Hz.
+        self.bin_start = 4
+        self.bin_end = 16
+        freq_bins = self.bin_end - self.bin_start
         
-    def forward(self, seq: torch.Tensor) -> torch.Tensor:
-        B, T, d = seq.shape
-        device = seq.device
+        # factorized Spatial Contrast Equivalent to Common Spatial Patterns (CSP)
+        # Prevent combinatorial memory explosion on dense arrays (e.g. 128 channels).
+        # CSP typically uses 4-6 components; 48 is extremely generous.
+        self.spatial_dim = min(in_channels * 3, 48)
+        self.spatial_mixer = nn.Conv1d(in_channels, self.spatial_dim, kernel_size=1, bias=False)
+        self.spatial_norm = nn.LayerNorm(self.spatial_dim)
         
-        betti_features = torch.zeros(B, 2, device=device)
+        self.proj = nn.Sequential(
+            nn.Linear(self.spatial_dim * freq_bins, d_model),
+            nn.GELU(),
+            nn.LayerNorm(d_model)
+        )
         
-        if ripser is None:
-            return self.proj(betti_features)
-            
-        if T > self.max_points:
-            seq_np = seq[:, -self.max_points:, :].detach().cpu().numpy()
-        else:
-            seq_np = seq.detach().cpu().numpy()
-            
-        for b in range(B):
-            try:
-                dgns = ripser(seq_np[b], maxdim=1)['dgms']
-                
-                h0_lifetimes = dgns[0][:-1, 1] - dgns[0][:-1, 0] if len(dgns[0]) > 1 else np.array([0.0])
-                betti_0_sum = np.sum(h0_lifetimes)
-                
-                h1_lifetimes = dgns[1][:, 1] - dgns[1][:, 0] if len(dgns[1]) > 0 else np.array([0.0])
-                betti_1_sum = np.sum(h1_lifetimes)
-                
-                betti_features[b, 0] = float(betti_0_sum)
-                betti_features[b, 1] = float(betti_1_sum)
-            except Exception:
-                pass
-                
-        return self.proj(betti_features)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, C, T = x.shape
+        # [CRITICAL METADATA INTERVENTION]
+        # CSP relies on phase coherence. Spatial filtering MUST happen in time-domain 
+        # BEFORE Fourier magnitude extraction destroys relative phase between C3 and C4.
+        
+        
+        # [DYNAMIC GRAPH CONVOLUTION]
+        # Construct the adjacency matrix dynamically using raw sequence covariance
+        # This allows the model to learn the geodesic topology of the scalp for any array density
+        x_centered = x - x.mean(dim=-1, keepdim=True)
+        cov = torch.bmm(x_centered, x_centered.transpose(1, 2)) / (T - 1)
+        adj = F.softmax(cov, dim=-1) # (B, C, C) Normalized adjacency mapping
+        
+        # Native message propagation across the electrode graph
+        x_gcn = torch.bmm(adj, x)
+        
+        # Time-domain spatial filter: (B, C, T) -> (B, spatial_dim, T)
+        x_mixed = self.spatial_mixer(x_gcn)
+        
+        B_mix, C_mix, T_mix = x_mixed.shape
+        x_flat = x_mixed.reshape(B_mix * C_mix, T_mix)
+        
+        window = torch.hann_window(self.n_fft, device=x.device)
+        stft = torch.stft(x_flat, n_fft=self.n_fft, hop_length=self.hop_length, 
+                          window=window, return_complex=True, center=True, pad_mode='reflect').abs()
+        
+        F_bins_total = stft.shape[1]
+        T_prime = stft.shape[2]
+        
+        # Reshape to (B, C_mix, F_bins_total, T_prime)
+        stft_mix = stft.reshape(B_mix, C_mix, F_bins_total, T_prime)
+        
+        # Slicing the ERD band
+        stft_erd = stft_mix[:, :, self.bin_start:self.bin_end, :]
+        
+        # Flatten for channel/frequency entanglement -> (B, C_mix * F_erd, T_prime)
+        F_erd = stft_erd.shape[2]
+        stft_erd_flat = stft_erd.reshape(B_mix, C_mix * F_erd, T_prime).transpose(1, 2)
+        
+        out = self.proj(stft_erd_flat)
+        return out.transpose(1, 2)
 
 class S4EEGEncoder(nn.Module):
     def __init__(self, in_channels: int = 3, d_model: int = 256, d_state: int = 64, n_blocks: int = 4, downsample: int = 4, n_actions: int = 8):
@@ -109,20 +139,12 @@ class S4EEGEncoder(nn.Module):
         self.d_model = d_model
         self.n_actions = n_actions
         
-        self.stem = nn.Sequential(
-            nn.Conv1d(in_channels, d_model // 2, kernel_size=15, stride=2, padding=7),
-            nn.GELU(),
-            nn.GroupNorm(8, d_model // 2),
-            nn.Conv1d(d_model // 2, d_model, kernel_size=7, stride=downsample // 2, padding=3),
-            nn.GELU(),
-            nn.GroupNorm(16, d_model)
-        )
+        # Explicit STFT spectral transform mapping ERD/ERS directly
+        self.stem = SpectralStem(in_channels, d_model, n_fft=128, hop_length=downsample)
 
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
         
-        self.tda = TopologyExtractor(d_model)
-        
-        # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
+        # Explicit Spatial topology is handled dynamically in the stem
         self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
         
         self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
@@ -148,7 +170,7 @@ class S4EEGEncoder(nn.Module):
         x = self.momentum_stem(eeg)
         x = x.transpose(1, 2)
         for block in self.momentum_blocks: x = block(x)
-        return x[:, -1, :]
+        return x.mean(dim=1)
 
     def forward(self, eeg: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         B = eeg.shape[0]
@@ -161,22 +183,23 @@ class S4EEGEncoder(nn.Module):
         x = x.transpose(1, 2)
         for block in self.blocks: x = block(x)
             
-        current_state = x[:, -1, :] 
+        current_state = x.mean(dim=1) 
 
-        evidence = F.softplus(self.intent_proj(current_state))
+        intent_logits = self.intent_proj(current_state)
+        
+        evidence = F.softplus(intent_logits)
         alpha = evidence + 1.0
         S = torch.sum(alpha, dim=-1, keepdim=True)
         intent_probs = alpha / S
         
         uncertainty = self.n_actions / S
         confidence = 1.0 - uncertainty
-        
-        topo_embed = self.tda(x)
 
         return {
             "sequence": x,                 
             "embed": current_state,        
             "topological": topo_embed,
+            "intent_logits": intent_logits,
             "intent_probs": intent_probs,  
             "confidence": confidence.squeeze(-1),      
             "alpha": alpha,                

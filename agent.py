@@ -20,7 +20,7 @@ import torch.optim as optim
 
 from noosphere.actions import ActBridge
 from noosphere.bundle import BundleMetadata, export_bundle, load_bundle
-from noosphere.learning import LearningConfig, LearningManager, JEPALoss, TS2VecLoss, EEGAugment
+from noosphere.learning import LearningConfig, LearningManager, SpatialTopologyLoss
 from noosphere.memory import EpisodicMemory, SequenceReplayBuffer, WorkingMemory
 from noosphere.perception import HybridPerceptionModel
 from noosphere.physics import PhysicsAugmentedRSSM
@@ -296,16 +296,10 @@ class NoosphereAgent(nn.Module):
                     L_sigreg = L_sigreg + sigreg_loss
                     
                     eeg = inp["eeg"]
-                    v1, v2 = EEGAugment.augment(eeg)
-                    out1 = self.perception.s4(v1); z1 = out1["embed"]; pred_z2 = out1["pred_z"]
-                    out2 = self.perception.s4(v2); z2 = out2["embed"]; pred_z1 = out2["pred_z"]
-                    with torch.no_grad():
-                        target_z1 = self.perception.s4.forward_momentum(v1)
-                        target_z2 = self.perception.s4.forward_momentum(v2)
-                    ts2vec_loss, _ = TS2VecLoss()(z1, z2)
-                    jepa_loss1, _ = JEPALoss()(pred_z1, target_z1)
-                    jepa_loss2, _ = JEPALoss()(pred_z2, target_z2)
-                    L_sigreg = L_sigreg + ts2vec_loss + jepa_loss1 + jepa_loss2
+                    out = self.perception.s4(eeg)
+                    topo_embed = out["topological"] + out["embed"]
+                    spatial_topo_loss, _ = SpatialTopologyLoss(d_model=self.cfg.d_model, n_channels=self.cfg.n_eeg_ch).to(self.device)(topo_embed, eeg)
+                    L_sigreg = L_sigreg + spatial_topo_loss
 
         h = torch.zeros(B, self._det_dim, device=self.device); z = torch.zeros(B, self._stoch_dim, device=self.device)
         L_kl, L_r, L_rew, L_t, L_p = [torch.tensor(0.0, device=self.device) for _ in range(5)]

@@ -30,7 +30,7 @@ from noosphere.proto      import NCPEncoder, NCPDecoder, Channel, MsgType, NCPTr
 from noosphere.learning   import (
     LearningManager, LearningConfig, LearningSignal,
     SupervisedCoordinateLoss, PositionErrorLoss,
-    SIGRegLoss, EEGAugment, JEPALoss, TS2VecLoss,
+    SIGRegLoss, SpatialTopologyLoss,
 )
 from noosphere.actions    import ActBridge
 from noosphere.trainer    import (
@@ -69,7 +69,7 @@ __all__ = [
     # Learning
     "LearningManager", "LearningConfig", "LearningSignal",
     "SupervisedCoordinateLoss", "PositionErrorLoss",
-    "SIGRegLoss", "EEGAugment", "JEPALoss", "TS2VecLoss",
+    "SIGRegLoss", "SpatialTopologyLoss",
     # Actions
     "ActBridge",
     # Training

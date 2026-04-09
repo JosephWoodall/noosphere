@@ -1,11 +1,3 @@
-- [x] Inject granular, sub-millisecond hardware latency timers (`demo.py`, `proto.py`, `agent.py`).
-- [x] Instrument `monitor.py` to continuously export `e2e_latency_ms` to Prometheus.
-- [x] Implement `io_uring` based hardware acceleration for BCI sensor ingestion.
-- [x] Integrate Gaze/Eye-Tracking vectors into `HybridPerceptionModel` to accelerate 0-to-1 spatial parameterization.
-- [x] Hook the `ActBridge` to local ZFS/Btrfs snapshot mechanisms to enforce retroactive consequence rollbacks.
-- [x] Implement Predictive S4 Intent Pre-fetching (Staging executors before intent-confidence crosses the gate threshold).
-- [x] Train local OS-Level Contrastive Grounding (UI-CLIP) to map window-buffers to the BCI latent space.
-- [x] Encode `bci/fatigue` and `bci/workload` into a Hamiltonian neural equation to dynamically scale the MCTS horizon.
-- [x] Implement a Vietoris-Rips Persistent Homology calculator on the output sequence of `S4EEGEncoder`.
-- [x] Extract the Betti-0 and Betti-1 numbers to quantify cognitive manifold connectivity (flow state vs. turbulence).
-- [x] Pipe the topological features directly into the `NoosphereGNN` cross-attention tokens.
+- [ ] Inject `PhysionetMI` (109 subjects) and `Cho2017` (52 subjects) into the `DATASET_CATALOGUE` to violently expand structural neuro-diversity.
+- [ ] Gut the singular `train_test_split` in `demo_real_eeg.py` and implement an internal `StratifiedKFold(n_splits=10)` loop per subject.
+- [ ] Aggregate per-fold metrics internally so the benchmark mathematically guarantees out-of-sample consistency without leakage.

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noosphere — Real EEG Metrics Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          background: #F0F2F5; color: #1A1A2E; font-size: 14px; }
+  header { background: #1A1A2E; color: white; padding: 24px 32px; }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+  header p  { color: #8899AA; margin-top: 4px; font-size: 13px; }
+  .summary { background: #2E5FA3; color: white; padding: 20px 32px;
+              display: flex; gap: 40px; flex-wrap: wrap; }
+  .summary-item { text-align: center; }
+  .summary-item .val { font-size: 28px; font-weight: 700; }
+  .summary-item .lbl { font-size: 11px; opacity: 0.8; text-transform: uppercase;
+                         letter-spacing: 0.5px; margin-top: 2px; }
+  main { padding: 24px 32px; max-width: 1100px; margin: 0 auto; }
+  .card { background: white; border-radius: 8px; padding: 24px;
+           margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .card h2 { font-size: 17px; font-weight: 700; color: #2E5FA3;
+              border-bottom: 2px solid #E8EDF5; padding-bottom: 8px;
+              margin-bottom: 12px; }
+  .card h3 { font-size: 13px; font-weight: 600; color: #444;
+              margin: 16px 0 8px; }
+  .desc { color: #666; font-size: 12px; margin-bottom: 16px; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr);
+                   gap: 12px; margin-bottom: 20px; }
+  .metric-box { background: #F7F9FC; border-radius: 6px; padding: 12px;
+                 border: 1px solid #E8EDF5; }
+  .metric-label { font-size: 11px; color: #888; text-transform: uppercase;
+                   letter-spacing: 0.3px; }
+  .metric-value { font-size: 22px; font-weight: 700; color: #1A1A2E;
+                   margin: 4px 0 2px; }
+  .metric-sub { font-size: 10px; color: #AAA; margin-bottom: 6px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+              margin: 16px 0; }
+  .fig-caption { font-size: 10px; color: #999; margin-top: 4px; }
+  .target { margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #F0F2F5; text-align: left; padding: 6px 10px;
+        font-weight: 600; color: #555; border-bottom: 1px solid #DDD; }
+  td { padding: 5px 10px; border-bottom: 1px solid #F0F0F0; }
+  tr:hover td { background: #FAFBFF; }
+  .note { background: #FFF9E6; border-left: 3px solid #F39C12;
+           padding: 12px 16px; margin: 16px 0; border-radius: 4px;
+           font-size: 12px; color: #666; }
+  footer { text-align: center; padding: 20px; color: #AAA; font-size: 11px; }
+  @media (max-width: 700px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Noosphere — Real EEG Performance Report</h1>
+  <p>S4EEGEncoder · Physics-Informed World Model · C3/Cz/C4 Motor Imagery
+     &nbsp;·&nbsp; Generated 2026-04-09 19:37:04 UTC</p>
+</header>
+
+<div class="summary">
+  <div class="summary-item">
+    <div class="val">5</div>
+    <div class="lbl">Datasets</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">13,851</div>
+    <div class="lbl">Total Trials</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">193</div>
+    <div class="lbl">Subjects</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">56.3%</div>
+    <div class="lbl">Mean Accuracy</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">0.259</div>
+    <div class="lbl">Mean κ</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">0.693</div>
+    <div class="lbl">Mean AUC-ROC</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">0.160</div>
+    <div class="lbl">Mean ECE</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">10.5</div>
+    <div class="lbl">Mean ITR (bits/min)</div>
+  </div>
+  <div class="summary-item">
+    <div class="val">21/45</div>
+    <div class="lbl">Checks Passed</div>
+  </div>
+</div>
+
+<main>
+
+<div class="note">
+  <strong>Methodological note:</strong> All EEG data are loaded from public
+  MOABB datasets, channel-subsampled to C3/Cz/C4 (or nearest equivalents),
+  resampled to 256 Hz, and z-scored per channel. The S4EEGEncoder is evaluated
+  zero-shot (untrained on these datasets) — results reflect the encoder's
+  out-of-the-box discriminative capacity, not fine-tuned performance.
+  AUC and calibration metrics use numpy-only implementations (no sklearn).
+  ITR computed via Wolpaw et al. (2000) with 1-second trial duration.
+</div>
+
+
+        <div class="card">
+          <h2>BNCI2014_001</h2>
+          <p class="desc">BCI Comp IV 2a — 9 subjects, 4-class MI, 22-ch, 250 Hz</p>
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <div class="metric-label">Accuracy</div>
+              <div class="metric-value">41.3%</div>
+              <div class="metric-sub">chance=25.0%</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="49.5" height="14" fill="#4A90D9" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Cohen's κ</div>
+              <div class="metric-value">0.217</div>
+              <div class="metric-sub">agreement beyond chance</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="26.0" height="14" fill="#9B59B6" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">AUC-ROC</div>
+              <div class="metric-value">0.674</div>
+              <div class="metric-sub">macro OvR</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="80.9" height="14" fill="#27AE60" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">F1 (macro)</div>
+              <div class="metric-value">0.412</div>
+              <div class="metric-sub">F1 weighted=0.412</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="49.5" height="14" fill="#E67E22" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ITR</div>
+              <div class="metric-value">5.5</div>
+              <div class="metric-sub">bits / minute</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="11.0" height="14" fill="#1ABC9C" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ECE</div>
+              <div class="metric-value">0.190</div>
+              <div class="metric-sub">lower = better calibrated</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="97.2" height="14" fill="#3498DB" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Conf–Acc r</div>
+              <div class="metric-value">0.152</div>
+              <div class="metric-sub">confidence calibration</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="18.3" height="14" fill="#8E44AD" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">BCI Lift</div>
+              <div class="metric-value">+16.3%</div>
+              <div class="metric-sub">vs random prior</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="19.5" height="14" fill="#E74C3C" rx="3"/></svg>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Reliability Diagram</h3>
+              <svg width="160" height="160"><line x1="20" y1="140" x2="140" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/><line x1="20" y1="20" x2="20" y2="140" stroke="#666" stroke-width="1"/><line x1="20" y1="140" x2="140" y2="140" stroke="#666" stroke-width="1"/><text x="10" y="80" font-size="9" fill="#666" transform="rotate(-90,10,80)" text-anchor="middle">Accuracy</text><text x="80" y="157" font-size="9" fill="#666" text-anchor="middle">Confidence</text><rect x="44.0" y="140.0" width="11.0" height="0.0" fill="#E74C3C" opacity="0.8"/><rect x="56.0" y="107.6" width="11.0" height="32.4" fill="#4A90D9" opacity="0.8"/><rect x="68.0" y="99.5" width="11.0" height="40.5" fill="#E74C3C" opacity="0.8"/><rect x="80.0" y="91.9" width="11.0" height="48.1" fill="#E74C3C" opacity="0.8"/><rect x="92.0" y="94.8" width="11.0" height="45.2" fill="#E74C3C" opacity="0.8"/><rect x="104.0" y="78.6" width="11.0" height="61.4" fill="#E74C3C" opacity="0.8"/><rect x="116.0" y="64.1" width="11.0" height="75.9" fill="#E74C3C" opacity="0.8"/><text x="22" y="30" font-size="9" fill="#333">ECE=0.190</text></svg>
+              <p class="fig-caption">ECE=0.190  MCE=0.285</p>
+            </div>
+            <div>
+              <h3>Confusion Matrix</h3>
+              <svg width="140" height="140"><rect x="20" y="20" width="29" height="29" fill="rgb(47,47,255)"/><text x="35" y="39" font-size="8" fill="#333" text-anchor="middle">143</text><rect x="50" y="20" width="29" height="29" fill="rgb(136,136,255)"/><text x="65" y="39" font-size="8" fill="#333" text-anchor="middle">69</text><rect x="80" y="20" width="29" height="29" fill="rgb(148,148,255)"/><text x="95" y="39" font-size="8" fill="#333" text-anchor="middle">59</text><rect x="110" y="20" width="29" height="29" fill="rgb(155,155,255)"/><text x="125" y="39" font-size="8" fill="#333" text-anchor="middle">53</text><rect x="20" y="50" width="29" height="29" fill="rgb(141,141,255)"/><text x="35" y="69" font-size="8" fill="#333" text-anchor="middle">65</text><rect x="50" y="50" width="29" height="29" fill="rgb(40,40,255)"/><text x="65" y="69" font-size="8" fill="#333" text-anchor="middle">149</text><rect x="80" y="50" width="29" height="29" fill="rgb(148,148,255)"/><text x="95" y="69" font-size="8" fill="#333" text-anchor="middle">59</text><rect x="110" y="50" width="29" height="29" fill="rgb(158,158,255)"/><text x="125" y="69" font-size="8" fill="#333" text-anchor="middle">51</text><rect x="20" y="80" width="29" height="29" fill="rgb(152,152,255)"/><text x="35" y="99" font-size="8" fill="#333" text-anchor="middle">56</text><rect x="50" y="80" width="29" height="29" fill="rgb(139,139,255)"/><text x="65" y="99" font-size="8" fill="#333" text-anchor="middle">67</text><rect x="80" y="80" width="29" height="29" fill="rgb(73,73,255)"/><text x="95" y="99" font-size="8" fill="#333" text-anchor="middle">121</text><rect x="110" y="80" width="29" height="29" fill="rgb(123,123,255)"/><text x="125" y="99" font-size="8" fill="#333" text-anchor="middle">80</text><rect x="20" y="110" width="29" height="29" fill="rgb(157,157,255)"/><text x="35" y="129" font-size="8" fill="#333" text-anchor="middle">52</text><rect x="50" y="110" width="29" height="29" fill="rgb(141,141,255)"/><text x="65" y="129" font-size="8" fill="#333" text-anchor="middle">65</text><rect x="80" y="110" width="29" height="29" fill="rgb(117,117,255)"/><text x="95" y="129" font-size="8" fill="#333" text-anchor="middle">85</text><rect x="110" y="110" width="29" height="29" fill="rgb(72,72,255)"/><text x="125" y="129" font-size="8" fill="#333" text-anchor="middle">122</text><text x="35" y="15" font-size="9" fill="#666" text-anchor="middle">0</text><text x="15" y="39" font-size="9" fill="#666" text-anchor="end">0</text><text x="65" y="15" font-size="9" fill="#666" text-anchor="middle">1</text><text x="15" y="69" font-size="9" fill="#666" text-anchor="end">1</text><text x="95" y="15" font-size="9" fill="#666" text-anchor="middle">2</text><text x="15" y="99" font-size="9" fill="#666" text-anchor="end">2</text><text x="125" y="15" font-size="9" fill="#666" text-anchor="middle">3</text><text x="15" y="129" font-size="9" fill="#666" text-anchor="end">3</text><text x="80" y="138" font-size="8" fill="#999" text-anchor="middle">Predicted</text></svg>
+              <p class="fig-caption">1296 trials · 9 subjects</p>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Stability (rolling 10-trial accuracy)</h3>
+              <p>First half: 39.7% → Second half: 42.9%
+                 (drop: -3.2%)</p>
+              <p>Rolling mean: 41.1% ± 21.0%</p>
+              <p>Subject-level: 25.9% ± 3.3%</p>
+            </div>
+            <div>
+              <h3>Inference Latency</h3>
+              <p>Mean: 0.0 ms</p>
+              <p>p95:  0.0 ms</p>
+              <p>p99:  0.0 ms</p>
+              <p class="target">Target: p95 &lt; 50 ms
+                 <span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></p>
+            </div>
+          </div>
+
+          <h3>Per-class Breakdown</h3>
+          <table>
+            <tr><th>Class</th><th>Precision</th><th>Recall</th>
+                <th>F1</th><th>AUC-ROC</th><th>Support</th></tr>
+            <tr><td>Class 0</td><td>0.45</td><td>0.44</td><td>0.45</td><td>0.710</td><td>324</td></tr><tr><td>Class 1</td><td>0.43</td><td>0.46</td><td>0.44</td><td>0.683</td><td>324</td></tr><tr><td>Class 2</td><td>0.37</td><td>0.37</td><td>0.37</td><td>0.651</td><td>324</td></tr><tr><td>Class 3</td><td>0.40</td><td>0.38</td><td>0.39</td><td>0.652</td><td>324</td></tr>
+          </table>
+
+          <h3>Framework-5 Checks (3/9 passed)</h3>
+          <table>
+            <tr><th>Check</th><th>Result</th></tr>
+            <tr><td>accuracy >70pct</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>bci lift >10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>confidence corr >0.30</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>stability drop <10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>kappa >0.40</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>itr >10 bits per min</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>ece <0.15</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>auc roc >0.70</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>inference p95 <50ms</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr>
+          </table>
+        </div>
+        
+        <div class="card">
+          <h2>BNCI2014_004</h2>
+          <p class="desc">BCI Comp IV 2b — 9 subjects, 2-class MI, 3-ch, 250 Hz</p>
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <div class="metric-label">Accuracy</div>
+              <div class="metric-value">65.2%</div>
+              <div class="metric-sub">chance=50.0%</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="78.2" height="14" fill="#4A90D9" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Cohen's κ</div>
+              <div class="metric-value">0.304</div>
+              <div class="metric-sub">agreement beyond chance</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="36.5" height="14" fill="#9B59B6" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">AUC-ROC</div>
+              <div class="metric-value">0.706</div>
+              <div class="metric-sub">macro OvR</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="84.7" height="14" fill="#27AE60" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">F1 (macro)</div>
+              <div class="metric-value">0.652</div>
+              <div class="metric-sub">F1 weighted=0.652</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="78.2" height="14" fill="#E67E22" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ITR</div>
+              <div class="metric-value">4.1</div>
+              <div class="metric-sub">bits / minute</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="8.1" height="14" fill="#1ABC9C" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ECE</div>
+              <div class="metric-value">0.194</div>
+              <div class="metric-sub">lower = better calibrated</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="96.8" height="14" fill="#3498DB" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Conf–Acc r</div>
+              <div class="metric-value">0.170</div>
+              <div class="metric-sub">confidence calibration</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="20.4" height="14" fill="#8E44AD" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">BCI Lift</div>
+              <div class="metric-value">+15.2%</div>
+              <div class="metric-sub">vs random prior</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="18.2" height="14" fill="#E74C3C" rx="3"/></svg>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Reliability Diagram</h3>
+              <svg width="160" height="160"><line x1="20" y1="140" x2="140" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/><line x1="20" y1="20" x2="20" y2="140" stroke="#666" stroke-width="1"/><line x1="20" y1="140" x2="140" y2="140" stroke="#666" stroke-width="1"/><text x="10" y="80" font-size="9" fill="#666" transform="rotate(-90,10,80)" text-anchor="middle">Accuracy</text><text x="80" y="157" font-size="9" fill="#666" text-anchor="middle">Confidence</text><rect x="80.0" y="80.0" width="11.0" height="60.0" fill="#4A90D9" opacity="0.8"/><rect x="92.0" y="82.2" width="11.0" height="57.8" fill="#E74C3C" opacity="0.8"/><rect x="104.0" y="74.2" width="11.0" height="65.8" fill="#E74C3C" opacity="0.8"/><rect x="116.0" y="62.7" width="11.0" height="77.3" fill="#E74C3C" opacity="0.8"/><rect x="128.0" y="47.8" width="11.0" height="92.2" fill="#E74C3C" opacity="0.8"/><text x="22" y="30" font-size="9" fill="#333">ECE=0.194</text></svg>
+              <p class="fig-caption">ECE=0.194  MCE=0.224</p>
+            </div>
+            <div>
+              <h3>Confusion Matrix</h3>
+              <svg width="140" height="140"><rect x="20" y="20" width="59" height="59" fill="rgb(40,40,255)"/><text x="50" y="54" font-size="10" fill="#333" text-anchor="middle">554</text><rect x="80" y="20" width="59" height="59" fill="rgb(134,134,255)"/><text x="110" y="54" font-size="10" fill="#333" text-anchor="middle">262</text><rect x="20" y="80" width="59" height="59" fill="rgb(120,120,255)"/><text x="50" y="114" font-size="10" fill="#333" text-anchor="middle">306</text><rect x="80" y="80" width="59" height="59" fill="rgb(54,54,255)"/><text x="110" y="114" font-size="10" fill="#333" text-anchor="middle">510</text><text x="50" y="15" font-size="9" fill="#666" text-anchor="middle">0</text><text x="15" y="54" font-size="9" fill="#666" text-anchor="end">0</text><text x="110" y="15" font-size="9" fill="#666" text-anchor="middle">1</text><text x="15" y="114" font-size="9" fill="#666" text-anchor="end">1</text><text x="80" y="138" font-size="8" fill="#999" text-anchor="middle">Predicted</text></svg>
+              <p class="fig-caption">1632 trials · 9 subjects</p>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Stability (rolling 10-trial accuracy)</h3>
+              <p>First half: 62.9% → Second half: 67.5%
+                 (drop: -4.7%)</p>
+              <p>Rolling mean: 65.2% ± 18.6%</p>
+              <p>Subject-level: 53.3% ± 3.1%</p>
+            </div>
+            <div>
+              <h3>Inference Latency</h3>
+              <p>Mean: 0.0 ms</p>
+              <p>p95:  0.0 ms</p>
+              <p>p99:  0.0 ms</p>
+              <p class="target">Target: p95 &lt; 50 ms
+                 <span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></p>
+            </div>
+          </div>
+
+          <h3>Per-class Breakdown</h3>
+          <table>
+            <tr><th>Class</th><th>Precision</th><th>Recall</th>
+                <th>F1</th><th>AUC-ROC</th><th>Support</th></tr>
+            <tr><td>Class 0</td><td>0.64</td><td>0.68</td><td>0.66</td><td>0.706</td><td>816</td></tr><tr><td>Class 1</td><td>0.66</td><td>0.62</td><td>0.64</td><td>0.706</td><td>816</td></tr>
+          </table>
+
+          <h3>Framework-5 Checks (4/9 passed)</h3>
+          <table>
+            <tr><th>Check</th><th>Result</th></tr>
+            <tr><td>accuracy >70pct</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>bci lift >10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>confidence corr >0.30</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>stability drop <10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>kappa >0.40</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>itr >10 bits per min</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>ece <0.15</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>auc roc >0.70</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>inference p95 <50ms</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr>
+          </table>
+        </div>
+        
+        <div class="card">
+          <h2>Schirrmeister2017</h2>
+          <p class="desc">HGD — 14 subjects, 4-class MI, 128-ch, 500 Hz</p>
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <div class="metric-label">Accuracy</div>
+              <div class="metric-value">57.7%</div>
+              <div class="metric-sub">chance=25.0%</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="69.3" height="14" fill="#4A90D9" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Cohen's κ</div>
+              <div class="metric-value">0.436</div>
+              <div class="metric-sub">agreement beyond chance</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="52.4" height="14" fill="#9B59B6" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">AUC-ROC</div>
+              <div class="metric-value">0.803</div>
+              <div class="metric-sub">macro OvR</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="96.3" height="14" fill="#27AE60" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">F1 (macro)</div>
+              <div class="metric-value">0.578</div>
+              <div class="metric-sub">F1 weighted=0.578</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="69.4" height="14" fill="#E67E22" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ITR</div>
+              <div class="metric-value">20.8</div>
+              <div class="metric-sub">bits / minute</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="41.7" height="14" fill="#1ABC9C" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ECE</div>
+              <div class="metric-value">0.104</div>
+              <div class="metric-sub">lower = better calibrated</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="107.5" height="14" fill="#3498DB" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Conf–Acc r</div>
+              <div class="metric-value">0.258</div>
+              <div class="metric-sub">confidence calibration</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="30.9" height="14" fill="#8E44AD" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">BCI Lift</div>
+              <div class="metric-value">+32.7%</div>
+              <div class="metric-sub">vs random prior</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="39.3" height="14" fill="#E74C3C" rx="3"/></svg>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Reliability Diagram</h3>
+              <svg width="160" height="160"><line x1="20" y1="140" x2="140" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/><line x1="20" y1="20" x2="20" y2="140" stroke="#666" stroke-width="1"/><line x1="20" y1="140" x2="140" y2="140" stroke="#666" stroke-width="1"/><text x="10" y="80" font-size="9" fill="#666" transform="rotate(-90,10,80)" text-anchor="middle">Accuracy</text><text x="80" y="157" font-size="9" fill="#666" text-anchor="middle">Confidence</text><rect x="44.0" y="110.0" width="11.0" height="30.0" fill="#4A90D9" opacity="0.8"/><rect x="56.0" y="92.0" width="11.0" height="48.0" fill="#4A90D9" opacity="0.8"/><rect x="68.0" y="89.0" width="11.0" height="51.0" fill="#4A90D9" opacity="0.8"/><rect x="80.0" y="83.3" width="11.0" height="56.7" fill="#4A90D9" opacity="0.8"/><rect x="92.0" y="78.6" width="11.0" height="61.4" fill="#E74C3C" opacity="0.8"/><rect x="104.0" y="73.7" width="11.0" height="66.3" fill="#E74C3C" opacity="0.8"/><rect x="116.0" y="44.7" width="11.0" height="95.3" fill="#4A90D9" opacity="0.8"/><rect x="128.0" y="22.9" width="11.0" height="117.1" fill="#4A90D9" opacity="0.8"/><text x="22" y="30" font-size="9" fill="#333">ECE=0.104</text></svg>
+              <p class="fig-caption">ECE=0.104  MCE=0.204</p>
+            </div>
+            <div>
+              <h3>Confusion Matrix</h3>
+              <svg width="140" height="140"><rect x="20" y="20" width="29" height="29" fill="rgb(47,47,255)"/><text x="35" y="39" font-size="8" fill="#333" text-anchor="middle">497</text><rect x="50" y="20" width="29" height="29" fill="rgb(156,156,255)"/><text x="65" y="39" font-size="8" fill="#333" text-anchor="middle">184</text><rect x="80" y="20" width="29" height="29" fill="rgb(189,189,255)"/><text x="95" y="39" font-size="8" fill="#333" text-anchor="middle">89</text><rect x="110" y="20" width="29" height="29" fill="rgb(194,194,255)"/><text x="125" y="39" font-size="8" fill="#333" text-anchor="middle">73</text><rect x="20" y="50" width="29" height="29" fill="rgb(137,137,255)"/><text x="35" y="69" font-size="8" fill="#333" text-anchor="middle">237</text><rect x="50" y="50" width="29" height="29" fill="rgb(51,51,255)"/><text x="65" y="69" font-size="8" fill="#333" text-anchor="middle">488</text><rect x="80" y="50" width="29" height="29" fill="rgb(197,197,255)"/><text x="95" y="69" font-size="8" fill="#333" text-anchor="middle">66</text><rect x="110" y="50" width="29" height="29" fill="rgb(202,202,255)"/><text x="125" y="69" font-size="8" fill="#333" text-anchor="middle">52</text><rect x="20" y="80" width="29" height="29" fill="rgb(173,173,255)"/><text x="35" y="99" font-size="8" fill="#333" text-anchor="middle">134</text><rect x="50" y="80" width="29" height="29" fill="rgb(177,177,255)"/><text x="65" y="99" font-size="8" fill="#333" text-anchor="middle">122</text><rect x="80" y="80" width="29" height="29" fill="rgb(67,67,255)"/><text x="95" y="99" font-size="8" fill="#333" text-anchor="middle">442</text><rect x="110" y="80" width="29" height="29" fill="rgb(169,169,255)"/><text x="125" y="99" font-size="8" fill="#333" text-anchor="middle">145</text><rect x="20" y="110" width="29" height="29" fill="rgb(179,179,255)"/><text x="35" y="129" font-size="8" fill="#333" text-anchor="middle">116</text><rect x="50" y="110" width="29" height="29" fill="rgb(194,194,255)"/><text x="65" y="129" font-size="8" fill="#333" text-anchor="middle">75</text><rect x="80" y="110" width="29" height="29" fill="rgb(173,173,255)"/><text x="95" y="129" font-size="8" fill="#333" text-anchor="middle">133</text><rect x="110" y="110" width="29" height="29" fill="rgb(40,40,255)"/><text x="125" y="129" font-size="8" fill="#333" text-anchor="middle">520</text><text x="35" y="15" font-size="9" fill="#666" text-anchor="middle">0</text><text x="15" y="39" font-size="9" fill="#666" text-anchor="end">0</text><text x="65" y="15" font-size="9" fill="#666" text-anchor="middle">1</text><text x="15" y="69" font-size="9" fill="#666" text-anchor="end">1</text><text x="95" y="15" font-size="9" fill="#666" text-anchor="middle">2</text><text x="15" y="99" font-size="9" fill="#666" text-anchor="end">2</text><text x="125" y="15" font-size="9" fill="#666" text-anchor="middle">3</text><text x="15" y="129" font-size="9" fill="#666" text-anchor="end">3</text><text x="80" y="138" font-size="8" fill="#999" text-anchor="middle">Predicted</text></svg>
+              <p class="fig-caption">3373 trials · 14 subjects</p>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Stability (rolling 10-trial accuracy)</h3>
+              <p>First half: 61.7% → Second half: 53.7%
+                 (drop: +8.0%)</p>
+              <p>Rolling mean: 57.8% ± 22.1%</p>
+              <p>Subject-level: 24.3% ± 1.3%</p>
+            </div>
+            <div>
+              <h3>Inference Latency</h3>
+              <p>Mean: 0.0 ms</p>
+              <p>p95:  0.0 ms</p>
+              <p>p99:  0.0 ms</p>
+              <p class="target">Target: p95 &lt; 50 ms
+                 <span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></p>
+            </div>
+          </div>
+
+          <h3>Per-class Breakdown</h3>
+          <table>
+            <tr><th>Class</th><th>Precision</th><th>Recall</th>
+                <th>F1</th><th>AUC-ROC</th><th>Support</th></tr>
+            <tr><td>Class 0</td><td>0.51</td><td>0.59</td><td>0.54</td><td>0.782</td><td>843</td></tr><tr><td>Class 1</td><td>0.56</td><td>0.58</td><td>0.57</td><td>0.784</td><td>843</td></tr><tr><td>Class 2</td><td>0.61</td><td>0.52</td><td>0.56</td><td>0.790</td><td>843</td></tr><tr><td>Class 3</td><td>0.66</td><td>0.62</td><td>0.64</td><td>0.853</td><td>844</td></tr>
+          </table>
+
+          <h3>Framework-5 Checks (7/9 passed)</h3>
+          <table>
+            <tr><th>Check</th><th>Result</th></tr>
+            <tr><td>accuracy >70pct</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>bci lift >10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>confidence corr >0.30</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>stability drop <10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>kappa >0.40</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>itr >10 bits per min</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>ece <0.15</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>auc roc >0.70</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>inference p95 <50ms</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr>
+          </table>
+        </div>
+        
+        <div class="card">
+          <h2>PhysionetMI</h2>
+          <p class="desc">Physionet — 109 subjects, 4-class MI, 64-ch, 160 Hz</p>
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <div class="metric-label">Accuracy</div>
+              <div class="metric-value">57.4%</div>
+              <div class="metric-sub">chance=25.0%</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="68.9" height="14" fill="#4A90D9" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Cohen's κ</div>
+              <div class="metric-value">0.140</div>
+              <div class="metric-sub">agreement beyond chance</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="16.8" height="14" fill="#9B59B6" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">AUC-ROC</div>
+              <div class="metric-value">0.631</div>
+              <div class="metric-sub">macro OvR</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="75.8" height="14" fill="#27AE60" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">F1 (macro)</div>
+              <div class="metric-value">0.336</div>
+              <div class="metric-sub">F1 weighted=0.522</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="40.4" height="14" fill="#E67E22" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ITR</div>
+              <div class="metric-value">20.4</div>
+              <div class="metric-sub">bits / minute</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="40.9" height="14" fill="#1ABC9C" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ECE</div>
+              <div class="metric-value">0.091</div>
+              <div class="metric-sub">lower = better calibrated</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="109.1" height="14" fill="#3498DB" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Conf–Acc r</div>
+              <div class="metric-value">0.263</div>
+              <div class="metric-sub">confidence calibration</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="31.5" height="14" fill="#8E44AD" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">BCI Lift</div>
+              <div class="metric-value">+32.4%</div>
+              <div class="metric-sub">vs random prior</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="38.9" height="14" fill="#E74C3C" rx="3"/></svg>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Reliability Diagram</h3>
+              <svg width="160" height="160"><line x1="20" y1="140" x2="140" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/><line x1="20" y1="20" x2="20" y2="140" stroke="#666" stroke-width="1"/><line x1="20" y1="140" x2="140" y2="140" stroke="#666" stroke-width="1"/><text x="10" y="80" font-size="9" fill="#666" transform="rotate(-90,10,80)" text-anchor="middle">Accuracy</text><text x="80" y="157" font-size="9" fill="#666" text-anchor="middle">Confidence</text><rect x="44.0" y="20.0" width="11.0" height="120.0" fill="#E74C3C" opacity="0.8"/><rect x="56.0" y="105.7" width="11.0" height="34.3" fill="#4A90D9" opacity="0.8"/><rect x="68.0" y="92.1" width="11.0" height="47.9" fill="#4A90D9" opacity="0.8"/><rect x="80.0" y="85.6" width="11.0" height="54.4" fill="#4A90D9" opacity="0.8"/><rect x="92.0" y="75.6" width="11.0" height="64.4" fill="#E74C3C" opacity="0.8"/><rect x="104.0" y="61.7" width="11.0" height="78.3" fill="#E74C3C" opacity="0.8"/><rect x="116.0" y="46.9" width="11.0" height="93.1" fill="#4A90D9" opacity="0.8"/><text x="22" y="30" font-size="9" fill="#333">ECE=0.091</text></svg>
+              <p class="fig-caption">ECE=0.091  MCE=0.709</p>
+            </div>
+            <div>
+              <h3>Confusion Matrix</h3>
+              <svg width="140" height="140"><rect x="20" y="20" width="29" height="29" fill="rgb(40,40,255)"/><text x="35" y="39" font-size="8" fill="#333" text-anchor="middle">2521</text><rect x="50" y="20" width="29" height="29" fill="rgb(210,210,255)"/><text x="65" y="39" font-size="8" fill="#333" text-anchor="middle">128</text><rect x="80" y="20" width="29" height="29" fill="rgb(211,211,255)"/><text x="95" y="39" font-size="8" fill="#333" text-anchor="middle">121</text><rect x="110" y="20" width="29" height="29" fill="rgb(207,207,255)"/><text x="125" y="39" font-size="8" fill="#333" text-anchor="middle">181</text><rect x="20" y="50" width="29" height="29" fill="rgb(186,186,255)"/><text x="35" y="69" font-size="8" fill="#333" text-anchor="middle">465</text><rect x="50" y="50" width="29" height="29" fill="rgb(213,213,255)"/><text x="65" y="69" font-size="8" fill="#333" text-anchor="middle">97</text><rect x="80" y="50" width="29" height="29" fill="rgb(216,216,255)"/><text x="95" y="69" font-size="8" fill="#333" text-anchor="middle">52</text><rect x="110" y="50" width="29" height="29" fill="rgb(217,217,255)"/><text x="125" y="69" font-size="8" fill="#333" text-anchor="middle">42</text><rect x="20" y="80" width="29" height="29" fill="rgb(186,186,255)"/><text x="35" y="99" font-size="8" fill="#333" text-anchor="middle">466</text><rect x="50" y="80" width="29" height="29" fill="rgb(216,216,255)"/><text x="65" y="99" font-size="8" fill="#333" text-anchor="middle">45</text><rect x="80" y="80" width="29" height="29" fill="rgb(213,213,255)"/><text x="95" y="99" font-size="8" fill="#333" text-anchor="middle">95</text><rect x="110" y="80" width="29" height="29" fill="rgb(216,216,255)"/><text x="125" y="99" font-size="8" fill="#333" text-anchor="middle">50</text><rect x="20" y="110" width="29" height="29" fill="rgb(186,186,255)"/><text x="35" y="129" font-size="8" fill="#333" text-anchor="middle">466</text><rect x="50" y="110" width="29" height="29" fill="rgb(216,216,255)"/><text x="65" y="129" font-size="8" fill="#333" text-anchor="middle">43</text><rect x="80" y="110" width="29" height="29" fill="rgb(217,217,255)"/><text x="95" y="129" font-size="8" fill="#333" text-anchor="middle">37</text><rect x="110" y="110" width="29" height="29" fill="rgb(212,212,255)"/><text x="125" y="129" font-size="8" fill="#333" text-anchor="middle">111</text><text x="35" y="15" font-size="9" fill="#666" text-anchor="middle">0</text><text x="15" y="39" font-size="9" fill="#666" text-anchor="end">0</text><text x="65" y="15" font-size="9" fill="#666" text-anchor="middle">1</text><text x="15" y="69" font-size="9" fill="#666" text-anchor="end">1</text><text x="95" y="15" font-size="9" fill="#666" text-anchor="middle">2</text><text x="15" y="99" font-size="9" fill="#666" text-anchor="end">2</text><text x="125" y="15" font-size="9" fill="#666" text-anchor="middle">3</text><text x="15" y="129" font-size="9" fill="#666" text-anchor="end">3</text><text x="80" y="138" font-size="8" fill="#999" text-anchor="middle">Predicted</text></svg>
+              <p class="fig-caption">4920 trials · 109 subjects</p>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Stability (rolling 10-trial accuracy)</h3>
+              <p>First half: 58.7% → Second half: 56.1%
+                 (drop: +2.6%)</p>
+              <p>Rolling mean: 57.4% ± 31.2%</p>
+              <p>Subject-level: 51.3% ± 3.4%</p>
+            </div>
+            <div>
+              <h3>Inference Latency</h3>
+              <p>Mean: 0.1 ms</p>
+              <p>p95:  0.1 ms</p>
+              <p>p99:  0.1 ms</p>
+              <p class="target">Target: p95 &lt; 50 ms
+                 <span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></p>
+            </div>
+          </div>
+
+          <h3>Per-class Breakdown</h3>
+          <table>
+            <tr><th>Class</th><th>Precision</th><th>Recall</th>
+                <th>F1</th><th>AUC-ROC</th><th>Support</th></tr>
+            <tr><td>Class 0</td><td>0.64</td><td>0.85</td><td>0.73</td><td>0.645</td><td>2951</td></tr><tr><td>Class 1</td><td>0.31</td><td>0.15</td><td>0.20</td><td>0.635</td><td>656</td></tr><tr><td>Class 2</td><td>0.31</td><td>0.14</td><td>0.20</td><td>0.625</td><td>656</td></tr><tr><td>Class 3</td><td>0.29</td><td>0.17</td><td>0.21</td><td>0.621</td><td>657</td></tr>
+          </table>
+
+          <h3>Framework-5 Checks (5/9 passed)</h3>
+          <table>
+            <tr><th>Check</th><th>Result</th></tr>
+            <tr><td>accuracy >70pct</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>bci lift >10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>confidence corr >0.30</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>stability drop <10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>kappa >0.40</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>itr >10 bits per min</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>ece <0.15</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>auc roc >0.70</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>inference p95 <50ms</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr>
+          </table>
+        </div>
+        
+        <div class="card">
+          <h2>Cho2017</h2>
+          <p class="desc">Cho — 52 subjects, 2-class MI, 64-ch, 512 Hz</p>
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <div class="metric-label">Accuracy</div>
+              <div class="metric-value">60.0%</div>
+              <div class="metric-sub">chance=50.0%</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="72.0" height="14" fill="#4A90D9" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Cohen's κ</div>
+              <div class="metric-value">0.199</div>
+              <div class="metric-sub">agreement beyond chance</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="23.9" height="14" fill="#9B59B6" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">AUC-ROC</div>
+              <div class="metric-value">0.652</div>
+              <div class="metric-sub">macro OvR</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="78.3" height="14" fill="#27AE60" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">F1 (macro)</div>
+              <div class="metric-value">0.599</div>
+              <div class="metric-sub">F1 weighted=0.599</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="71.9" height="14" fill="#E67E22" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ITR</div>
+              <div class="metric-value">1.7</div>
+              <div class="metric-sub">bits / minute</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="3.5" height="14" fill="#1ABC9C" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">ECE</div>
+              <div class="metric-value">0.223</div>
+              <div class="metric-sub">lower = better calibrated</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="93.3" height="14" fill="#3498DB" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Conf–Acc r</div>
+              <div class="metric-value">0.141</div>
+              <div class="metric-sub">confidence calibration</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="16.9" height="14" fill="#8E44AD" rx="3"/></svg>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">BCI Lift</div>
+              <div class="metric-value">+10.0%</div>
+              <div class="metric-sub">vs random prior</div>
+              <svg width="120" height="14" style="vertical-align:middle;border-radius:3px;background:#eee"><rect width="12.0" height="14" fill="#E74C3C" rx="3"/></svg>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Reliability Diagram</h3>
+              <svg width="160" height="160"><line x1="20" y1="140" x2="140" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/><line x1="20" y1="20" x2="20" y2="140" stroke="#666" stroke-width="1"/><line x1="20" y1="140" x2="140" y2="140" stroke="#666" stroke-width="1"/><text x="10" y="80" font-size="9" fill="#666" transform="rotate(-90,10,80)" text-anchor="middle">Accuracy</text><text x="80" y="157" font-size="9" fill="#666" text-anchor="middle">Confidence</text><rect x="80.0" y="83.7" width="11.0" height="56.3" fill="#4A90D9" opacity="0.8"/><rect x="92.0" y="75.0" width="11.0" height="65.0" fill="#E74C3C" opacity="0.8"/><rect x="104.0" y="76.0" width="11.0" height="64.0" fill="#E74C3C" opacity="0.8"/><rect x="116.0" y="70.9" width="11.0" height="69.1" fill="#E74C3C" opacity="0.8"/><rect x="128.0" y="49.3" width="11.0" height="90.7" fill="#E74C3C" opacity="0.8"/><text x="22" y="30" font-size="9" fill="#333">ECE=0.223</text></svg>
+              <p class="fig-caption">ECE=0.223  MCE=0.286</p>
+            </div>
+            <div>
+              <h3>Confusion Matrix</h3>
+              <svg width="140" height="140"><rect x="20" y="20" width="59" height="59" fill="rgb(54,54,255)"/><text x="50" y="54" font-size="10" fill="#333" text-anchor="middle">756</text><rect x="80" y="20" width="59" height="59" fill="rgb(97,97,255)"/><text x="110" y="54" font-size="10" fill="#333" text-anchor="middle">559</text><rect x="20" y="80" width="59" height="59" fill="rgb(111,111,255)"/><text x="50" y="114" font-size="10" fill="#333" text-anchor="middle">494</text><rect x="80" y="80" width="59" height="59" fill="rgb(40,40,255)"/><text x="110" y="114" font-size="10" fill="#333" text-anchor="middle">821</text><text x="50" y="15" font-size="9" fill="#666" text-anchor="middle">0</text><text x="15" y="54" font-size="9" fill="#666" text-anchor="end">0</text><text x="110" y="15" font-size="9" fill="#666" text-anchor="middle">1</text><text x="15" y="114" font-size="9" fill="#666" text-anchor="end">1</text><text x="80" y="138" font-size="8" fill="#999" text-anchor="middle">Predicted</text></svg>
+              <p class="fig-caption">2630 trials · 52 subjects</p>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <h3>Stability (rolling 10-trial accuracy)</h3>
+              <p>First half: 57.9% → Second half: 62.0%
+                 (drop: -4.0%)</p>
+              <p>Rolling mean: 60.0% ± 20.3%</p>
+              <p>Subject-level: 47.7% ± 3.7%</p>
+            </div>
+            <div>
+              <h3>Inference Latency</h3>
+              <p>Mean: 0.1 ms</p>
+              <p>p95:  0.1 ms</p>
+              <p>p99:  0.1 ms</p>
+              <p class="target">Target: p95 &lt; 50 ms
+                 <span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></p>
+            </div>
+          </div>
+
+          <h3>Per-class Breakdown</h3>
+          <table>
+            <tr><th>Class</th><th>Precision</th><th>Recall</th>
+                <th>F1</th><th>AUC-ROC</th><th>Support</th></tr>
+            <tr><td>Class 0</td><td>0.60</td><td>0.57</td><td>0.59</td><td>0.652</td><td>1315</td></tr><tr><td>Class 1</td><td>0.59</td><td>0.62</td><td>0.61</td><td>0.652</td><td>1315</td></tr>
+          </table>
+
+          <h3>Framework-5 Checks (2/9 passed)</h3>
+          <table>
+            <tr><th>Check</th><th>Result</th></tr>
+            <tr><td>accuracy >70pct</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>bci lift >10pp</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>confidence corr >0.30</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>stability drop <10pp</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr><tr><td>kappa >0.40</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>itr >10 bits per min</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>ece <0.15</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>auc roc >0.70</td><td><span style="background:#E74C3C;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">FAIL</span></td></tr><tr><td>inference p95 <50ms</td><td><span style="background:#27AE60;color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold">PASS</span></td></tr>
+          </table>
+        </div>
+        
+
+</main>
+
+<footer>
+  Noosphere v1.6.0 · Joseph Woodall · 2026-04-09 19:37:04 UTC ·
+  <a href="https://github.com/JosephWoodall/noosphere">github.com/JosephWoodall/noosphere</a>
+</footer>
+
+</body>
+</html>

@@ -19,3 +19,7 @@ bleak>=0.21.1       # Bluetooth LE support
 
 # Topological Data Analysis
 ripser>=0.6.8
+
+# BCI / EEG analysis
+moabb
+mne

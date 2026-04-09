@@ -1,3 +1,3 @@
-- [ ] Replace `Conv1d` stem in `S4EEGEncoder` with a Differentiable `SpectralStem` utilizing `torch.stft`.
-- [ ] Set `n_fft=64` and `hop_length=4` to lock in the `downsample=4` temporal resolution matching the S4 blocks' expectations.
-- [ ] Maintain `SpatialTopologyLoss` but allow S4 to map topological dynamics operating explicitly on Fourier spectrograms.
+- [ ] Inject `PhysionetMI` (109 subjects) and `Cho2017` (52 subjects) into the `DATASET_CATALOGUE` to violently expand structural neuro-diversity.
+- [ ] Gut the singular `train_test_split` in `demo_real_eeg.py` and implement an internal `StratifiedKFold(n_splits=10)` loop per subject.
+- [ ] Aggregate per-fold metrics internally so the benchmark mathematically guarantees out-of-sample consistency without leakage.

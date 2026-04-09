@@ -109,12 +109,17 @@ class SpectralStem(nn.Module):
         self.n_fft = n_fft
         self.hop_length = hop_length
         # Hard biological constraint: ERD exists ONLY in 8-32Hz.
-        # At 250Hz sampling and n_fft=64, bins 2 through 8 correspond precisely to ~7.8Hz - 31.25Hz.
         self.bin_start = 2
         self.bin_end = 9
         freq_bins = self.bin_end - self.bin_start
+        
+        # factorized Spatial Contrast Equivalent to Common Spatial Patterns (CSP)
+        self.spatial_dim = in_channels * 3
+        self.spatial_mixer = nn.Conv1d(in_channels, self.spatial_dim, kernel_size=1, bias=False)
+        self.spatial_norm = nn.LayerNorm(self.spatial_dim)
+        
         self.proj = nn.Sequential(
-            nn.Linear(in_channels * freq_bins, d_model),
+            nn.Linear(self.spatial_dim * freq_bins, d_model),
             nn.GELU(),
             nn.LayerNorm(d_model)
         )
@@ -128,14 +133,25 @@ class SpectralStem(nn.Module):
         F_bins_total = stft.shape[1]
         T_prime = stft.shape[2]
         
-        # SLICE the STFT output tensor [B, C*33, T] across channels 
-        # to strictly retain bins [2:9] for each channel.
         # Reshape to (B, C, F_bins_total, T)
         stft_c = stft.reshape(B, C, F_bins_total, T_prime)
+        
         # Slicing the ERD band
         stft_erd = stft_c[:, :, self.bin_start:self.bin_end, :]
         
-        stft_erd_flat = stft_erd.reshape(B, C * (self.bin_end - self.bin_start), T_prime).transpose(1, 2)
+        # Spatial Mixing (Unified across frequencies)
+        B_erd, C_erd, F_erd, T_erd = stft_erd.shape
+        stft_erd_spatial = stft_erd.reshape(B_erd, C_erd, F_erd * T_erd)
+        
+        s_mix = self.spatial_mixer(stft_erd_spatial) # (B, spatial_dim, F * T)
+        s_mix = s_mix.transpose(1, 2)
+        s_mix = self.spatial_norm(s_mix)
+        s_mix = F.gelu(s_mix).transpose(1, 2)
+        
+        # Back to (B, spatial_dim, F_erd, T_erd)
+        s_mix = s_mix.reshape(B_erd, self.spatial_dim, F_erd, T_erd)
+        
+        stft_erd_flat = s_mix.reshape(B_erd, self.spatial_dim * F_erd, T_erd).transpose(1, 2)
         out = self.proj(stft_erd_flat)
         return out.transpose(1, 2)
 

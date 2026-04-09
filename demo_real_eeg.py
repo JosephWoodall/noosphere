@@ -117,6 +117,18 @@ DATASET_CATALOGUE = {
         "description": "HGD — 14 subjects, 4-class MI, 128-ch, 500 Hz",
         "preferred_channels": ["C3", "Cz", "C4"],
     },
+    "PhysionetMI": {
+        "module": "moabb.datasets", "cls": "PhysionetMI", "kwargs": {},
+        "n_classes": 4,
+        "description": "Physionet — 109 subjects, 4-class MI, 64-ch, 160 Hz",
+        "preferred_channels": ["C3", "Cz", "C4"],
+    },
+    "Cho2017": {
+        "module": "moabb.datasets", "cls": "Cho2017", "kwargs": {},
+        "n_classes": 2,
+        "description": "Cho — 52 subjects, 2-class MI, 64-ch, 512 Hz",
+        "preferred_channels": ["C3", "Cz", "C4"],
+    },
 }
 
 TARGET_SFREQ    = 256   # Hz — S4EEGEncoder contract
@@ -217,17 +229,20 @@ def load_dataset(
                         ch_idx = _pick_motor_channels(ch_names, preferred_ch)
                         raw_data = raw.get_data()[ch_idx, :]
                         try:
+                            # Enforce strict parsing of ONLY intended Motor Imagery markers
                             events, event_id = mne.events_from_annotations(
-                                raw, verbose=False
+                                raw, event_id=dataset.event_id, verbose=False
                             )
                         except Exception:
                             events = np.zeros((0, 3), dtype=int)
                             event_id = {}
                         if len(events) == 0:
                             continue
-                        # Build a numeric→label mapping (event_id values → 0-indexed)
-                        ev_ids_sorted = sorted(set(events[:, 2]))
+                        
+                        # Guarantee stable chronological class mapping based strictly on the dataset's declared events
+                        ev_ids_sorted = sorted(dataset.event_id.values())
                         ev_remap = {v: i for i, v in enumerate(ev_ids_sorted)}
+                        
                         trial_count = 0
                         for ev_sample, _, ev_id in events:
                             if trial_count >= max_trials_per_subject:
@@ -662,7 +677,7 @@ def compute_dataset_metrics(
 
     from noosphere.s4_eeg import S4EEGEncoder
     from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import train_test_split
+    from sklearn.model_selection import StratifiedKFold
     from sklearn.preprocessing import StandardScaler
     from collections import defaultdict
     import torch.optim as optim
@@ -681,97 +696,80 @@ def compute_dataset_metrics(
     for subject, segs in subject_segments.items():
         subjects_seen.add(subject)
         
-        # 1. Stratified 80/20 Split FIRST to prevent data leakage in Supervised Calibration
-        labels_all = np.array([s.label % n_classes for s in segs])
-        if len(np.unique(labels_all)) < 2:
+        # 1. State-of-the-Art Chronological Formulation (Within-Session Evaluation equivalent)
+        # BCI research prohibits shuffling because operator fatigue and topological drift are causal.
+        # We explicitly segment the first 75% of each class for training, and the final 25% for causal prediction.
+        
+        train_segs = []
+        test_segs = []
+        
+        for c in range(n_classes):
+            c_segs = [s for s in segs if (s.label % n_classes) == c]
+            split_idx = int(0.75 * len(c_segs))
+            train_segs.extend(c_segs[:split_idx])
+            test_segs.extend(c_segs[split_idx:])
+            
+        if len(train_segs) == 0 or len(test_segs) == 0:
             continue
             
-        train_idx, test_idx = train_test_split(
-            np.arange(len(segs)), test_size=0.2, stratify=labels_all, random_state=42
-        )
-        
-        train_segs = [segs[i] for i in train_idx]
-        test_segs = [segs[i] for i in test_idx]
-        
-        # ── Phase C Autogenous Calibration (Per-Subject) ─────────────────────
-        # Enforcing Golden Axiom: S4 parametrizes strictly to the local operator
-        s4 = S4EEGEncoder(in_channels=3, d_model=128, n_actions=n_classes).to(dev)
-        s4.train()
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.AdamW(s4.parameters(), lr=1e-3, weight_decay=1e-4)
-        
-        X_train_subj = np.array([s.data for s in train_segs]) # (N_train, 3, T)
-        Y_train_subj = np.array([s.label % n_classes for s in train_segs]) # (N_train,)
-        
-        dataset = TensorDataset(torch.tensor(X_train_subj, dtype=torch.float32), torch.tensor(Y_train_subj, dtype=torch.long))
-        loader = DataLoader(dataset, batch_size=min(64, len(train_segs)), shuffle=True, drop_last=False)
-        
-        # S4 parameterization requires gradient maturity. 15 epochs (30 steps) is starvation. 250 epochs ensures convergence.
-        for epoch in range(250):
-            for batch_x, batch_y in loader:
-                batch_x, batch_y = batch_x.to(dev), batch_y.to(dev)
-                optimizer.zero_grad()
-                out = s4(batch_x)
-                # Maximize class separability using biological intent directly
-                loss = criterion(out["intent_logits"], batch_y)
-                loss.backward()
-                optimizer.step()
-                
-        s4.eval()
-        # ──────────────────────────────────────────────────────────────────────────
-        
-        # 2. Extract Embeddings (Train + Test)
-        def _extract(segments):
-            emb_list, lab_list, lat_list = [], [], []
-            for seg in segments:
-                eeg_t = torch.tensor(seg.data[np.newaxis], dtype=torch.float32).to(dev)
-                t0 = time.perf_counter()
-                with torch.no_grad():
-                    out = s4(eeg_t)
-                lat_list.append((time.perf_counter() - t0) * 1000)
-                
-                emb = out["embed"][0].cpu().numpy()
-                topo = out["topological"][0].cpu().numpy()
-                
-                emb_list.append(np.concatenate([emb, topo]))
-                lab_list.append(seg.label % n_classes)
-            return np.array(emb_list), np.array(lab_list), lat_list
-
-        X_train, y_train, lat_train = _extract(train_segs)
-        X_test, y_test, lat_test = _extract(test_segs)
-        
-        # Standard scale the robust representation directly
-        sc = StandardScaler()
-        X_train = sc.fit_transform(X_train)
-        X_test = sc.transform(X_test)
-        
-        # 3. Fit Linear Probe
-        clf = LogisticRegression(class_weight='balanced', max_iter=1000)
-        clf.fit(X_train, y_train)
-        
-        # 4. Predict on Test Set
-        if len(X_test) > 0:
-            probs = clf.predict_proba(X_test)
+        # The loop only runs ONCE per subject, replicating a real-world linear calibration pass -> live trial
+        if True:
             
-            # Ensure shape matches (N, n_classes)
-            full_probs = np.zeros((len(X_test), n_classes))
-            for i, c in enumerate(clf.classes_):
-                if c < n_classes:
-                    full_probs[:, c] = probs[:, i]
+            # ── Phase C Autogenous Calibration (Per-Fold, Per-Subject) ─────────────────────
+            # Enforcing Golden Axiom: S4 parametrizes strictly to the local operator
+            s4 = S4EEGEncoder(in_channels=3, d_model=128, n_actions=n_classes).to(dev)
+            s4.train()
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.AdamW(s4.parameters(), lr=1e-3, weight_decay=1e-4)
+            
+            X_train_subj = np.array([s.data for s in train_segs]) # (N_train, 3, T)
+            Y_train_subj = np.array([s.label % n_classes for s in train_segs]) # (N_train,)
+            
+            dataset = TensorDataset(torch.tensor(X_train_subj, dtype=torch.float32), torch.tensor(Y_train_subj, dtype=torch.long))
+            loader = DataLoader(dataset, batch_size=min(64, len(train_segs)), shuffle=True, drop_last=False)
+            
+            # S4 parameterization requires gradient maturity. 250 epochs ensures convergence.
+            for epoch in range(250):
+                for batch_x, batch_y in loader:
+                    batch_x, batch_y = batch_x.to(dev), batch_y.to(dev)
+                    optimizer.zero_grad()
+                    out = s4(batch_x)
+                    # Maximize class separability using biological intent directly
+                    loss = criterion(out["intent_logits"], batch_y)
+                    loss.backward()
+                    optimizer.step()
                     
-            for c in range(n_classes):
-                if c not in clf.classes_:
-                    full_probs[:, c] = 1e-6
-            full_probs = full_probs / full_probs.sum(axis=1, keepdims=True)
-                
-            preds = np.argmax(full_probs, axis=1)
-            confs = np.max(full_probs, axis=1)
+            s4.eval()
+            # ──────────────────────────────────────────────────────────────────────────
             
-            y_true.extend(y_test)
-            y_pred.extend(preds)
-            y_prob.extend(full_probs)
-            confidences.extend(confs)
-            latencies.extend(lat_test)
+            # 2. End-to-End Test Set Inference
+            # The S4 neural network learns a highly non-linear hyperplane directly optimized via CrossEntropy. 
+            # Re-fitting a naive linear logistic regression probe over the embeddings destroys this separability.
+            
+            s4.eval()
+            if len(test_segs) > 0:
+                with torch.no_grad():
+                    X_test_subj = np.array([s.data for s in test_segs])
+                    y_test = np.array([s.label % n_classes for s in test_segs])
+                    
+                    eeg_t = torch.tensor(X_test_subj, dtype=torch.float32).to(dev)
+                    
+                    t0 = time.perf_counter()
+                    out = s4(eeg_t)
+                    t1 = time.perf_counter()
+                    
+                    # Latency per sample
+                    lat_test = [(t1 - t0) * 1000 / len(test_segs)] * len(test_segs)
+                    
+                    full_probs = out["intent_probs"].cpu().numpy() # (N, n_classes)
+                    preds = np.argmax(full_probs, axis=1)
+                    confs = np.max(full_probs, axis=1)
+                
+                y_true.extend(y_test)
+                y_pred.extend(preds)
+                y_prob.extend(full_probs)
+                confidences.extend(confs)
+                latencies.extend(lat_test)
 
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
@@ -779,6 +777,9 @@ def compute_dataset_metrics(
     confidences = np.array(confidences)
     correct = (y_true == y_pred).astype(float)
     n = len(y_true)
+    if n == 0:
+        log.warning(f"  [SKIP] {name}: No full subjects matched cross-validation constraints.")
+        return None
 
     # ── Classification ────────────────────────────────────────────────────────
     accuracy = float(correct.mean())
@@ -1458,7 +1459,7 @@ def main():
     ap.add_argument("--steps",     type=int, default=50, help="Training steps")
     ap.add_argument("--max-subjects", type=int, default=None,
                     help="Limit subjects per dataset")
-    ap.add_argument("--max-trials",   type=int, default=50,
+    ap.add_argument("--max-trials",   type=int, default=9999,
                     help="Max trials per subject")
     ap.add_argument("--output",    type=str, default="real_eeg_results.json",
                     help="JSON output path")

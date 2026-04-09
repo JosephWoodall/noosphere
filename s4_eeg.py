@@ -53,6 +53,7 @@ class S4Block(nn.Module):
         self.conv = nn.Conv1d(d_model * 2, d_model * 2, kernel_size=3, padding=1, groups=d_model * 2)
         self.out_proj = nn.Linear(d_model, d_model)
         self.norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(0.3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         residual = x
@@ -63,7 +64,7 @@ class S4Block(nn.Module):
         x = x.transpose(1, 2)
         x1, x2 = x.chunk(2, dim=-1)
         x = x1 * torch.sigmoid(x2) 
-        x = self.out_proj(x)
+        x = self.dropout(self.out_proj(x))
         return x + residual
 
 class TopologyExtractor(nn.Module):
@@ -104,17 +105,19 @@ class TopologyExtractor(nn.Module):
         return self.proj(betti_features)
 
 class SpectralStem(nn.Module):
-    def __init__(self, in_channels: int, d_model: int, n_fft: int = 64, hop_length: int = 4):
+    def __init__(self, in_channels: int, d_model: int, n_fft: int = 128, hop_length: int = 4):
         super().__init__()
         self.n_fft = n_fft
         self.hop_length = hop_length
         # Hard biological constraint: ERD exists ONLY in 8-32Hz.
-        self.bin_start = 2
-        self.bin_end = 9
+        self.bin_start = 4
+        self.bin_end = 16
         freq_bins = self.bin_end - self.bin_start
         
         # factorized Spatial Contrast Equivalent to Common Spatial Patterns (CSP)
-        self.spatial_dim = in_channels * 3
+        # Prevent combinatorial memory explosion on dense arrays (e.g. 128 channels).
+        # CSP typically uses 4-6 components; 48 is extremely generous.
+        self.spatial_dim = min(in_channels * 3, 48)
         self.spatial_mixer = nn.Conv1d(in_channels, self.spatial_dim, kernel_size=1, bias=False)
         self.spatial_norm = nn.LayerNorm(self.spatial_dim)
         
@@ -126,32 +129,36 @@ class SpectralStem(nn.Module):
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, C, T = x.shape
-        x_flat = x.view(B * C, T)
+        # [CRITICAL METADATA INTERVENTION]
+        # CSP relies on phase coherence. Spatial filtering MUST happen in time-domain 
+        # BEFORE Fourier magnitude extraction destroys relative phase between C3 and C4.
+        
+        # Time-domain spatial filter: (B, 3, T) -> (B, 9, T)
+        x_mixed = self.spatial_mixer(x)
+        
+        # DESTROYED: self.spatial_norm. LayerNorm across channels equalizes the power 
+        # across hemispheres, mathematically erasing ERD lateralization.
+        
+        B_mix, C_mix, T_mix = x_mixed.shape
+        x_flat = x_mixed.reshape(B_mix * C_mix, T_mix)
+        
         window = torch.hann_window(self.n_fft, device=x.device)
         stft = torch.stft(x_flat, n_fft=self.n_fft, hop_length=self.hop_length, 
                           window=window, return_complex=True, center=True, pad_mode='reflect').abs()
+        
         F_bins_total = stft.shape[1]
         T_prime = stft.shape[2]
         
-        # Reshape to (B, C, F_bins_total, T)
-        stft_c = stft.reshape(B, C, F_bins_total, T_prime)
+        # Reshape to (B, C_mix, F_bins_total, T_prime)
+        stft_mix = stft.reshape(B_mix, C_mix, F_bins_total, T_prime)
         
         # Slicing the ERD band
-        stft_erd = stft_c[:, :, self.bin_start:self.bin_end, :]
+        stft_erd = stft_mix[:, :, self.bin_start:self.bin_end, :]
         
-        # Spatial Mixing (Unified across frequencies)
-        B_erd, C_erd, F_erd, T_erd = stft_erd.shape
-        stft_erd_spatial = stft_erd.reshape(B_erd, C_erd, F_erd * T_erd)
+        # Flatten for channel/frequency entanglement -> (B, C_mix * F_erd, T_prime)
+        F_erd = stft_erd.shape[2]
+        stft_erd_flat = stft_erd.reshape(B_mix, C_mix * F_erd, T_prime).transpose(1, 2)
         
-        s_mix = self.spatial_mixer(stft_erd_spatial) # (B, spatial_dim, F * T)
-        s_mix = s_mix.transpose(1, 2)
-        s_mix = self.spatial_norm(s_mix)
-        s_mix = F.gelu(s_mix).transpose(1, 2)
-        
-        # Back to (B, spatial_dim, F_erd, T_erd)
-        s_mix = s_mix.reshape(B_erd, self.spatial_dim, F_erd, T_erd)
-        
-        stft_erd_flat = s_mix.reshape(B_erd, self.spatial_dim * F_erd, T_erd).transpose(1, 2)
         out = self.proj(stft_erd_flat)
         return out.transpose(1, 2)
 
@@ -162,7 +169,7 @@ class S4EEGEncoder(nn.Module):
         self.n_actions = n_actions
         
         # Explicit STFT spectral transform mapping ERD/ERS directly
-        self.stem = SpectralStem(in_channels, d_model, n_fft=64, hop_length=downsample)
+        self.stem = SpectralStem(in_channels, d_model, n_fft=128, hop_length=downsample)
 
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
         
@@ -177,7 +184,7 @@ class S4EEGEncoder(nn.Module):
         )
         
         # Only the Discrete Cognitive head remains. Spatial head moved to perception.py
-        self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
+        self.intent_proj = nn.Sequential(nn.Linear(d_model * 2, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
         
         self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
         self.momentum_stem = None
@@ -217,7 +224,15 @@ class S4EEGEncoder(nn.Module):
             
         current_state = x.mean(dim=1) 
 
-        intent_logits = self.intent_proj(current_state)
+        topo_embed_raw = self.tda(x)
+        # Weight Betti features depending on sequence entropy (temporal variance)
+        seq_entropy = x.var(dim=1)
+        gate = self.topo_gate(seq_entropy)
+        topo_embed = topo_embed_raw * gate
+        
+        combined_state = torch.cat([current_state, topo_embed], dim=-1)
+        intent_logits = self.intent_proj(combined_state)
+        
         evidence = F.softplus(intent_logits)
         alpha = evidence + 1.0
         S = torch.sum(alpha, dim=-1, keepdim=True)
@@ -225,12 +240,6 @@ class S4EEGEncoder(nn.Module):
         
         uncertainty = self.n_actions / S
         confidence = 1.0 - uncertainty
-        
-        topo_embed_raw = self.tda(x)
-        # Weight Betti features depending on sequence entropy (temporal variance)
-        seq_entropy = x.var(dim=1)
-        gate = self.topo_gate(seq_entropy)
-        topo_embed = topo_embed_raw * gate
 
         return {
             "sequence": x,                 

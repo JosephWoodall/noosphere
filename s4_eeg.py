@@ -146,6 +146,7 @@ class S4EEGEncoder(nn.Module):
         
         # Explicit Spatial topology is handled dynamically in the stem
         self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
+        self.spatial_proj = nn.Conv1d(in_channels, d_model, kernel_size=1)
         
         self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
         self.momentum_stem = None
@@ -172,41 +173,44 @@ class S4EEGEncoder(nn.Module):
         for block in self.momentum_blocks: x = block(x)
         return x.mean(dim=1)
 
-    def forward(self, eeg: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
-        B = eeg.shape[0]
+    def forward(self, x):
+        """
+        x: (B, C, T)
+        Returns: Dict with spatial, temporal, topological embeddings
+        """
+        B, C, T = x.shape
         
-        if mask is not None:
-            mask_t = mask.unsqueeze(-1).expand_as(eeg)
-            eeg = eeg * mask_t
-
-        x = self.stem(eeg)
-        x = x.transpose(1, 2)
-        for block in self.blocks: x = block(x)
+        # Spatial processing (C -> d_model)
+        spatial = self.spatial_proj(x)  # (B, d_model, T)
+        
+        # Temporal processing with S4
+        temp = spatial
+        for layer in self.s4_layers:
+            temp, _ = layer(temp)  # (B, d_model, T)
             
-        current_state = x.mean(dim=1) 
-
-        intent_logits = self.intent_proj(current_state)
+        # Initialize topo_embed to None by default <--- ADD THIS LINE
+        topo_embed = None 
+            
+        # Get topological embeddings if GNN is available
+        if hasattr(self, 'gnn') and hasattr(self, 'edge_index'):
+            if self.edge_index is not None:
+                try:
+                    # GNN expects (Batch*Time, Channels, Features)
+                    # For now we'll just pass a dummy feature since our GNN is simple
+                    x_reshaped = x.transpose(1, 2).reshape(B*T, C, 1)
+                    topo_embed = self.gnn(x_reshaped, self.edge_index)
+                    topo_embed = topo_embed.reshape(B, T, -1).transpose(1, 2)
+                except Exception as e:
+                    print(f"Warning: GNN embedding failed: {e}")
+                    topo_embed = torch.zeros(B, getattr(self, 'topo_dim', 32), T, device=x.device)
+                    
+        # Combine features
+        # Simple addition for now, could be more complex
+        out = spatial + temp
         
-        evidence = F.softplus(intent_logits)
-        alpha = evidence + 1.0
-        S = torch.sum(alpha, dim=-1, keepdim=True)
-        intent_probs = alpha / S
-        
-        uncertainty = self.n_actions / S
-        confidence = 1.0 - uncertainty
-
         return {
-            "sequence": x,                 
-            "embed": current_state,        
+            "spatial": spatial,
+            "temporal": temp,
             "topological": topo_embed,
-            "intent_logits": intent_logits,
-            "intent_probs": intent_probs,  
-            "confidence": confidence.squeeze(-1),      
-            "alpha": alpha,                
-            "uncertainty": uncertainty.squeeze(-1),
-            "pred_z": self.predictor(current_state),
-            "cognitive": {
-                "uncertainty": uncertainty.squeeze(-1),
-                "total_evidence": S.squeeze(-1)
-            }
+            "combined": out
         }

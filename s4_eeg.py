@@ -173,44 +173,43 @@ class S4EEGEncoder(nn.Module):
         for block in self.momentum_blocks: x = block(x)
         return x.mean(dim=1)
 
-    def forward(self, x):
-        """
-        x: (B, C, T)
-        Returns: Dict with spatial, temporal, topological embeddings
-        """
-        B, C, T = x.shape
-        
-        # Spatial processing (C -> d_model)
-        spatial = self.spatial_proj(x)  # (B, d_model, T)
-        
-        # Temporal processing with S4
-        temp = spatial
-        for layer in self.s4_layers:
-            temp, _ = layer(temp)  # (B, d_model, T)
-            
-        # Initialize topo_embed to None by default <--- ADD THIS LINE
-        topo_embed = None 
-            
-        # Get topological embeddings if GNN is available
-        if hasattr(self, 'gnn') and hasattr(self, 'edge_index'):
-            if self.edge_index is not None:
-                try:
-                    # GNN expects (Batch*Time, Channels, Features)
-                    # For now we'll just pass a dummy feature since our GNN is simple
-                    x_reshaped = x.transpose(1, 2).reshape(B*T, C, 1)
-                    topo_embed = self.gnn(x_reshaped, self.edge_index)
-                    topo_embed = topo_embed.reshape(B, T, -1).transpose(1, 2)
-                except Exception as e:
-                    print(f"Warning: GNN embedding failed: {e}")
-                    topo_embed = torch.zeros(B, getattr(self, 'topo_dim', 32), T, device=x.device)
-                    
-        # Combine features
-        # Simple addition for now, could be more complex
-        out = spatial + temp
-        
+    def forward(self, eeg: torch.Tensor, mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+        B = eeg.shape[0]
+
+        if mask is not None:
+            mask_t = mask.unsqueeze(-1).expand_as(eeg)
+            eeg = eeg * mask_t
+
+        # SpectralStem: (B, C, T) -> (B, d_model, T_prime)
+        x = self.stem(eeg)
+
+        # S4 blocks expect (B, T, d_model)
+        x = x.transpose(1, 2)
+        for block in self.blocks:
+            x = block(x)
+
+        # Use last time-step as the summary state
+        current_state = x[:, -1, :]
+
+        # Evidential intent decoding (Dirichlet)
+        evidence = F.softplus(self.intent_proj(current_state))
+        alpha = evidence + 1.0
+        S = torch.sum(alpha, dim=-1, keepdim=True)
+        intent_probs = alpha / S
+        uncertainty = self.n_actions / S
+        confidence = 1.0 - uncertainty
+
         return {
-            "spatial": spatial,
-            "temporal": temp,
-            "topological": topo_embed,
-            "combined": out
+            "sequence":    x,                            # (B, T', d_model)
+            "embed":       current_state,                 # (B, d_model)
+            "topological": None,                          # placeholder; no TDA in this build
+            "intent_probs": intent_probs,                 # (B, n_actions)
+            "confidence":  confidence.squeeze(-1),        # (B,)
+            "alpha":       alpha,                         # (B, n_actions)
+            "uncertainty": uncertainty.squeeze(-1),       # (B,)
+            "pred_z":      self.predictor(current_state), # (B, d_model)
+            "cognitive": {
+                "uncertainty":    uncertainty.squeeze(-1),
+                "total_evidence": S.squeeze(-1),
+            },
         }

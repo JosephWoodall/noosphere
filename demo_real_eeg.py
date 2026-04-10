@@ -979,13 +979,14 @@ def run_benchmark(all_data, dev, temperature=1.5, run_loso=True):
 # =============================================================================
 
 def _clean(obj):
+    if isinstance(obj, bool):       return int(obj)   # must be before int check
     if isinstance(obj, dict):       return {k: _clean(v) for k, v in obj.items()}
     if isinstance(obj, list):       return [_clean(v) for v in obj]
+    if isinstance(obj, np.bool_):   return int(obj)
     if isinstance(obj, np.integer): return int(obj)
     if isinstance(obj, np.floating): return float(obj)
     if isinstance(obj, np.ndarray): return obj.tolist()
     return obj
-
 
 def save_json(results, path="real_eeg_results.json"):
     ws_acc, ws_csp, ws_k, ws_auc, ws_ps = [], [], [], [], []

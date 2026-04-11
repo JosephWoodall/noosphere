@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import copy
+import math
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -46,109 +47,178 @@ class DirichletEDLLoss(nn.Module):
         kl = beta_ones / (beta_alpha + 1e-8) + torch.sum((alpha - 1) * (torch.digamma(alpha) - torch.digamma(S)), dim=-1, keepdim=True)
         return kl.squeeze(-1)
 
-class S4Block(nn.Module):
-    def __init__(self, d_model: int, d_state: int):
+class S4DKernel(nn.Module):
+    """Efficient Diagonal State-Space Kernel (S4D)."""
+    def __init__(self, d_model: int, d_state: int = 64):
         super().__init__()
-        self.proj = nn.Linear(d_model, d_model * 2)
-        self.conv = nn.Conv1d(d_model * 2, d_model * 2, kernel_size=3, padding=1, groups=d_model * 2)
-        self.out_proj = nn.Linear(d_model, d_model)
+        self.d_model = d_model
+        self.d_state = d_state
+
+        # Log-space initialization for stability
+        # A is diagonal, complex-valued for S4D-Lin initialization
+        self.log_A_real = nn.Parameter(torch.log(0.5 * torch.ones(d_model, d_state)))
+        self.A_imag = nn.Parameter(math.pi * torch.arange(d_state).repeat(d_model, 1) / d_state)
+        self.C = nn.Parameter(torch.randn(d_model, d_state, 2) / math.sqrt(d_state)) # Complex C
+
+    def forward(self, L: int) -> torch.Tensor:
+        """Returns the convolution kernel of length L."""
+        # [S4D Cauchy Kernel Formulation]
+        A = -torch.exp(self.log_A_real) + 1j * self.A_imag # (H, N)
+        C = self.C[..., 0] + 1j * self.C[..., 1]           # (H, N)
+
+        t = torch.arange(L, device=A.device)
+        kernel = (C.unsqueeze(-1) * torch.exp(A.unsqueeze(-1) * t)).sum(dim=1).real # (H, L)
+        return kernel
+
+class S4Block(nn.Module):
+    def __init__(self, d_model: int, d_state: int = 64):
+        super().__init__()
+        self.d_model = d_model
         self.norm = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(0.3)
+        self.kernel = S4DKernel(d_model, d_state)
+        self.dropout = nn.Dropout(0.2)
+
+        self.output_linear = nn.Sequential(
+            nn.Linear(d_model, d_model * 2),
+            nn.GLU(dim=-1) # Gated Linear Unit
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """x: (B, L, H)"""
         residual = x
         x = self.norm(x)
-        x = self.proj(x)
-        x = x.transpose(1, 2)
-        x = F.silu(self.conv(x))
-        x = x.transpose(1, 2)
-        x1, x2 = x.chunk(2, dim=-1)
-        x = x1 * torch.sigmoid(x2) 
-        x = self.dropout(self.out_proj(x))
-        return x + residual
+        B, L, H = x.shape
+
+        # FFT Convolution with S4D Kernel
+        x = x.transpose(1, 2) # (B, H, L)
+        k = self.kernel(L)     # (H, L)
+
+        x_fft = torch.fft.rfft(x, n=2*L)
+        k_fft = torch.fft.rfft(k, n=2*L)
+        y = torch.fft.irfft(x_fft * k_fft, n=2*L)[..., :L]
+
+        y = y.transpose(1, 2) # (B, L, H)
+        y = self.dropout(self.output_linear(y))
+
+        return residual + y
+class MultiHeadAttentionPooling(nn.Module):
+    def __init__(self, d_model: int, n_heads: int = 8):
+        super().__init__()
+        self.q = nn.Parameter(torch.randn(1, 1, d_model))
+        self.mha = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
+        self.norm = nn.LayerNorm(d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, L, d_model)
+        attn_out, _ = self.mha(self.q.expand(x.shape[0], -1, -1), x, x)
+        return self.norm(attn_out.squeeze(1))
 
 class SpectralStem(nn.Module):
-    def __init__(self, in_channels: int, d_model: int, n_fft: int = 128, hop_length: int = 4):
+    def __init__(self, in_channels: int, d_model: int, hop_length: int = 4):
         super().__init__()
-        self.n_fft = n_fft
         self.hop_length = hop_length
-        # Hard biological constraint: ERD exists ONLY in 8-32Hz.
-        self.bin_start = 4
-        self.bin_end = 16
-        freq_bins = self.bin_end - self.bin_start
+        self.scales = [64, 128, 256] 
+        self.bin_ranges = [(1, 10), (2, 20), (4, 40)] 
         
-        # factorized Spatial Contrast Equivalent to Common Spatial Patterns (CSP)
-        # Prevent combinatorial memory explosion on dense arrays (e.g. 128 channels).
-        # CSP typically uses 4-6 components; 48 is extremely generous.
-        self.spatial_dim = min(in_channels * 3, 48)
-        self.spatial_mixer = nn.Conv1d(in_channels, self.spatial_dim, kernel_size=1, bias=False)
-        self.spatial_norm = nn.LayerNorm(self.spatial_dim)
+        # Define region indices
+        self.regions = {
+            "motor":    slice(0, 9),
+            "parietal": slice(9, 16),
+            "frontal":  slice(16, 21)
+        }
+        
+        self.spatial_dim = 32
+        self.spatial_mixers = nn.ModuleDict({
+            r: nn.Conv1d(len(range(*s.indices(in_channels))), self.spatial_dim, kernel_size=1, bias=False)
+            for r, s in self.regions.items()
+        })
+        
+        total_bins = sum(r[1] - r[0] for r in self.bin_ranges)
+        # 2x for Real + Imaginary components
+        self.freq_weight = nn.Parameter(torch.ones(1, 1, total_bins * 3 * 2, 1)) 
         
         self.proj = nn.Sequential(
-            nn.Linear(self.spatial_dim * freq_bins, d_model),
+            nn.Linear(self.spatial_dim * total_bins * 3 * 2, d_model),
             nn.GELU(),
             nn.LayerNorm(d_model)
         )
+        for s in self.scales:
+            self.register_buffer(f"window_{s}", torch.hann_window(s))
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, C, T = x.shape
-        # [CRITICAL METADATA INTERVENTION]
-        # CSP relies on phase coherence. Spatial filtering MUST happen in time-domain 
-        # BEFORE Fourier magnitude extraction destroys relative phase between C3 and C4.
-        
-        
-        # [DYNAMIC GRAPH CONVOLUTION]
-        # Construct the adjacency matrix dynamically using raw sequence covariance
-        # This allows the model to learn the geodesic topology of the scalp for any array density
-        x_centered = x - x.mean(dim=-1, keepdim=True)
-        cov = torch.bmm(x_centered, x_centered.transpose(1, 2)) / (T - 1)
-        adj = F.softmax(cov, dim=-1) # (B, C, C) Normalized adjacency mapping
-        
-        # Native message propagation across the electrode graph
-        x_gcn = torch.bmm(adj, x)
-        
-        # Time-domain spatial filter: (B, C, T) -> (B, spatial_dim, T)
-        x_mixed = self.spatial_mixer(x_gcn)
-        
+        regional_feats = []
+        for r, slice_obj in self.regions.items():
+            xr = x[:, slice_obj, :]
+            xr_centered = xr - xr.mean(dim=-1, keepdim=True)
+            cov = torch.bmm(xr_centered, xr_centered.transpose(1, 2)) / (T - 1)
+            adj = F.softmax(cov / (T ** 0.5), dim=-1) 
+            xr_gcn = torch.bmm(adj, xr) + xr 
+            xr_mixed = self.spatial_mixers[r](xr_gcn)
+            regional_feats.append(xr_mixed)
+            
+        x_mixed = torch.cat(regional_feats, dim=1) 
         B_mix, C_mix, T_mix = x_mixed.shape
         x_flat = x_mixed.reshape(B_mix * C_mix, T_mix)
         
-        window = torch.hann_window(self.n_fft, device=x.device)
-        stft = torch.stft(x_flat, n_fft=self.n_fft, hop_length=self.hop_length, 
-                          window=window, return_complex=True, center=True, pad_mode='reflect').abs()
+        all_stfts = []
+        for s, (b_start, b_end) in zip(self.scales, self.bin_ranges):
+            window = getattr(self, f"window_{s}")
+            stft_complex = torch.stft(x_flat, n_fft=s, hop_length=self.hop_length, 
+                                     window=window, return_complex=True, center=True, 
+                                     pad_mode='reflect')
+            # Concatenate Real and Imag parts instead of taking .abs()
+            stft_real = stft_complex.real.reshape(B_mix, C_mix, -1, stft_complex.shape[-1])[:, :, b_start:b_end, :]
+            stft_imag = stft_complex.imag.reshape(B_mix, C_mix, -1, stft_complex.shape[-1])[:, :, b_start:b_end, :]
+            all_stfts.append(torch.cat([stft_real, stft_imag], dim=2))
+            
+        min_t = min(s.shape[-1] for s in all_stfts)
+        all_stfts = [s[..., :min_t] for s in all_stfts]
         
-        F_bins_total = stft.shape[1]
-        T_prime = stft.shape[2]
+        stft_merged = torch.cat(all_stfts, dim=2) 
         
-        # Reshape to (B, C_mix, F_bins_total, T_prime)
-        stft_mix = stft.reshape(B_mix, C_mix, F_bins_total, T_prime)
+        # Proper broadcasting for (B, 3*spatial_dim, total_bins*2, min_t)
+        B_s, C_s, F_s, T_s = stft_merged.shape
+        stft_merged = stft_merged.reshape(B_s, 3, self.spatial_dim, F_s, T_s)
+        fw = self.freq_weight.reshape(1, 3, 1, F_s, 1)
+        stft_merged = (stft_merged * fw).reshape(B_s, C_s, F_s, T_s)
         
-        # Slicing the ERD band
-        stft_erd = stft_mix[:, :, self.bin_start:self.bin_end, :]
-        
-        # Flatten for channel/frequency entanglement -> (B, C_mix * F_erd, T_prime)
-        F_erd = stft_erd.shape[2]
-        stft_erd_flat = stft_erd.reshape(B_mix, C_mix * F_erd, T_prime).transpose(1, 2)
-        
-        out = self.proj(stft_erd_flat)
-        return out.transpose(1, 2)
+        stft_flat = stft_merged.reshape(B_mix, -1, min_t).transpose(1, 2)
+        return self.proj(stft_flat).transpose(1, 2)
 
 class S4EEGEncoder(nn.Module):
     def __init__(self, in_channels: int = 3, d_model: int = 256, d_state: int = 64, n_blocks: int = 4, downsample: int = 4, n_actions: int = 8):
         super().__init__()
+        self.in_channels = in_channels
         self.d_model = d_model
         self.n_actions = n_actions
         
-        # Explicit STFT spectral transform mapping ERD/ERS directly
-        self.stem = SpectralStem(in_channels, d_model, n_fft=128, hop_length=downsample)
-
+        self.stem = SpectralStem(in_channels, d_model, hop_length=downsample)
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
+        self.pooler = MultiHeadAttentionPooling(d_model, n_heads=8)
         
-        # Explicit Spatial topology is handled dynamically in the stem
-        self.intent_proj = nn.Sequential(nn.Linear(d_model, d_model), nn.SiLU(), nn.Linear(d_model, n_actions))
-        self.spatial_proj = nn.Conv1d(in_channels, d_model, kernel_size=1)
+        self.intent_proj = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.SiLU(),
+            nn.Dropout(0.3),
+            nn.Linear(d_model, n_actions)
+        )
         
         self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
+
+    @torch.no_grad()
+    def get_flops(self, seq_len: int = 256) -> float:
+        """Estimate FLOPs for a single forward pass."""
+        B, C, T = 1, sum(len(range(*s.indices(self.in_channels))) for s in self.stem.regions.values()), seq_len
+        # GCN: O(C^2 * T) + O(C^2) per region
+        gcn_flops = sum((len(range(*s.indices(self.in_channels)))**2 * T) for s in self.stem.regions.values())
+        # Spatial Mixer: O(C * C_mix * T)
+        mix_flops = sum(len(range(*s.indices(self.in_channels))) * self.stem.spatial_dim * T for s in self.stem.regions.values())
+        # STFT: O(C_mix * T * log T) roughly
+        stft_flops = self.stem.spatial_dim * 3 * T * math.log2(T)
+        # S4Blocks: 4 * (Linear + Conv + Linear)
+        block_flops = len(self.blocks) * (T/4) * (self.d_model**2 * 4 + self.d_model * 6)
+        return float(gcn_flops + mix_flops + stft_flops + block_flops)
         self.momentum_stem = None
         self.momentum_blocks = None
 
@@ -188,8 +258,8 @@ class S4EEGEncoder(nn.Module):
         for block in self.blocks:
             x = block(x)
 
-        # Use last time-step as the summary state
-        current_state = x[:, -1, :]
+        # Use Attention Pooling instead of just last time-step
+        current_state = self.pooler(x)
 
         # Evidential intent decoding (Dirichlet)
         evidence = F.softplus(self.intent_proj(current_state))

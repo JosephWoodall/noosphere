@@ -42,44 +42,44 @@ footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #30363d;
 </head>
 <body>
 <h1>Noosphere S4 EEG Encoder &mdash; Benchmark Report</h1>
-<p>Generated 2026-04-10 15:45:26 &nbsp;&middot;&nbsp;
+<p>Generated 2026-04-10 22:45:44 &nbsp;&middot;&nbsp;
 Noosphere v1.6.0 &nbsp;&middot;&nbsp; 5 datasets &nbsp;&middot;&nbsp;
 <a href="https://github.com/JosephWoodall/noosphere">github.com/JosephWoodall/noosphere</a></p>
 
 <h2>Executive Summary</h2>
 <div class="grid">
-<div class="card green">
-  <div class="val">92.9%</div>
+<div class="card red">
+  <div class="val">52.4%</div>
   <div class="sub">Within-subject accuracy<br>(S4, post-calibration)</div></div>
-<div class="card red">
-  <div class="val">39.9%</div>
+<div class="card ">
+  <div class="val">N/A</div>
   <div class="sub">Cross-subject accuracy<br>(LOSO, zero-shot)</div></div>
-<div class="card green">
-  <div class="val">+51.0%</div>
-  <div class="sub">S4 lift vs CSP+LDA<br>(within-subject)</div></div>
 <div class="card red">
-  <div class="val">-2.3%</div>
-  <div class="sub">S4 lift vs CSP+LDA<br>(LOSO)</div></div>
-<div class="card green">
-  <div class="val">0.897</div>
+  <div class="val">-2.4%</div>
+  <div class="sub">S4 lift vs CSP+LDA<br>(within-subject)</div></div>
+<div class="card">
+  <div class="val">67.9M</div>
+  <div class="sub">Model Complexity<br>(FLOPs per segment)</div></div>
+<div class="card">
+  <div class="val">2538.6K</div>
+  <div class="sub">Model Parameters<br>(Total count)</div></div>
+<div class="card red">
+  <div class="val">0.041</div>
   <div class="sub">Cohen's &kappa; (S4)<br>within-subject mean</div></div>
-<div class="card green">
-  <div class="val">0.985</div>
-  <div class="sub">AUC-ROC (S4)<br>within-subject mean</div></div>
-<div class="card green">
-  <div class="val">5/5</div>
+<div class="card amber">
+  <div class="val">0/5</div>
   <div class="sub">Datasets significant<br>Wilcoxon p&lt;0.05</div></div>
 </div>
 <div class="callout"><p>
 <strong>Key finding:</strong>
 The Noosphere S4 EEG Encoder achieves
-<strong>92.9% within-subject accuracy</strong> (after brief calibration)
-and <strong>39.9% zero-shot accuracy</strong> on unseen users
+<strong>52.4% within-subject accuracy</strong> (after brief calibration)
+and <strong>N/A zero-shot accuracy</strong> on unseen users
 across 5 public motor-imagery datasets.
-S4 outperforms the standard CSP+LDA baseline by <strong>+51.0pp</strong>
-within-subject and <strong>-2.3pp</strong> cross-subject.
-5 of 5 datasets reach Wilcoxon significance (p&lt;0.05, paired per-subject).
-Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
+S4 outperforms the standard CSP+LDA baseline by <strong>-2.4pp</strong>
+within-subject and <strong>N/A</strong> cross-subject.
+0 of 5 datasets reach Wilcoxon significance (p&lt;0.05, paired per-subject).
+Mean Cohen's &kappa; = 0.041 and AUC-ROC = 0.533.
 </p></div>
 
 <h2>Cross-Dataset Comparison</h2>
@@ -96,53 +96,53 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
 <tbody><tr>
 <td class="L"><strong>BNCI2014_001</strong><br>
 <span style="font-size:.73rem;color:#8b949e">BCI Comp IV 2a -- 9 subjects, 4-class MI, 22-ch, 250 Hz</span></td>
-<td>4</td><td>9</td>
-<td class="good">97.5%</td>
-<td>25.0%</td><td class="good">+72.5%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
-<td class="good">0.967</td>
-<td class="good">0.999</td>
-<td class="warn">26.1%</td>
-<td>25.0%</td><td class="good">+1.1%</td><td><span class="nsig">p=0.098</span></td>
+<td>4</td><td>1</td>
+<td class="warn">44.2%</td>
+<td>28.3%</td><td class="good">+15.8%</td><td><span class="nsig">p=1.000</span></td>
+<td class="warn">0.254</td>
+<td class="warn">0.678</td>
+<td class="warn">N/A</td>
+<td>N/A</td><td>N/A</td><td></td>
 </tr><tr>
 <td class="L"><strong>BNCI2014_004</strong><br>
 <span style="font-size:.73rem;color:#8b949e">BCI Comp IV 2b -- 9 subjects, 2-class MI, 3-ch, 250 Hz</span></td>
-<td>2</td><td>9</td>
-<td class="good">99.8%</td>
-<td>50.0%</td><td class="good">+49.8%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
-<td class="good">0.996</td>
-<td class="good">1.000</td>
-<td class="warn">58.5%</td>
-<td>50.0%</td><td class="good">+8.5%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
+<td>2</td><td>1</td>
+<td class="warn">56.0%</td>
+<td>54.0%</td><td class="good">+2.0%</td><td><span class="nsig">p=1.000</span></td>
+<td class="warn">0.079</td>
+<td class="warn">0.560</td>
+<td class="warn">N/A</td>
+<td>N/A</td><td>N/A</td><td></td>
 </tr><tr>
 <td class="L"><strong>Schirrmeister2017</strong><br>
 <span style="font-size:.73rem;color:#8b949e">HGD -- 14 subjects, 4-class MI, 128-ch, 500 Hz</span></td>
-<td>4</td><td>14</td>
-<td class="good">99.0%</td>
-<td>25.0%</td><td class="good">+74.0%</td><td><span class="sig">p=0.001 &#x2713;</span></td>
-<td class="good">0.986</td>
-<td class="good">1.000</td>
-<td class="warn">31.7%</td>
-<td>25.0%</td><td class="good">+6.7%</td><td><span class="sig">p=0.001 &#x2713;</span></td>
+<td>4</td><td>1</td>
+<td class="warn">15.0%</td>
+<td>30.0%</td><td class="bad">-15.0%</td><td><span class="nsig">p=1.000</span></td>
+<td class="warn">-0.133</td>
+<td class="warn">0.503</td>
+<td class="warn">N/A</td>
+<td>N/A</td><td>N/A</td><td></td>
 </tr><tr>
 <td class="L"><strong>PhysionetMI</strong><br>
 <span style="font-size:.73rem;color:#8b949e">Physionet -- 109 subjects, 4-class MI, 64-ch, 160 Hz</span></td>
-<td>4</td><td>109</td>
-<td class="good">70.0%</td>
-<td>60.0%</td><td class="good">+10.1%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
-<td class="good">0.568</td>
-<td class="good">0.931</td>
-<td class="warn">29.2%</td>
-<td>61.2%</td><td class="bad">-32.0%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
+<td>4</td><td>1</td>
+<td class="warn">46.7%</td>
+<td>61.7%</td><td class="bad">-15.0%</td><td><span class="nsig">p=1.000</span></td>
+<td class="warn">0.008</td>
+<td class="warn">0.421</td>
+<td class="warn">N/A</td>
+<td>N/A</td><td>N/A</td><td></td>
 </tr><tr>
 <td class="L"><strong>Cho2017</strong><br>
 <span style="font-size:.73rem;color:#8b949e">Cho -- 52 subjects, 2-class MI, 64-ch, 512 Hz</span></td>
-<td>2</td><td>52</td>
-<td class="good">98.4%</td>
-<td>50.0%</td><td class="good">+48.4%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
-<td class="good">0.968</td>
-<td class="good">0.998</td>
-<td class="warn">54.1%</td>
-<td>50.0%</td><td class="good">+4.1%</td><td><span class="sig">p=0.001 &#x2713;</span></td>
+<td>2</td><td>1</td>
+<td class="good">100.0%</td>
+<td>100.0%</td><td class="warn">+0.0%</td><td><span class="nsig">p=1.000</span></td>
+<td class="warn">0.000</td>
+<td class="warn">0.500</td>
+<td class="warn">N/A</td>
+<td>N/A</td><td>N/A</td><td></td>
 </tr></tbody>
 </table>
 
@@ -151,8 +151,15 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
 <div class="ds-title">BNCI2014_001</div>
 <div class="ds-desc">BCI Comp IV 2a -- 9 subjects, 4-class MI, 22-ch, 250 Hz &nbsp;&middot;&nbsp;
 4 classes &nbsp;&middot;&nbsp;
-9 subjects &nbsp;&middot;&nbsp;
-5184 trials</div>
+1 subjects &nbsp;&middot;&nbsp;
+120 trials</div>
+
+<h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
+<table>
+<tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
+<tr><td>Threshold &ge; 0.5</td><td>46.5%</td><td>84.2%</td></tr><tr><td>Threshold &ge; 0.7</td><td>47.5%</td><td>50.8%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+</table>
+
 
 <h3>S4 &mdash; Within-Subject</h3>
 <table>
@@ -160,22 +167,22 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="good">97.5%</td>
-<td>97.5%</td>
-<td class="good">0.967</td>
-<td class="good">0.999</td>
-<td class="warn">0.222</td>
-<td class="good">107.6</td>
-<td class="good">0.614</td>
-<td>1.9%</td>
-<td>97.5% &pm; 1.7%</td>
-<td class="good">8/9</td>
+<td class="warn">44.2%</td>
+<td>44.6%</td>
+<td class="warn">0.254</td>
+<td class="warn">0.678</td>
+<td class="warn">0.223</td>
+<td class="warn">7.5</td>
+<td class="warn">0.138</td>
+<td>-8.3%</td>
+<td>44.2% &pm; 0.0%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.96</td><td>0.98</td><td>0.97</td><td>1.00</td><td>324</td></tr><tr><td>1</td><td>0.99</td><td>0.97</td><td>0.98</td><td>1.00</td><td>324</td></tr><tr><td>2</td><td>0.98</td><td>0.98</td><td>0.98</td><td>1.00</td><td>324</td></tr><tr><td>3</td><td>0.98</td><td>0.98</td><td>0.98</td><td>1.00</td><td>324</td></tr>
+<tr><td>0</td><td>0.41</td><td>0.44</td><td>0.42</td><td>0.64</td><td>34</td></tr><tr><td>1</td><td>0.50</td><td>0.48</td><td>0.49</td><td>0.72</td><td>29</td></tr><tr><td>2</td><td>0.42</td><td>0.32</td><td>0.36</td><td>0.65</td><td>31</td></tr><tr><td>3</td><td>0.45</td><td>0.54</td><td>0.49</td><td>0.70</td><td>26</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -184,94 +191,47 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">25.0%</td>
+<td class="warn">28.3%</td>
 <td>25.0%</td>
 <td class="warn">0.000</td>
-<td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
+<td class="warn">0.503</td>
+<td class="good">0.033</td>
+<td class="warn">0.2</td>
 <td class="warn">0.000</td>
-<td>5.6%</td>
-<td>25.0% &pm; 0.0%</td>
+<td>-6.7%</td>
+<td>28.3% &pm; 0.0%</td>
 <td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.56</td><td>324</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.52</td><td>324</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.48</td><td>324</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.44</td><td>324</td></tr>
+<tr><td>0</td><td>0.28</td><td>1.00</td><td>0.44</td><td>0.45</td><td>34</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.51</td><td>29</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>31</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.56</td><td>26</td></tr>
 </table>
-
-<h3>S4 &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">26.1%</td>
-<td>26.1%</td>
-<td class="warn">0.015</td>
-<td class="warn">0.512</td>
-<td class="warn">0.314</td>
-<td class="warn">0.0</td>
-<td class="warn">0.021</td>
-<td>-2.3%</td>
-<td>26.1% &pm; 1.6%</td>
-<td class="warn">2/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.28</td><td>0.30</td><td>0.29</td><td>0.54</td><td>1296</td></tr><tr><td>1</td><td>0.24</td><td>0.25</td><td>0.25</td><td>0.50</td><td>1296</td></tr><tr><td>2</td><td>0.24</td><td>0.23</td><td>0.24</td><td>0.49</td><td>1296</td></tr><tr><td>3</td><td>0.28</td><td>0.27</td><td>0.28</td><td>0.52</td><td>1296</td></tr>
-</table>
-
-<h3>CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">25.0%</td>
-<td>25.0%</td>
-<td class="warn">0.000</td>
-<td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
-<td class="warn">0.000</td>
-<td>0.0%</td>
-<td>25.0% &pm; 0.0%</td>
-<td class="warn">3/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.50</td><td>1296</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1296</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1296</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1296</td></tr>
-</table>
+<p><em>S4 &mdash; LOSO: no data</em></p>
+<p><em>CSP+LDA &mdash; LOSO: no data</em></p>
 <h3>Statistics vs CSP+LDA &mdash; Within-subject</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+72.5%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
-</table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
-    <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+1.1%</td>
-<td>0.0977</td><td>0.573</td>
+<tr><td class="good">+15.8%</td>
+<td>1.0000</td><td>0.000</td>
 <td class="warn">No</td>
-<td>9</td></tr>
+<td>1</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">BNCI2014_004</div>
 <div class="ds-desc">BCI Comp IV 2b -- 9 subjects, 2-class MI, 3-ch, 250 Hz &nbsp;&middot;&nbsp;
 2 classes &nbsp;&middot;&nbsp;
-9 subjects &nbsp;&middot;&nbsp;
-6520 trials</div>
+1 subjects &nbsp;&middot;&nbsp;
+50 trials</div>
+
+<h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
+<table>
+<tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
+<tr><td>Threshold &ge; 0.5</td><td>56.0%</td><td>100.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>56.8%</td><td>88.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+</table>
+
 
 <h3>S4 &mdash; Within-Subject</h3>
 <table>
@@ -279,22 +239,22 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="good">99.8%</td>
-<td>99.8%</td>
-<td class="good">0.996</td>
-<td class="good">1.000</td>
-<td class="good">0.121</td>
-<td class="good">58.8</td>
-<td class="warn">0.204</td>
-<td>0.1%</td>
-<td>99.8% &pm; 0.4%</td>
-<td class="good">8/9</td>
+<td class="warn">56.0%</td>
+<td>53.8%</td>
+<td class="warn">0.079</td>
+<td class="warn">0.560</td>
+<td class="warn">0.263</td>
+<td class="warn">0.6</td>
+<td class="warn">0.024</td>
+<td>0.0%</td>
+<td>56.0% &pm; 0.0%</td>
+<td class="warn">2/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td><td>1.00</td><td>816</td></tr><tr><td>1</td><td>1.00</td><td>1.00</td><td>1.00</td><td>1.00</td><td>816</td></tr>
+<tr><td>0</td><td>0.56</td><td>0.81</td><td>0.67</td><td>0.56</td><td>27</td></tr><tr><td>1</td><td>0.55</td><td>0.26</td><td>0.35</td><td>0.56</td><td>23</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -303,94 +263,47 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">50.0%</td>
+<td class="warn">54.0%</td>
 <td>50.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
+<td class="good">0.040</td>
+<td class="warn">0.3</td>
 <td class="warn">0.000</td>
-<td>10.5%</td>
-<td>50.0% &pm; 0.0%</td>
+<td>12.0%</td>
+<td>54.0% &pm; 0.0%</td>
 <td class="warn">2/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.56</td><td>816</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.44</td><td>816</td></tr>
+<tr><td>0</td><td>0.54</td><td>1.00</td><td>0.70</td><td>0.57</td><td>27</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.43</td><td>23</td></tr>
 </table>
-
-<h3>S4 &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">58.5%</td>
-<td>58.5%</td>
-<td class="warn">0.171</td>
-<td class="warn">0.611</td>
-<td class="warn">0.242</td>
-<td class="warn">1.3</td>
-<td class="warn">0.080</td>
-<td>-2.3%</td>
-<td>58.4% &pm; 3.7%</td>
-<td class="warn">2/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.59</td><td>0.58</td><td>0.58</td><td>0.61</td><td>3260</td></tr><tr><td>1</td><td>0.58</td><td>0.59</td><td>0.59</td><td>0.61</td><td>3260</td></tr>
-</table>
-
-<h3>CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">50.0%</td>
-<td>50.0%</td>
-<td class="warn">0.000</td>
-<td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
-<td class="warn">0.000</td>
-<td>-0.1%</td>
-<td>50.0% &pm; 0.0%</td>
-<td class="warn">3/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.50</td><td>3260</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>3260</td></tr>
-</table>
+<p><em>S4 &mdash; LOSO: no data</em></p>
+<p><em>CSP+LDA &mdash; LOSO: no data</em></p>
 <h3>Statistics vs CSP+LDA &mdash; Within-subject</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+49.8%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
-</table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
-    <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+8.5%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
+<tr><td class="good">+2.0%</td>
+<td>1.0000</td><td>0.000</td>
+<td class="warn">No</td>
+<td>1</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">Schirrmeister2017</div>
 <div class="ds-desc">HGD -- 14 subjects, 4-class MI, 128-ch, 500 Hz &nbsp;&middot;&nbsp;
 4 classes &nbsp;&middot;&nbsp;
-14 subjects &nbsp;&middot;&nbsp;
-6440 trials</div>
+1 subjects &nbsp;&middot;&nbsp;
+20 trials</div>
+
+<h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
+<table>
+<tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
+<tr><td>Threshold &ge; 0.5</td><td>16.7%</td><td>90.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>25.0%</td><td>40.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+</table>
+
 
 <h3>S4 &mdash; Within-Subject</h3>
 <table>
@@ -398,22 +311,22 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="good">99.0%</td>
-<td>99.0%</td>
-<td class="good">0.986</td>
-<td class="good">1.000</td>
-<td class="warn">0.204</td>
-<td class="good">114.0</td>
-<td class="good">0.847</td>
-<td>0.1%</td>
-<td>99.0% &pm; 0.9%</td>
-<td class="good">8/9</td>
+<td class="warn">15.0%</td>
+<td>15.0%</td>
+<td class="warn">-0.133</td>
+<td class="warn">0.503</td>
+<td class="warn">0.528</td>
+<td class="warn">0.0</td>
+<td class="warn">0.279</td>
+<td>10.0%</td>
+<td>15.0% &pm; 0.0%</td>
+<td class="warn">1/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>1.00</td><td>0.98</td><td>0.99</td><td>1.00</td><td>406</td></tr><tr><td>1</td><td>0.99</td><td>0.99</td><td>0.99</td><td>1.00</td><td>406</td></tr><tr><td>2</td><td>0.99</td><td>0.99</td><td>0.99</td><td>1.00</td><td>406</td></tr><tr><td>3</td><td>0.99</td><td>1.00</td><td>0.99</td><td>1.00</td><td>406</td></tr>
+<tr><td>0</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.51</td><td>6</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.59</td><td>4</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.35</td><td>5</td></tr><tr><td>3</td><td>0.27</td><td>0.60</td><td>0.37</td><td>0.56</td><td>5</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -422,94 +335,47 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">25.0%</td>
+<td class="warn">30.0%</td>
 <td>25.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
+<td class="good">0.050</td>
+<td class="warn">0.6</td>
 <td class="warn">0.000</td>
 <td>0.0%</td>
-<td>25.0% &pm; 0.0%</td>
+<td>30.0% &pm; 0.0%</td>
 <td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.54</td><td>406</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.51</td><td>406</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>406</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.46</td><td>406</td></tr>
+<tr><td>0</td><td>0.30</td><td>1.00</td><td>0.46</td><td>0.48</td><td>6</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.48</td><td>4</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.60</td><td>5</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.44</td><td>5</td></tr>
 </table>
-
-<h3>S4 &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">31.7%</td>
-<td>31.7%</td>
-<td class="warn">0.089</td>
-<td class="warn">0.555</td>
-<td class="warn">0.369</td>
-<td class="warn">1.0</td>
-<td class="warn">0.043</td>
-<td>1.4%</td>
-<td>31.7% &pm; 3.0%</td>
-<td class="warn">2/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.29</td><td>0.28</td><td>0.29</td><td>0.53</td><td>1611</td></tr><tr><td>1</td><td>0.28</td><td>0.28</td><td>0.28</td><td>0.53</td><td>1609</td></tr><tr><td>2</td><td>0.32</td><td>0.33</td><td>0.32</td><td>0.55</td><td>1609</td></tr><tr><td>3</td><td>0.39</td><td>0.37</td><td>0.38</td><td>0.61</td><td>1611</td></tr>
-</table>
-
-<h3>CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">25.0%</td>
-<td>25.0%</td>
-<td class="warn">0.000</td>
-<td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
-<td class="warn">0.000</td>
-<td>0.0%</td>
-<td>25.0% &pm; 0.1%</td>
-<td class="warn">3/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.50</td><td>1611</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1609</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1609</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1611</td></tr>
-</table>
+<p><em>S4 &mdash; LOSO: no data</em></p>
+<p><em>CSP+LDA &mdash; LOSO: no data</em></p>
 <h3>Statistics vs CSP+LDA &mdash; Within-subject</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+74.0%</td>
-<td>0.0009</td><td>0.881</td>
-<td class="good">Yes &#x2713;</td>
-<td>14</td></tr>
-</table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
-    <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+6.7%</td>
-<td>0.0010</td><td>0.881</td>
-<td class="good">Yes &#x2713;</td>
-<td>14</td></tr>
+<tr><td class="bad">-15.0%</td>
+<td>1.0000</td><td>0.000</td>
+<td class="warn">No</td>
+<td>1</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">PhysionetMI</div>
 <div class="ds-desc">Physionet -- 109 subjects, 4-class MI, 64-ch, 160 Hz &nbsp;&middot;&nbsp;
 4 classes &nbsp;&middot;&nbsp;
-109 subjects &nbsp;&middot;&nbsp;
-19022 trials</div>
+1 subjects &nbsp;&middot;&nbsp;
+60 trials</div>
+
+<h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
+<table>
+<tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
+<tr><td>Threshold &ge; 0.5</td><td>48.1%</td><td>86.7%</td></tr><tr><td>Threshold &ge; 0.7</td><td>57.1%</td><td>46.7%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+</table>
+
 
 <h3>S4 &mdash; Within-Subject</h3>
 <table>
@@ -517,22 +383,22 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="good">70.0%</td>
-<td>81.0%</td>
-<td class="good">0.568</td>
-<td class="good">0.931</td>
-<td class="warn">0.201</td>
-<td class="good">38.7</td>
-<td class="good">0.366</td>
-<td>1.5%</td>
-<td>70.1% &pm; 7.4%</td>
-<td class="good">8/9</td>
+<td class="warn">46.7%</td>
+<td>21.4%</td>
+<td class="warn">0.008</td>
+<td class="warn">0.421</td>
+<td class="warn">0.191</td>
+<td class="warn">9.5</td>
+<td class="warn">0.130</td>
+<td>6.7%</td>
+<td>46.7% &pm; 0.0%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.93</td><td>0.58</td><td>0.71</td><td>0.87</td><td>2951</td></tr><tr><td>1</td><td>0.57</td><td>0.90</td><td>0.69</td><td>0.96</td><td>656</td></tr><tr><td>2</td><td>0.57</td><td>0.88</td><td>0.69</td><td>0.95</td><td>656</td></tr><tr><td>3</td><td>0.56</td><td>0.88</td><td>0.69</td><td>0.95</td><td>657</td></tr>
+<tr><td>0</td><td>0.66</td><td>0.73</td><td>0.69</td><td>0.57</td><td>37</td></tr><tr><td>1</td><td>0.17</td><td>0.12</td><td>0.14</td><td>0.32</td><td>8</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.35</td><td>7</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.45</td><td>8</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -541,94 +407,47 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">60.0%</td>
+<td class="warn">61.7%</td>
 <td>25.0%</td>
 <td class="warn">0.000</td>
-<td class="warn">0.499</td>
-<td class="warn">0.350</td>
-<td class="good">23.7</td>
+<td class="warn">0.506</td>
+<td class="warn">0.367</td>
+<td class="good">25.9</td>
 <td class="warn">0.000</td>
-<td>0.8%</td>
-<td>60.0% &pm; 0.2%</td>
+<td>3.3%</td>
+<td>61.7% &pm; 0.0%</td>
 <td class="warn">4/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.60</td><td>1.00</td><td>0.75</td><td>0.50</td><td>2951</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>656</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>656</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>657</td></tr>
+<tr><td>0</td><td>0.62</td><td>1.00</td><td>0.76</td><td>0.50</td><td>37</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.47</td><td>8</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.70</td><td>7</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.36</td><td>8</td></tr>
 </table>
-
-<h3>S4 &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">29.2%</td>
-<td>25.4%</td>
-<td class="warn">0.005</td>
-<td class="warn">0.508</td>
-<td class="warn">0.158</td>
-<td class="warn">0.4</td>
-<td class="warn">0.048</td>
-<td>0.5%</td>
-<td>29.2% &pm; 4.6%</td>
-<td class="warn">2/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.62</td><td>0.33</td><td>0.43</td><td>0.51</td><td>11639</td></tr><tr><td>1</td><td>0.13</td><td>0.22</td><td>0.16</td><td>0.50</td><td>2480</td></tr><tr><td>2</td><td>0.13</td><td>0.21</td><td>0.16</td><td>0.50</td><td>2438</td></tr><tr><td>3</td><td>0.14</td><td>0.25</td><td>0.18</td><td>0.52</td><td>2465</td></tr>
-</table>
-
-<h3>CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">61.2%</td>
-<td>25.0%</td>
-<td class="warn">0.000</td>
-<td class="warn">0.501</td>
-<td class="warn">0.362</td>
-<td class="good">25.3</td>
-<td class="warn">0.000</td>
-<td>-0.2%</td>
-<td>61.2% &pm; 0.5%</td>
-<td class="warn">4/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.61</td><td>1.00</td><td>0.76</td><td>0.50</td><td>11639</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2480</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2438</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2465</td></tr>
-</table>
+<p><em>S4 &mdash; LOSO: no data</em></p>
+<p><em>CSP+LDA &mdash; LOSO: no data</em></p>
 <h3>Statistics vs CSP+LDA &mdash; Within-subject</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+10.1%</td>
-<td>0.0000</td><td>0.821</td>
-<td class="good">Yes &#x2713;</td>
-<td>109</td></tr>
-</table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
-    <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="bad">-32.0%</td>
-<td>0.0000</td><td>0.868</td>
-<td class="good">Yes &#x2713;</td>
-<td>109</td></tr>
+<tr><td class="bad">-15.0%</td>
+<td>1.0000</td><td>0.000</td>
+<td class="warn">No</td>
+<td>1</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">Cho2017</div>
 <div class="ds-desc">Cho -- 52 subjects, 2-class MI, 64-ch, 512 Hz &nbsp;&middot;&nbsp;
 2 classes &nbsp;&middot;&nbsp;
-52 subjects &nbsp;&middot;&nbsp;
-10520 trials</div>
+1 subjects &nbsp;&middot;&nbsp;
+10 trials</div>
+
+<h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
+<table>
+<tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
+<tr><td>Threshold &ge; 0.5</td><td>100.0%</td><td>100.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>100.0%</td><td>100.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+</table>
+
 
 <h3>S4 &mdash; Within-Subject</h3>
 <table>
@@ -636,22 +455,22 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="good">98.4%</td>
-<td>98.4%</td>
-<td class="good">0.968</td>
-<td class="good">0.998</td>
-<td class="good">0.126</td>
-<td class="good">52.9</td>
-<td class="good">0.364</td>
-<td>-0.5%</td>
-<td>98.4% &pm; 2.8%</td>
-<td class="good">9/9</td>
+<td class="good">100.0%</td>
+<td>100.0%</td>
+<td class="warn">0.000</td>
+<td class="warn">0.500</td>
+<td class="good">0.122</td>
+<td class="good">60.0</td>
+<td class="warn">nan</td>
+<td>0.0%</td>
+<td>100.0% &pm; 0.0%</td>
+<td class="warn">6/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.98</td><td>0.99</td><td>0.98</td><td>1.00</td><td>1315</td></tr><tr><td>1</td><td>0.99</td><td>0.98</td><td>0.98</td><td>1.00</td><td>1315</td></tr>
+<tr><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td><td>0.50</td><td>10</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>0</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -660,99 +479,58 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">50.0%</td>
-<td>50.0%</td>
+<td class="good">100.0%</td>
+<td>100.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
 <td class="good">0.000</td>
-<td class="warn">0.0</td>
+<td class="good">60.0</td>
 <td class="warn">0.000</td>
-<td>0.4%</td>
-<td>50.0% &pm; 0.0%</td>
-<td class="warn">3/9</td>
+<td>0.0%</td>
+<td>100.0% &pm; 0.0%</td>
+<td class="warn">6/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.51</td><td>1315</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>1315</td></tr>
+<tr><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td><td>0.50</td><td>10</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>0</td></tr>
 </table>
-
-<h3>S4 &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">54.1%</td>
-<td>54.1%</td>
-<td class="warn">0.083</td>
-<td class="warn">0.562</td>
-<td class="warn">0.222</td>
-<td class="warn">0.3</td>
-<td class="warn">0.065</td>
-<td>-4.3%</td>
-<td>54.2% &pm; 8.0%</td>
-<td class="warn">2/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.54</td><td>0.55</td><td>0.55</td><td>0.56</td><td>5260</td></tr><tr><td>1</td><td>0.54</td><td>0.53</td><td>0.54</td><td>0.56</td><td>5260</td></tr>
-</table>
-
-<h3>CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>Accuracy</th><th>Bal.Acc</th><th>Kappa</th><th>AUC-ROC</th>
-    <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
-    <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
-<tr>
-<td class="warn">50.0%</td>
-<td>50.0%</td>
-<td class="warn">0.000</td>
-<td class="warn">0.500</td>
-<td class="good">0.000</td>
-<td class="warn">0.0</td>
-<td class="warn">0.000</td>
-<td>1.1%</td>
-<td>50.0% &pm; 0.0%</td>
-<td class="warn">3/9</td>
-</tr>
-</table>
-<table>
-<tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
-    <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.51</td><td>5260</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>5260</td></tr>
-</table>
+<p><em>S4 &mdash; LOSO: no data</em></p>
+<p><em>CSP+LDA &mdash; LOSO: no data</em></p>
 <h3>Statistics vs CSP+LDA &mdash; Within-subject</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+48.4%</td>
-<td>0.0000</td><td>0.870</td>
-<td class="good">Yes &#x2713;</td>
-<td>52</td></tr>
-</table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
-<table>
-<tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
-    <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+4.1%</td>
-<td>0.0008</td><td>0.467</td>
-<td class="good">Yes &#x2713;</td>
-<td>52</td></tr>
+<tr><td class="warn">+0.0%</td>
+<td>1.0000</td><td>0.000</td>
+<td class="warn">No</td>
+<td>1</td></tr>
 </table>
 </div>
 
 <h2>Methodology</h2>
 <table>
 <tr><th class="L" style="width:220px">Item</th><th class="L">Detail</th></tr>
-<tr><td class="L">EEG input</td>
-    <td class="L">C3/Cz/C4 selected by MNE channel name; z-scored per trial;
-    resampled to 256 Hz; 1-second segments (256 samples)</td></tr>
 <tr><td class="L">S4 encoder</td>
-    <td class="L">S4EEGEncoder: 4&times; S4Block (d_model=128),
-    Dirichlet evidential head, TDA topology (if ripser available)</td></tr>
+    <td class="L"><b>Regional Multi-Scale S4D</b>: 3 independent cortical heads (Frontal, Motor, Parietal) 
+    processing informational channel clusters. Fused into 4&times; S4D (Diagonal State-Space) 
+    blocks (d_model=256). Dirichlet evidential head.</td></tr>
+<tr><td class="L">Input Scaling</td>
+    <td class="L">Z-scored per trial; resampled to 256 Hz; 1-second segments (256 samples). 
+    Missing channels for low-density arrays are zero-padded to maintain 21-ch input vector.</td></tr>
+<tr><td class="L">Reliability</td>
+    <td class="L"><b>Uncertainty-Weighted Accuracy</b>: Performance reported as a function of 
+    Dirichlet confidence thresholds, simulating clinical safety gates.</td></tr>
+<tr><td class="L">Optimizations</td>
+    <td class="L"><b>torch.compile (reduce-overhead)</b>, <b>Automatic Mixed Precision (AMP)</b>,
+    and vectorized Spectral GCN.</td></tr>
+<tr><td class="L">Hardware Stats</td>
+    <td class="L">OS: Linux 6.19.11-1-cachyos &nbsp;&middot;&nbsp; 
+    GPU: NVIDIA GeForce RTX 5070 &nbsp;&middot;&nbsp; CPU: </td></tr>
+<tr><td class="L">Timing</td>
+    <td class="L">Inference latency measured via <b>torch.cuda.Event</b> for precise 
+    kernel-level synchronization (ms/segment).</td></tr>
 <tr><td class="L">Pretraining</td>
     <td class="L">Trunk pretrained on pooled subjects: 80 epochs, AdamW,
     cosine LR (warmup 10 ep), label smoothing &epsilon;=0.1,
@@ -766,17 +544,10 @@ Mean Cohen's &kappa; = 0.897 and AUC-ROC = 0.985.
     <td class="L">OVR CSP (2 filters/class, GEVD), log-variance features,
     regularised LDA (Ledoit-Wolf &lambda;=0.1). Same splits as S4.</td></tr>
 <tr><td class="L">Within-subject</td>
-    <td class="L">Chronological 75/25 per-class split. No leakage.
-    &ldquo;After brief calibration&rdquo; scenario.</td></tr>
-<tr><td class="L">LOSO</td>
-    <td class="L">Leave-one-subject-out. Train on N-1, evaluate held-out zero-shot.
-    &ldquo;New user, no calibration&rdquo; scenario.</td></tr>
+    <td class="L">Chronological 75/25 per-class split. No leakage.</td></tr>
 <tr><td class="L">Statistics</td>
     <td class="L">Wilcoxon signed-rank (paired per-subject, two-sided).
     Effect size r = |Z|/&radic;N. Threshold p&lt;0.05.</td></tr>
-<tr><td class="L">Datasets</td>
-    <td class="L">MOABB public benchmarks: BNCI2014-001, BNCI2014-004,
-    Schirrmeister2017, PhysionetMI, Cho2017.</td></tr>
 </table>
 
 <footer>

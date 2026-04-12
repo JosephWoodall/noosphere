@@ -257,35 +257,61 @@ class RiemannianStem(nn.Module):
         # 5. Project to d_model
         return self.proj(ts_vector).unsqueeze(1) # (B, 1, d_model)
 
+class SpatialAttention(nn.Module):
+    """Learned channel-wise importance weighting for high-density arrays."""
+    def __init__(self, in_channels: int, d_model: int):
+        super().__init__()
+        self.attn = nn.Sequential(
+            nn.Linear(in_channels, d_model // 4),
+            nn.SiLU(),
+            nn.Linear(d_model // 4, in_channels),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, C, T)
+        weights = self.attn(x.mean(dim=-1)).unsqueeze(-1)
+        return x * weights
+
 class S4EEGEncoder(nn.Module):
-    def __init__(self, in_channels: int = 21, d_model: int = 256, d_state: int = 64, n_blocks: int = 4, downsample: int = 4, n_actions: int = 8):
+    def __init__(self, in_channels: int = 21, d_model: int = 256, d_state: int = 128, n_blocks: int = 6, downsample: int = 4, n_actions: int = 8):
         super().__init__()
         self.in_channels = in_channels
         self.d_model = d_model
         self.n_actions = n_actions
         
-        # 1. Spatial Domain: Riemannian Tangent Space
+        # 1. Spatial Domain: Adaptive Riemannian + Local Attention
+        self.spatial_attn = SpatialAttention(in_channels, d_model)
         self.spatial_stem = RiemannianStem(in_channels, d_model)
         
-        # 2. Temporal Domain: Multi-Scale S4D or Simple Conv
+        # 2. Temporal Domain: Multi-Scale Feature Extraction
         if in_channels < 10:
             self.temporal_stem = nn.Sequential(
-                nn.Conv1d(in_channels, d_model, kernel_size=7, padding=3),
+                nn.Conv1d(in_channels, d_model, kernel_size=15, padding=7, stride=2),
                 nn.GELU(),
-                nn.GroupNorm(min(8, d_model), d_model)
+                nn.GroupNorm(min(8, d_model), d_model),
+                nn.Conv1d(d_model, d_model, kernel_size=15, padding=7, stride=2),
+                nn.GELU()
             )
         else:
             self.temporal_stem = SpectralStem(in_channels, d_model, hop_length=downsample)
         
-        # 3. Processing Blocks
+        # 3. Processing Blocks: Deeper S4D chain
         self.blocks = nn.ModuleList([S4Block(d_model, d_state) for _ in range(n_blocks)])
         self.pooler = MultiHeadAttentionPooling(d_model, n_heads=8)
         
+        # Head Refinement
         self.intent_proj = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.SiLU(),
-            nn.Dropout(0.3),
+            nn.LayerNorm(d_model),
+            nn.Dropout(0.2),
             nn.Linear(d_model, n_actions)
+        )
+        self.identity_proj = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.SiLU(),
+            nn.Linear(d_model, 64)
         )
         self.predictor = nn.Sequential(nn.Linear(d_model, d_model), nn.GELU(), nn.Linear(d_model, d_model))
         self.momentum_spatial = None
@@ -335,11 +361,14 @@ class S4EEGEncoder(nn.Module):
             mask_t = mask.unsqueeze(-1).expand_as(eeg)
             eeg = eeg * mask_t
 
+        # 0. Spatial Attention
+        eeg_weighted = self.spatial_attn(eeg)
+
         # 1. Spatial Pathway
-        x_spatial = self.spatial_stem(eeg) # (B, 1, d_model)
+        x_spatial = self.spatial_stem(eeg_weighted) # (B, 1, d_model)
 
         # 2. Temporal Pathway
-        x_temporal = self.temporal_stem(eeg) # (B, d_model, T') or (B, T', d_model)
+        x_temporal = self.temporal_stem(eeg_weighted) # (B, d_model, T') or (B, T', d_model)
         if x_temporal.shape[1] == self.d_model:
             x_temporal = x_temporal.transpose(1, 2) # ensure (B, T', d_model)
 
@@ -361,6 +390,9 @@ class S4EEGEncoder(nn.Module):
         uncertainty = self.n_actions / S
         confidence = 1.0 - uncertainty
 
+        # Identity Manifold Projection
+        identity_embed = self.identity_proj(current_state)
+
         return {
             "sequence":    x,
             "embed":       current_state,
@@ -368,6 +400,7 @@ class S4EEGEncoder(nn.Module):
             "confidence":  confidence.squeeze(-1),
             "alpha":       alpha,
             "uncertainty": uncertainty.squeeze(-1),
+            "identity_embed": identity_embed,
             "pred_z":      self.predictor(current_state),
             "cognitive": {
                 "uncertainty":    uncertainty.squeeze(-1),

@@ -426,6 +426,7 @@ def run_csp_lda(X_train: np.ndarray, y_train: np.ndarray,
 def _make_s4(n_classes: int, dev: torch.device) -> nn.Module:
     from noosphere.s4_eeg import S4EEGEncoder
     return S4EEGEncoder(in_channels=N_EEG_CH, d_model=256,
+                        n_blocks=6, d_state=128,
                         n_actions=n_classes).to(dev)
 
 
@@ -490,7 +491,7 @@ def _nllloss_smooth(log_probs: torch.Tensor, targets: torch.Tensor,
 def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                    dev: torch.device,
                    epochs: int = 250, lr: float = 2e-3,
-                   batch: int = 64) -> nn.Module:
+                   batch: int = 32) -> nn.Module:
     """
     Train a shared S4 trunk on all provided segments.
     Uses AMP and robust augmentation (including Mixup) for maximum performance.

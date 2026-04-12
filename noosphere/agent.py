@@ -28,7 +28,7 @@ from noosphere.perception import HybridPerceptionModel
 from noosphere.physics import PhysicsAugmentedRSSM
 from noosphere.planner import ActionEncoder, Actor, Critic, ImaginationBuffer, MCTSPlanner
 from noosphere.preprocessing import ObservationPreprocessor
-from noosphere.rssm import ConsequenceModel, ObservationDecoder
+from noosphere.rssm import EnhancedConsequenceModel, ObservationDecoder
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class NoosphereAgent(nn.Module):
         )
         
         state_dim = self.rssm.state_dim
-        self.consequence = ConsequenceModel(state_dim, W.hidden_dim)
+        self.consequence = EnhancedConsequenceModel(state_dim, W.hidden_dim)
         self.obs_decoder = ObservationDecoder(state_dim, P.d_model, W.hidden_dim)
         self.action_enc = ActionEncoder(C.bci.n_actions, W.action_dim)
         self.actor = Actor(state_dim, C.bci.n_actions, W.hidden_dim, max_reach=P.max_reach)
@@ -109,6 +109,16 @@ class NoosphereAgent(nn.Module):
         self.act_bridge: Optional[ActBridge] = None
         self.learning_manager: Optional[LearningManager] = None
         
+        from noosphere.apparatus_iot import IoTApparatus
+        self.iot_apparatus = IoTApparatus()
+        
+        from noosphere.proto import NCPTransport
+        self.transport = NCPTransport.inproc(node_id="local_operator")
+        
+        from noosphere.network import NetworkSessionManager, NetworkUI
+        self.network_manager = NetworkSessionManager("local_operator", self.transport)
+        self.network_ui = NetworkUI(self.network_manager)
+        
         self._h = None; self._z = None
 
     def _jit_compile(self):
@@ -128,6 +138,11 @@ class NoosphereAgent(nn.Module):
 
     @torch.no_grad()
     def step(self, obs: Dict, prev_action: Optional[int] = None, prev_cont_exec: Optional[np.ndarray] = None, deterministic: bool = False) -> Tuple[int, np.ndarray, Dict]:
+        # Inject IoT state if modality is missing
+        if "structured" not in obs and hasattr(self, "iot_apparatus"):
+            obs = dict(obs)
+            obs["structured"] = np.pad(self.iot_apparatus.get_state_vector(), (0, 64 - 3))
+
         autocast_dtype = torch.bfloat16 if (self.device.type == "cuda" and torch.cuda.is_bf16_supported()) else torch.float16
         with torch.autocast(device_type=self.device.type, dtype=autocast_dtype, enabled=self.device.type in ["cuda", "mps"]):
             # 1. Perceive & Encode
@@ -147,6 +162,11 @@ class NoosphereAgent(nn.Module):
             # 3. Process BCI Intent
             bci_out = self.intent.update(perc_out.get("s4_out"), perc_out.get("xyz_pred"))
             
+            # Update Network Sessions
+            if self.cfg.bci.enable_inter_agent_comms:
+                self.network_manager.update(bci_out["contact_id"], bci_out["identity_confidence"])
+                self.network_ui.render()
+
             # 4. Plan & Sample
             actor_dist, actor_cont = self.actor(state)
             p_final, cont_final = self.intent.blend(bci_out, actor_dist.probs.squeeze(0), actor_cont.squeeze(0))
@@ -162,7 +182,14 @@ class NoosphereAgent(nn.Module):
                 else:
                     action = int(p_final.argmax().item()) if deterministic else int(torch.distributions.Categorical(probs=p_final).sample().item())
 
-            # 5. Safety Gating
+            # 5. Network Routing Bypass
+            # If a session is active and it's a discrete intent, route to network
+            if self.cfg.bci.enable_inter_agent_comms and self.network_manager.active_session:
+                if bci_out["active"] and action < 6: # Maps 0-5 to our Macros
+                    self.network_manager.send_message(action)
+                    # We continue to execute locally too, but the Network UI will show it
+
+            # 6. Safety Gating
             sim_termination = self._safety_check(action, cont_final)
             if sim_termination > 0.90:
                 cont_final = prev_cont_t.squeeze(0)
@@ -172,6 +199,8 @@ class NoosphereAgent(nn.Module):
                 "n_mcts_sims": n_sims,
                 "bci_active": bci_out["active"],
                 "bci_confidence": bci_out["confidence"],
+                "contact_id": bci_out["contact_id"],
+                "identity_confidence": bci_out["identity_confidence"],
                 "raw_continuous_intent": cont_final.detach().float().cpu().numpy()
             }
             
@@ -202,7 +231,7 @@ class NoosphereAgent(nn.Module):
     def observe(self, obs: Dict, action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, reward: float, done: bool, info: Optional[Dict] = None):
         if info and "_exec_structured" in info: obs = dict(obs); obs["structured"] = info["_exec_structured"]
         bci_active = info.get("bci_active", False) if info else False
-        self.replay.add_step(obs, action, raw_cont, exec_cont, bci_active, reward, done)
+        self.replay.add_step(obs, action, raw_cont, exec_cont, bci_active, reward, done, info=info)
         
         if self._h is not None and self._step % 10 == 0:
             state = torch.cat([self._h, self._z], -1)
@@ -218,6 +247,14 @@ class NoosphereAgent(nn.Module):
         for _ in range(self.cfg.training.wm_updates): metrics.update(self._update_wm())
         if self._step >= self.cfg.training.warmup_steps:
             for _ in range(self.cfg.ac.ac_updates): metrics.update(self._update_ac())
+            
+        # Collaborative Learning: The "Whisper" Protocol
+        if self.cfg.bci.allow_collective_learning and self._step % 100 == 0:
+            # We share abstract dynamics (RSSM parameters related to physics)
+            weights = {k: v for k, v in self.rssm.named_parameters() if "residual" in k or "physics" in k}
+            if weights:
+                self.network_manager.share_insights(weights)
+                
         return metrics
 
     def _update_wm(self) -> Dict[str, float]:
@@ -264,6 +301,17 @@ class NoosphereAgent(nn.Module):
             term = F.binary_cross_entropy(cons["termination"].clamp(0, 1).squeeze(), batch["dones"][:, t])
             
             L_wm += C.world_model.lambda_kl * kl + C.world_model.lambda_recon * recon + C.world_model.lambda_reward * rew + term + C.world_model.lambda_physics * phys_tensor
+
+            # Digital Consequence Supervision (v1.7.0)
+            if hasattr(self.consequence, "digital_loss") and "digital_feedback" in batch:
+                df = batch["digital_feedback"]
+                L_wm += self.consequence.digital_loss(
+                    s, 
+                    actual_exit=df["exit_code"][:, t],
+                    actual_stdout_len=df["stdout_len"][:, t],
+                    actual_state_change=df["state_change"][:, t],
+                    actual_next_state=df["next_digital"][:, t]
+                )
 
         loss = (L_wm + L_sigreg) / T_eff
         self.opt_wm.zero_grad(); loss.backward()

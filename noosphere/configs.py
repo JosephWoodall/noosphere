@@ -68,6 +68,8 @@ class BCIConfig:
     fast_path_threshold: float = 0.85
     momentum_decay: float = 0.05
     n_actions: int = 8
+    enable_inter_agent_comms: bool = False # User must explicitly enable "Brain-Phone" features
+    allow_collective_learning: bool = False # User must explicitly enable sharing Dynamics Insights
 
 @dataclass
 class AgentConfig:

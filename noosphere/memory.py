@@ -30,8 +30,14 @@ class SequenceReplayBuffer:
         
         self.reward_buffer = np.zeros(capacity, dtype=np.float32)
         self.done_buffer = np.zeros(capacity, dtype=bool)
+        
+        # Digital Feedback Buffers (v1.7.0)
+        self.exit_code_buffer = np.zeros(capacity, dtype=np.int64)
+        self.stdout_len_buffer = np.zeros(capacity, dtype=np.float32)
+        self.state_change_buffer = np.zeros(capacity, dtype=np.float32)
+        self.next_digital_buffer = np.zeros((capacity, 64), dtype=np.float32)
 
-    def add_step(self, obs: Dict[str, Any], action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, bci_active: bool, reward: float, done: bool):
+    def add_step(self, obs: Dict[str, Any], action: int, raw_cont: np.ndarray, exec_cont: np.ndarray, bci_active: bool, reward: float, done: bool, info: Optional[Dict] = None):
         numpy_obs = {}
         for k, v in obs.items():
             if isinstance(v, torch.Tensor): numpy_obs[k] = v.detach().cpu().numpy()
@@ -48,6 +54,16 @@ class SequenceReplayBuffer:
         self.bci_active_buffer[self.ptr] = 1.0 if bci_active else 0.0
         self.reward_buffer[self.ptr] = reward
         self.done_buffer[self.ptr] = done
+        
+        # Process Digital Feedback from info
+        if info:
+            # Shell/IoT results often returned in 'act_result' or similar
+            res = info.get("act_executed_result", {})
+            self.exit_code_buffer[self.ptr] = 0 if res.get("success", True) else 1
+            self.stdout_len_buffer[self.ptr] = float(res.get("duration_s", 0.0)) # proxy for now
+            self.state_change_buffer[self.ptr] = 1.0 if res.get("executed") else 0.0
+            if "structured" in res:
+                self.next_digital_buffer[self.ptr] = np.asarray(res["structured"], dtype=np.float32).flatten()[:64]
 
         self.ptr = (self.ptr + 1) % self.capacity
         self.size = min(self.size + 1, self.capacity)
@@ -55,7 +71,10 @@ class SequenceReplayBuffer:
     def sample(self, batch_size: int, device: torch.device) -> Dict[str, torch.Tensor]:
         if self.size < self.seq_len: return {}
 
-        batch = {"actions": [], "raw_cont": [], "exec_cont": [], "bci_active": [], "rewards": [], "dones": []}
+        batch = {
+            "actions": [], "raw_cont": [], "exec_cont": [], "bci_active": [], "rewards": [], "dones": [],
+            "digital_feedback": {"exit_code": [], "stdout_len": [], "state_change": [], "next_digital": []}
+        }
         obs_keys = self.obs_buffer[0].keys()
         for k in obs_keys: batch[k] = []
 
@@ -76,6 +95,13 @@ class SequenceReplayBuffer:
             batch["bci_active"].append(self.bci_active_buffer[seq_indices])
             batch["rewards"].append(self.reward_buffer[seq_indices])
             batch["dones"].append(self.done_buffer[seq_indices])
+            
+            # Digital Feedback
+            batch["digital_feedback"]["exit_code"].append(self.exit_code_buffer[seq_indices])
+            batch["digital_feedback"]["stdout_len"].append(self.stdout_len_buffer[seq_indices])
+            batch["digital_feedback"]["state_change"].append(self.state_change_buffer[seq_indices])
+            batch["digital_feedback"]["next_digital"].append(self.next_digital_buffer[seq_indices])
+
             for k in obs_keys:
                 modality_seq = [self.obs_buffer[idx].get(k, np.zeros_like(self.obs_buffer[start][k])) for idx in seq_indices]
                 batch[k].append(np.stack(modality_seq))
@@ -86,7 +112,13 @@ class SequenceReplayBuffer:
             "exec_cont": torch.tensor(np.stack(batch["exec_cont"]), dtype=torch.float32, device=device),
             "bci_active": torch.tensor(np.stack(batch["bci_active"]), dtype=torch.float32, device=device),
             "rewards": torch.tensor(np.stack(batch["rewards"]), dtype=torch.float32, device=device),
-            "dones": torch.tensor(np.stack(batch["dones"]), dtype=torch.float32, device=device)
+            "dones": torch.tensor(np.stack(batch["dones"]), dtype=torch.float32, device=device),
+            "digital_feedback": {
+                "exit_code": torch.tensor(np.stack(batch["digital_feedback"]["exit_code"]), dtype=torch.long, device=device),
+                "stdout_len": torch.tensor(np.stack(batch["digital_feedback"]["stdout_len"]), dtype=torch.float32, device=device),
+                "state_change": torch.tensor(np.stack(batch["digital_feedback"]["state_change"]), dtype=torch.float32, device=device),
+                "next_digital": torch.tensor(np.stack(batch["digital_feedback"]["next_digital"]), dtype=torch.float32, device=device)
+            }
         }
         for k in obs_keys:
             out[k] = torch.tensor(np.stack(batch[k]), dtype=torch.float32, device=device)

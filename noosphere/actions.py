@@ -138,16 +138,51 @@ def make_agent_space() -> ActionSpace:
         .add("agent_git_sync", "Deploy agent to resolve git state", T.SYSTEM, payload={"agent_prompt": "Sync git state."})
     )
 
-class ExecutorRouter(Executor):
-    def __init__(self, shell_exec, llm_exec):
-        self.shell = shell_exec
-        self.llm = llm_exec
+class IoTExecutor(Executor):
+    """Bridge to Home Assistant / IoT systems."""
+    def __init__(self, api_endpoint: Optional[str] = None):
+        from noosphere.apparatus_iot import IoTApparatus
+        self.apparatus = IoTApparatus(api_endpoint=api_endpoint)
 
     def can_execute(self, action: Action) -> bool:
-        return self.shell.can_execute(action) or self.llm.can_execute(action)
+        return action.payload is not None and "iot_action" in action.payload
+
+    def execute(self, action: Action) -> Dict[str, Any]:
+        t_start = time.perf_counter()
+        iot_cmd = action.payload.get("iot_action")
+        entity_id = action.payload.get("entity_id")
+        
+        result = self.apparatus.execute(iot_cmd, {"entity_id": entity_id})
+        
+        return {
+            "executed": True,
+            "success": result["status"] == "success",
+            "outcome": f"IoT {iot_cmd} on {entity_id}: {result['status']}",
+            "reward": 1.0 if result["status"] == "success" else -0.5,
+            "duration_s": time.perf_counter() - t_start,
+            "structured": np.pad(self.apparatus.get_state_vector(), (0, 64 - 3)) # Pad to 64 dims
+        }
+
+def make_iot_space() -> ActionSpace:
+    T = Tier
+    return (
+        ActionSpace("iot_smart_home")
+        .add("light_toggle", "Toggle Living Room Light", T.SAFE_WRITE, payload={"iot_action": "TOGGLE", "entity_id": "light.living_room"})
+        .add("door_unlock", "Unlock Front Door", T.SYSTEM, payload={"iot_action": "UNLOCK", "entity_id": "lock.front_door"})
+    )
+
+class ExecutorRouter(Executor):
+    def __init__(self, shell_exec, llm_exec, iot_exec=None):
+        self.shell = shell_exec
+        self.llm = llm_exec
+        self.iot = iot_exec
+
+    def can_execute(self, action: Action) -> bool:
+        return self.shell.can_execute(action) or self.llm.can_execute(action) or (self.iot and self.iot.can_execute(action))
 
     def execute(self, action: Action) -> Dict[str, Any]:
         if self.llm.can_execute(action): return self.llm.execute(action)
+        if self.iot and self.iot.can_execute(action): return self.iot.execute(action)
         return self.shell.execute(action)
 
 class ActBridge:
@@ -212,8 +247,11 @@ class ActBridge:
         # Consequence Engine Mandatory Rollback Gateway
         self._trigger_snapshot(task_id)
 
+        # Check for any finished tasks to update history/feedback
+        self._poll_tasks()
+
         future = self._thread_pool.submit(self.executor.execute, action)
-        self._pending_tasks[task_id] = future
+        self._pending_tasks[task_id] = {"future": future, "action": action}
 
         out = {
             "executed": "pending",
@@ -222,10 +260,26 @@ class ActBridge:
             "reward": 0.0,
             "outcome": f"[Async] Dispatched {action.name} to background worker...",
             "confidence": effective,
-            "task_id": task_id
+            "task_id": task_id,
+            "act_executed_result": {} # Placeholder for digital head
         }
         self._history.append(out)
         return out
+
+    def _poll_tasks(self):
+        """Checks for completed async tasks and updates metadata."""
+        finished = []
+        for tid, task in self._pending_tasks.items():
+            if task["future"].done():
+                try:
+                    result = task["future"].result()
+                    # Store result in a way the agent can find it next step
+                    # This is tricky in a single step loop, but we can update a cache
+                    self._last_async_result = result
+                    finished.append(tid)
+                except Exception:
+                    finished.append(tid)
+        for tid in finished: del self._pending_tasks[tid]
 
     def _prefetch_executor(self, action: Action):
         if hasattr(self.executor, "prefetch"):

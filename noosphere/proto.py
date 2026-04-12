@@ -91,6 +91,9 @@ class MsgType(IntEnum):
     OBSTACLE_MAP = 0x04
     LEARNING_SIGNAL = 0x05
     COGNITIVE_STATE = 0x06
+    IDENTITY = 0x07 # Brain-Phone identity packet
+    IOT_ACTION = 0x08 # Smart home state change command
+    CONTEXT_INSIGHT = 0x09 # Shareable Dynamics Insights
     HEARTBEAT = 0xFF
 
 
@@ -213,6 +216,21 @@ class NCPEncoder:
             flags,
         )
 
+    def identity_packet(self, sender_id: str, receiver_id: str, confidence: float, flags: int = Flags.NONE) -> bytes:
+        import json
+        payload = json.dumps({"sender": sender_id, "receiver": receiver_id, "confidence": confidence}).encode('utf-8')
+        return self._frame(MsgType.IDENTITY, payload, flags)
+
+    def iot_action_packet(self, entity_id: str, action: str, payload: dict, flags: int = Flags.NONE) -> bytes:
+        import json
+        p = json.dumps({"entity_id": entity_id, "action": action, "payload": payload}).encode('utf-8')
+        return self._frame(MsgType.IOT_ACTION, p, flags)
+
+    def context_insight_packet(self, insight_type: str, data: dict, flags: int = Flags.NONE) -> bytes:
+        import json
+        p = json.dumps({"type": insight_type, "data": data}).encode('utf-8')
+        return self._frame(MsgType.CONTEXT_INSIGHT, p, flags)
+
     def heartbeat(self, uptime_ms: int, flags: int = Flags.NONE) -> bytes:
         return self._frame(MsgType.HEARTBEAT, struct.pack("<I", uptime_ms), flags)
 
@@ -317,6 +335,9 @@ class NCPDecoder:
         elif t == MsgType.HEARTBEAT:
             (ms,) = struct.unpack("<I", p)
             return {"uptime_ms": ms}
+        elif t in (MsgType.IDENTITY, MsgType.IOT_ACTION, MsgType.CONTEXT_INSIGHT):
+            import json
+            return json.loads(p.decode('utf-8'))
         else:
             return {"raw": p}
 
@@ -383,47 +404,33 @@ from typing import Dict as _Dict
 
 class NCPTransport:
     """
-    Transport backend for NCP binary frames.
-
-    Backends
-    --------
-    NCPTransport.redis(host, port, db)  — Redis pub/sub
-    NCPTransport.inproc()               — in-process threading.Queue
-    NCPTransport.shm()                  — lock-free zero-copy POSIX shared memory
-
-    Both expose the same interface:
-        publish(channel, frame)     — send a frame
-        recv(channel, timeout_s)    — blocking receive, returns frame or None
-        subscribe(channel, callback)— register a callback (Redis only)
-        close()                     — clean up connections
+    Transport backend for NCP binary frames with Peer Routing.
     """
-
-    def __init__(self, backend):
+    def __init__(self, backend, node_id: str = "local_node"):
         self._backend = backend
+        self.node_id = node_id
 
     # ── Factory methods ───────────────────────────────────────────────────────
 
     @classmethod
-    def redis(cls, host: str = "127.0.0.1", port: int = 6379, db: int = 0):
+    def redis(cls, host: str = "127.0.0.1", port: int = 6379, db: int = 0, node_id: str = "local_node"):
         """Redis pub/sub backend. Requires `pip install redis`."""
         try:
             import redis as _redis
-
             r = _redis.Redis(host=host, port=port, db=db, socket_timeout=1.0)
             r.ping()
-            return cls(_RedisBackend(r))
+            return cls(_RedisBackend(r), node_id=node_id)
         except Exception as e:
             import logging
-
             logging.getLogger(__name__).warning(
                 f"Redis unavailable ({e}) — falling back to in-process transport"
             )
-            return cls.inproc()
+            return cls.inproc(node_id=node_id)
 
     @classmethod
-    def inproc(cls):
+    def inproc(cls, node_id: str = "local_node"):
         """In-process queue backend — no external dependencies."""
-        return cls(_InProcBackend())
+        return cls(_InProcBackend(), node_id=node_id)
 
     @classmethod
     def shm(cls):
@@ -437,10 +444,21 @@ class NCPTransport:
 
     # ── Interface ─────────────────────────────────────────────────────────────
 
-    def publish(self, channel: str, frame: bytes) -> None:
-        self._backend.publish(channel, frame)
+    def publish(self, channel: str, frame: bytes, peer_id: Optional[str] = None) -> None:
+        """Publishes a frame. If peer_id is set, routes specifically to that peer."""
+        target_channel = f"{channel}:{peer_id}" if peer_id else channel
+        self._backend.publish(target_channel, frame)
 
-    def recv(self, channel: str, timeout_s: float = 0.1) -> None:
+    def recv(self, channel: str, timeout_s: float = 0.1, from_peer: Optional[str] = None) -> Optional[bytes]:
+        """Receives a frame. If from_peer is set, listens on that peer's specific channel."""
+        # Listen on either global channel or peer-specific one
+        if from_peer:
+            return self._backend.recv(f"{channel}:{from_peer}", timeout_s)
+        
+        # Default: check for messages specifically for THIS node first
+        peer_msg = self._backend.recv(f"{channel}:{self.node_id}", timeout_s=0.01)
+        if peer_msg: return peer_msg
+        
         return self._backend.recv(channel, timeout_s)
 
     def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
@@ -475,14 +493,13 @@ class _RedisBackend:
 
 
 class _InProcBackend:
-    def __init__(self):
-        self._queues: _Dict[str, queue.Queue] = {}
-        self._callbacks: _Dict[str, list] = {}
+    _shared_queues: _Dict[str, queue.Queue] = {}
+    _shared_callbacks: _Dict[str, list] = {}
 
     def _queue(self, channel: str) -> queue.Queue:
-        if channel not in self._queues:
-            self._queues[channel] = queue.Queue(maxsize=1024)
-        return self._queues[channel]
+        if channel not in self._shared_queues:
+            self._shared_queues[channel] = queue.Queue(maxsize=1024)
+        return self._shared_queues[channel]
 
     def publish(self, channel: str, frame: bytes) -> None:
         q = self._queue(channel)
@@ -495,7 +512,7 @@ class _InProcBackend:
                 pass
             q.put_nowait(frame)
         # Notify synchronous subscribers
-        for cb in self._callbacks.get(channel, []):
+        for cb in self._shared_callbacks.get(channel, []):
             try:
                 cb(frame)
             except Exception:
@@ -508,11 +525,11 @@ class _InProcBackend:
             return None
 
     def subscribe(self, channel: str, callback: Callable[[bytes], None]) -> None:
-        self._callbacks.setdefault(channel, []).append(callback)
+        self._shared_callbacks.setdefault(channel, []).append(callback)
 
     def close(self) -> None:
-        self._queues.clear()
-        self._callbacks.clear()
+        # Note: Class-level shared state remains, but we clear for this instance
+        pass
 
 
 class _ShmBackend:

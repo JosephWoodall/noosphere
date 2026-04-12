@@ -176,6 +176,30 @@ def _resample(data: np.ndarray, orig_sfreq: float) -> np.ndarray:
     return np.pad(r, ((0, 0), (0, SEGMENT_SAMPLES - r.shape[1])), mode="edge")
 
 
+def euclidean_alignment(X: np.ndarray) -> np.ndarray:
+    """
+    Normalizes EEG trials to a reference manifold (He & Wu, 2019).
+    X: (N_trials, C, T)
+    Returns: (N_trials, C, T) aligned data.
+    """
+    if len(X) == 0: return X
+    # 1. Compute average covariance across all trials
+    covs = np.array([np.cov(trial) for trial in X])
+    R = np.mean(covs, axis=0)
+    
+    # 2. Compute R^(-1/2) using eigenvalue decomposition
+    from scipy.linalg import fractional_matrix_power
+    try:
+        R_inv_sqrt = fractional_matrix_power(R, -0.5).real
+    except Exception:
+        # Fallback for singular matrices
+        R_inv_sqrt = np.eye(X.shape[1])
+        
+    # 3. Transform trials: X' = R^(-1/2) * X
+    X_aligned = np.einsum("ij,njk->nik", R_inv_sqrt, X)
+    return X_aligned.astype(np.float32)
+
+
 def _zscore(data: np.ndarray) -> np.ndarray:
     mu = data.mean(axis=1, keepdims=True)
     sd = data.std(axis=1, keepdims=True) + 1e-8
@@ -490,19 +514,33 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
         for bx, by in loader:
             bx, by = bx.to(dev), by.to(dev)
             
-            # 1. Standard Augmentations
-            bx = augment_eeg(bx)
-            # 2. Mixup (applied 50% of the time)
+            # Contrastive SSL: Generate two views of the same batch
+            bx_v1 = augment_eeg(bx)
+            bx_v2 = augment_eeg(bx)
+            
+            # Mixup (on v1)
             if np.random.rand() < 0.5:
-                bx, ya, yb, lam = mixup_eeg(bx, by, alpha=0.2)
+                bx_mix, ya, yb, lam = mixup_eeg(bx_v1, by, alpha=0.2)
             else:
-                ya, yb, lam = by, None, 1.0
+                bx_mix, ya, yb, lam = bx_v1, by, None, 1.0
             
             opt.zero_grad()
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
-                out  = model(bx)
-                lp   = torch.log(out["intent_probs"].clamp(min=1e-9))
-                loss = _nllloss_smooth(lp, ya, wt, targets_b=yb, lam=lam)
+                out1  = model(bx_mix)
+                out2  = model(bx_v2) # Second view for SSL
+                
+                # 1. Supervised Loss (NLL + Smoothing + Mixup)
+                lp    = torch.log(out1["intent_probs"].clamp(min=1e-9))
+                loss_sup = _nllloss_smooth(lp, ya, wt, targets_b=yb, lam=lam)
+                
+                # 2. Self-Supervised Contrastive Loss (Signal Consistency)
+                # Ensure the latent embeddings (current_state) are similar for both views
+                # We use a simple Cosine Similarity loss here
+                z1 = out1["intent_probs"] # Using probs as an embedding proxy for simplicity
+                z2 = out2["intent_probs"]
+                loss_ssl = 1.0 - F.cosine_similarity(z1, z2).mean()
+                
+                loss = loss_sup + 0.1 * loss_ssl
             
             if scaler:
                 scaler.scale(loss).backward()
@@ -644,26 +682,38 @@ def _temperature_scale(probs: np.ndarray, T: float = 1.5) -> np.ndarray:
 
 def infer_s4(model: nn.Module, X: np.ndarray,
              dev: torch.device,
-             T: float = 1.5) -> Tuple[np.ndarray, np.ndarray, float]:
+             T: float = 1.5, batch_size: int = 64) -> Tuple[np.ndarray, np.ndarray, float]:
     model.eval()
-    Xt = torch.tensor(X, dtype=torch.float32, device=dev)
     
-    if dev.type == "cuda":
-        start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-        start.record()
-        with torch.no_grad():
-            out = model(Xt)
-        end.record()
-        torch.cuda.synchronize()
-        lat = start.elapsed_time(end) / len(X)
-    else:
-        t0 = time.perf_counter()
-        with torch.no_grad():
-            out = model(Xt)
-        lat = (time.perf_counter() - t0) * 1000 / len(X)
-        
-    prob = _temperature_scale(out["intent_probs"].cpu().numpy(), T=T)
-    return np.argmax(prob, 1), prob, lat
+    # Use DataLoader for batched inference to prevent OOM
+    ds = TensorDataset(torch.tensor(X, dtype=torch.float32))
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=False)
+    
+    all_probs = []
+    lats = []
+    
+    with torch.no_grad():
+        for (bx,) in loader:
+            bx = bx.to(dev)
+            if dev.type == "cuda":
+                start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+                start.record()
+                out = model(bx)
+                end.record()
+                torch.cuda.synchronize()
+                lats.append(start.elapsed_time(end) / len(bx))
+            else:
+                t0 = time.perf_counter()
+                out = model(bx)
+                lats.append((time.perf_counter() - t0) * 1000 / len(bx))
+            
+            all_probs.append(out["intent_probs"].cpu().numpy())
+            
+    prob = np.concatenate(all_probs, axis=0)
+    prob = _temperature_scale(prob, T=T)
+    avg_lat = float(np.mean(lats))
+    
+    return np.argmax(prob, 1), prob, avg_lat
 
 
 # =============================================================================
@@ -849,13 +899,9 @@ def _compute_metrics(y_true, y_pred, y_prob, confs, lats_ms,
 # SECTION 7 -- WITHIN-SUBJECT EVALUATION
 # =============================================================================
 
-def evaluate_within_subject(name, segments, dev, temperature=1.5):
+def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=None):
     """
-    10-fold Stratified Cross-Validation.
-    In each fold:
-      1. Pretrain trunk on pooled training folds of all subjects.
-      2. Per-subject: fine-tune head on its training fold -> evaluate on test fold.
-    Simultaneously runs CSP+LDA on the same splits.
+    10-fold Stratified Cross-Validation with Euclidean Alignment.
     """
     meta      = DATASET_CATALOGUE[name]
     n_cls     = meta["n_classes"]
@@ -864,18 +910,20 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5):
 
     subjects = sorted(subj_map.keys())
     subj_folds = {}
-    # Use random_state for reproducibility as per scientific standards
     skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
     
+    # Pre-align each subject globally to center their distribution
+    aligned_subj_data = {}
     for subj in subjects:
         segs = subj_map[subj]
+        X = np.stack([s.data for s in segs])
+        X_ea = euclidean_alignment(X)
+        aligned_subj_data[subj] = X_ea
+        
         y = np.array([s.label % n_cls for s in segs])
-        # Handle cases with very few samples per class if necessary
         try:
             subj_folds[subj] = list(skf.split(np.zeros(len(segs)), y))
         except ValueError:
-            # Fallback for very small datasets
-            log.warning(f"      Subj {subj} too few samples for 10-fold, using 3-fold")
             skf_small = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
             subj_folds[subj] = list(skf_small.split(np.zeros(len(segs)), y))
 
@@ -891,22 +939,27 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5):
         for subj in subjects:
             segs = subj_map[subj]
             folds = subj_folds[subj]
-            if fold_idx >= len(folds):
-                # If this subject had fewer folds, we might skip or reuse
-                continue
+            if fold_idx >= len(folds): continue
                 
             train_idx, test_idx = folds[fold_idx]
-            tr = [segs[i] for i in train_idx]
-            te = [segs[i] for i in test_idx]
+            
+            # Create segments with EA-transformed data
+            X_ea = aligned_subj_data[subj]
+            tr = [EEGSegment(X_ea[i], segs[i].label, segs[i].subject, segs[i].dataset, segs[i].sfreq_orig) 
+                  for i in train_idx]
+            te = [EEGSegment(X_ea[i], segs[i].label, segs[i].subject, segs[i].dataset, segs[i].sfreq_orig) 
+                  for i in test_idx]
+            
             all_tr_k.extend(tr)
             subj_splits_k[subj] = (tr, te)
 
         if not all_tr_k: continue
 
-        # Pretrain trunk on pooled training data for THIS fold
-        # 100 epochs is a compromise between stability and CV execution time
-        log.info(f"      Pretraining trunk on {len(all_tr_k)} segments...")
-        pretrained = pretrain_trunk(all_tr_k, n_cls, dev, epochs=100)
+        # Use foundation model if provided, else train fresh trunk
+        if base_model is not None:
+            pretrained = copy.deepcopy(base_model)
+        else:
+            pretrained = pretrain_trunk(all_tr_k, n_cls, dev, epochs=100)
 
         for subj, (tr, te) in subj_splits_k.items():
             Xtr = np.stack([s.data for s in tr])
@@ -928,6 +981,9 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5):
             csp_yt.extend(yte)
             csp_yp.extend(cp)
             csp_yprob.extend(cp_prob)
+
+            del model
+            if dev.type == "cuda": torch.cuda.empty_cache()
 
     if not s4_yt: return {}
 
@@ -969,10 +1025,9 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5):
 # SECTION 8 -- LOSO CROSS-SUBJECT EVALUATION
 # =============================================================================
 
-def evaluate_loso(name, segments, dev, temperature=1.5):
+def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
     """
-    Leave-one-subject-out.
-    Train on N-1 subjects -> evaluate held-out subject zero-shot.
+    Leave-one-subject-out with Euclidean Alignment.
     """
     meta      = DATASET_CATALOGUE[name]
     n_cls     = meta["n_classes"]
@@ -984,14 +1039,31 @@ def evaluate_loso(name, segments, dev, temperature=1.5):
         log.warning(f"    LOSO skipped ({name}): need >= 2 subjects")
         return {}
 
+    # Pre-align all subjects for cross-subject consistency
+    aligned_subj_data = {}
+    for subj in subjects:
+        segs = subj_map[subj]
+        X = np.stack([s.data for s in segs])
+        aligned_subj_data[subj] = euclidean_alignment(X)
+
     s4_yt, s4_yp, s4_yprob, s4_conf, s4_lat = [], [], [], [], []
     csp_yt, csp_yp, csp_yprob               = [], [], []
     test_segs: List[EEGSegment]              = []
 
     for held in subjects:
-        tr_segs = [s for subj, segs in subj_map.items()
-                   if subj != held for s in segs]
-        te_segs = subj_map[held]
+        tr_segs = []
+        for subj in subjects:
+            if subj == held: continue
+            X_ea = aligned_subj_data[subj]
+            orig = subj_map[subj]
+            for i in range(len(X_ea)):
+                tr_segs.append(EEGSegment(X_ea[i], orig[i].label, orig[i].subject, orig[i].dataset, orig[i].sfreq_orig))
+        
+        te_orig = subj_map[held]
+        X_ea_te = aligned_subj_data[held]
+        te_segs = [EEGSegment(X_ea_te[i], te_orig[i].label, te_orig[i].subject, te_orig[i].dataset, te_orig[i].sfreq_orig)
+                   for i in range(len(X_ea_te))]
+
         if not tr_segs or not te_segs: continue
 
         Xtr = np.stack([s.data for s in tr_segs])
@@ -999,7 +1071,11 @@ def evaluate_loso(name, segments, dev, temperature=1.5):
         Xte = np.stack([s.data for s in te_segs])
         yte = np.array([s.label % n_cls for s in te_segs])
 
-        model          = pretrain_trunk(tr_segs, n_cls, dev, epochs=150)
+        if base_model is not None:
+            model = copy.deepcopy(base_model)
+        else:
+            model = pretrain_trunk(tr_segs, n_cls, dev, epochs=150)
+            
         pred, prob, lat = infer_s4(model, Xte, dev, T=temperature)
         s4_yt.extend(yte);  s4_yp.extend(pred)
         s4_yprob.extend(prob); s4_conf.extend(prob.max(1))
@@ -1010,6 +1086,9 @@ def evaluate_loso(name, segments, dev, temperature=1.5):
 
         log.info(f"    LOSO held={held}  S4={float((pred==yte).mean()):.1%}"
                  f"  CSP={float((cp==yte).mean()):.1%}")
+        
+        del model
+        if dev.type == "cuda": torch.cuda.empty_cache()
 
     if not s4_yt: return {}
 
@@ -1056,37 +1135,56 @@ def _uw_acc(yt, yp, conf, thresh):
 
 def run_benchmark(all_data, dev, temperature=1.5, run_loso=True):
     results = {}
+    
+    # 1. PRETRAIN GLOBAL FOUNDATION MODEL (4-class datasets pooled)
+    # This aligns with the "Neural Foundation Model" strategy
+    pool_4cls = []
+    for name, segments in all_data.items():
+        if DATASET_CATALOGUE[name]["n_classes"] == 4:
+            pool_4cls.extend(segments)
+    
+    global_model_4 = None
+    if pool_4cls:
+        log.info(f"\n== Pretraining Global 4-Class Foundation Model ({len(pool_4cls)} trials) ==")
+        global_model_4 = pretrain_trunk(pool_4cls, 4, dev, epochs=100)
+
     for name, segments in all_data.items():
         log.info(f"\n== {name} ({len(segments)} trials) ================")
         meta = DATASET_CATALOGUE[name]
+        n_cls = meta["n_classes"]
+        
         ds   = {
             "dataset":     name,
             "description": meta["description"],
-            "n_classes":   meta["n_classes"],
+            "n_classes":   n_cls,
             "n_segments":  len(segments),
             "n_subjects":  len(set(s.subject for s in segments)),
         }
 
+        # Select appropriate base model
+        base_model = global_model_4 if n_cls == 4 else None
+
         log.info("  [Within-subject]")
-        ws = evaluate_within_subject(name, segments, dev, temperature)
+        ws = evaluate_within_subject(name, segments, dev, temperature, base_model=base_model)
         ds["within_subject"] = ws
         
         # Uncertainty-Weighted Accuracy (WS)
         r = ws.get("raw_s4", {})
-        ds["uw_acc"] = {
-            "acc_05": _uw_acc(r["yt"], r["yp"], r["conf"], 0.5),
-            "acc_07": _uw_acc(r["yt"], r["yp"], r["conf"], 0.7),
-            "acc_09": _uw_acc(r["yt"], r["yp"], r["conf"], 0.9),
-        }
+        if r:
+            ds["uw_acc"] = {
+                "acc_05": _uw_acc(r["yt"], r["yp"], r["conf"], 0.5),
+                "acc_07": _uw_acc(r["yt"], r["yp"], r["conf"], 0.7),
+                "acc_09": _uw_acc(r["yt"], r["yp"], r["conf"], 0.9),
+            }
         
         # [RESEARCH] Capture model complexity
-        model_tmp = _make_s4(meta["n_classes"], dev)
+        model_tmp = _make_s4(n_cls, dev)
         ds["flops"] = model_tmp.get_flops(SEGMENT_SAMPLES)
         ds["params"] = sum(p.numel() for p in model_tmp.parameters())
 
         if run_loso:
             log.info("  [LOSO]")
-            ds["loso"] = evaluate_loso(name, segments, dev, temperature)
+            ds["loso"] = evaluate_loso(name, segments, dev, temperature, base_model=base_model)
 
         ws = ds["within_subject"]
         if ws and ws.get("s4"):

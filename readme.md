@@ -546,6 +546,9 @@ A bundle is a `.pt` file containing:
 ```
 noosphere/
 ├── __init__.py       public API — all exports
+├── configs.py        Centralized, nested AgentConfig and parameters
+├── intent.py         IntentProcessor for BCI Intent Momentum and Blending
+├── preprocessing.py  ObservationPreprocessor for modality handling
 ├── agent.py          NoosphereAgent — step / observe / update
 │                     export_bundle() · load_bundle() · run_calibration()
 ├── perception.py     HybridPerceptionModel — 3 streams, 4 fusion strategies
@@ -576,8 +579,7 @@ noosphere/
 ├── proto.py          NCP binary protocol + NCPTransport (Redis / in-process)
 ├── learning.py       5 loss classes + LearningManager + EEGAugment
 ├── discovery.py      Hardware & Bluetooth DiscoveryDaemons — plug-and-play extremity detection
-└── data/
-    └── synth.py      ScalpEEGGenerator + obs_* builders + make_batch()
+└── synth.py          ScalpEEGGenerator + obs_* builders + make_batch()
 
 demo.py               Entry point
 requirements.txt

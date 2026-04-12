@@ -57,6 +57,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import StratifiedKFold
@@ -511,6 +512,7 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
     model.train()
     for epoch in range(epochs):
         _cosine_lr(opt, epoch, 40, epochs, lr, lr*0.01)
+        epoch_loss = 0.0
         for bx, by in loader:
             bx, by = bx.to(dev), by.to(dev)
             
@@ -534,9 +536,7 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                 loss_sup = _nllloss_smooth(lp, ya, wt, targets_b=yb, lam=lam)
                 
                 # 2. Self-Supervised Contrastive Loss (Signal Consistency)
-                # Ensure the latent embeddings (current_state) are similar for both views
-                # We use a simple Cosine Similarity loss here
-                z1 = out1["intent_probs"] # Using probs as an embedding proxy for simplicity
+                z1 = out1["intent_probs"]
                 z2 = out2["intent_probs"]
                 loss_ssl = 1.0 - F.cosine_similarity(z1, z2).mean()
                 
@@ -552,6 +552,10 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 opt.step()
+            epoch_loss += loss.item()
+            
+        if (epoch + 1) % 10 == 0:
+            log.info(f"      Epoch {epoch+1}/{epochs} | Loss: {epoch_loss/len(loader):.4f}")
 
     log.info(f"    Pretrain done ({epochs} ep, {len(segments)} segs)")
     return model

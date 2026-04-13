@@ -16,3 +16,11 @@ The continuous physical intent (the arm trajectory) and the discrete digital int
 * `raw_continuous`: The pure biological intent (used to train the psychological Digital Twin).
 * `exec_continuous`: The physically clamped action permitted by the Safety Gate (used to train the World Model's physics simulation).
 Failing to separate these causes the World Model to hallucinate impossible physics, and the Actor to fail at cloning the true human desire.
+
+---
+
+## 5. Expansion: The Noosphere Network (A "Phone of the Brain")
+Noosphere must evolve beyond an isolated brain-to-action layer; it needs an interpretation layer and messaging queue to facilitate digital telepathy between users and foundational agents.
+- **Terminal-Based Messaging Queue:** Allow users to send direct digital intent/messages to other users on the network using the same BCI modalities.
+- **Inter-Agent Communication:** Enable Noosphere foundational models/agents to communicate and coordinate collaboratively over this network.
+- **Broader Digital Actions (World Model Integration):** Expand the vocabulary of executed actions (e.g., opening doors, turning appliances on/off, smart-home integration). The World Model should anticipate the consequences of these digital actions just as it does for physical robotic arm movements.

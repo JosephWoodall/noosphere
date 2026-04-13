@@ -1,3 +1,3 @@
-- [ ] Inject `PhysionetMI` (109 subjects) and `Cho2017` (52 subjects) into the `DATASET_CATALOGUE` to violently expand structural neuro-diversity.
-- [ ] Gut the singular `train_test_split` in `demo_real_eeg.py` and implement an internal `StratifiedKFold(n_splits=10)` loop per subject.
-- [ ] Aggregate per-fold metrics internally so the benchmark mathematically guarantees out-of-sample consistency without leakage.
+- [x] Inject `PhysionetMI` (109 subjects) and `Cho2017` (52 subjects) into the `DATASET_CATALOGUE` to violently expand structural neuro-diversity.
+- [x] Gut the singular `train_test_split` in `demo_real_eeg.py` and implement an internal `StratifiedKFold(n_splits=10)` loop per subject.
+- [x] Aggregate per-fold metrics internally so the benchmark mathematically guarantees out-of-sample consistency without leakage.

@@ -217,18 +217,34 @@ class NCPEncoder:
         )
 
     def identity_packet(self, sender_id: str, receiver_id: str, confidence: float, flags: int = Flags.NONE) -> bytes:
-        import json
-        payload = json.dumps({"sender": sender_id, "receiver": receiver_id, "confidence": confidence}).encode('utf-8')
+        """Binary packed identity: [confidence(f32), sender_len(u8), sender(str), receiver_len(u8), receiver(str)]"""
+        s_bytes = sender_id.encode('utf-8')[:32]
+        r_bytes = receiver_id.encode('utf-8')[:32]
+        payload = struct.pack("<fB", confidence, len(s_bytes)) + s_bytes + struct.pack("<B", len(r_bytes)) + r_bytes
         return self._frame(MsgType.IDENTITY, payload, flags)
 
     def iot_action_packet(self, entity_id: str, action: str, payload: dict, flags: int = Flags.NONE) -> bytes:
+        """Binary packed IoT: [action_code(u8), entity_len(u8), entity(str), data_len(u16), data(json)]"""
+        # We keep the payload data as JSON for flexibility, but wrap the core command in binary
         import json
-        p = json.dumps({"entity_id": entity_id, "action": action, "payload": payload}).encode('utf-8')
+        e_bytes = entity_id.encode('utf-8')[:64]
+        d_bytes = json.dumps(payload).encode('utf-8')
+        
+        # Action map
+        a_map = {"TOGGLE": 0, "LOCK": 1, "UNLOCK": 2, "MESSAGE": 3}
+        a_code = a_map.get(action, 255)
+        
+        p = struct.pack("<BBB", a_code, len(e_bytes), 0) + e_bytes + struct.pack("<H", len(d_bytes)) + d_bytes
         return self._frame(MsgType.IOT_ACTION, p, flags)
 
     def context_insight_packet(self, insight_type: str, data: dict, flags: int = Flags.NONE) -> bytes:
-        import json
-        p = json.dumps({"type": insight_type, "data": data}).encode('utf-8')
+        """Binary packed Insight: [type_code(u8), data_len(u16), data(zlib_json)]"""
+        import json, zlib
+        t_map = {"dynamics_residual": 0, "topological_flow": 1}
+        t_code = t_map.get(insight_type, 255)
+        
+        d_bytes = zlib.compress(json.dumps(data).encode('utf-8'))
+        p = struct.pack("<BH", t_code, len(d_bytes)) + d_bytes
         return self._frame(MsgType.CONTEXT_INSIGHT, p, flags)
 
     def heartbeat(self, uptime_ms: int, flags: int = Flags.NONE) -> bytes:
@@ -335,9 +351,26 @@ class NCPDecoder:
         elif t == MsgType.HEARTBEAT:
             (ms,) = struct.unpack("<I", p)
             return {"uptime_ms": ms}
-        elif t in (MsgType.IDENTITY, MsgType.IOT_ACTION, MsgType.CONTEXT_INSIGHT):
+        elif t == MsgType.IDENTITY:
+            conf, s_len = struct.unpack("<fB", p[:5])
+            sender = p[5 : 5 + s_len].decode('utf-8')
+            r_len = struct.unpack("<B", p[5 + s_len : 6 + s_len])[0]
+            receiver = p[6 + s_len : 6 + s_len + r_len].decode('utf-8')
+            return {"sender": sender, "receiver": receiver, "confidence": conf}
+        elif t == MsgType.IOT_ACTION:
             import json
-            return json.loads(p.decode('utf-8'))
+            a_code, e_len, _ = struct.unpack("<BBB", p[:3])
+            entity = p[3 : 3 + e_len].decode('utf-8')
+            d_len = struct.unpack("<H", p[3 + e_len : 5 + e_len])[0]
+            data = json.loads(p[5 + e_len : 5 + e_len + d_len].decode('utf-8'))
+            a_map = {0: "TOGGLE", 1: "LOCK", 2: "UNLOCK", 3: "MESSAGE"}
+            return {"entity_id": entity, "action": a_map.get(a_code, "UNKNOWN"), "payload": data}
+        elif t == MsgType.CONTEXT_INSIGHT:
+            import json, zlib
+            t_code, d_len = struct.unpack("<BH", p[:3])
+            data = json.loads(zlib.decompress(p[3 : 3 + d_len]).decode('utf-8'))
+            t_map = {0: "dynamics_residual", 1: "topological_flow"}
+            return {"type": t_map.get(t_code, "UNKNOWN"), "data": data}
         else:
             return {"raw": p}
 

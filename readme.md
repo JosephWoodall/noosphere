@@ -1,4 +1,4 @@
-# Noosphere v1.7.0 — The Personal Foundation Model
+# Noosphere v1.8.0 — The Personal Foundation Model
 
 **A physics-informed world model agent with Brain-Computer Interface (BCI) control, decentralized neural networking, and autonomous digital/physical execution.**
 
@@ -23,7 +23,7 @@ Unlike traditional "Universal" AI that tries to understand everyone, Noosphere *
 *   **Safety Gating:** A "Digital Twin" simulates the outcome of your thought *before* it happens. If the AI predicts a failure (e.g., "the arm will hit the table"), it intercepts and blocks the action.
 
 ### II. Intention-to-Communication (The Noosphere Network)
-*   **Neural Messaging:** Send `ActionTokens` and digital messages between users on a decentralized P2P network.
+*   **Neural Messaging:** Send binary-packed `ActionTokens` and digital messages between users on a decentralized P2P network.
 *   **Neural Prototyping (The "Mom" Mapping):** While 3-channel EEG cannot decode specific words, it decodes **Neural Prototypes**. By associating a specific mental focus (e.g., visualizing a face) with a contact, the S4 encoder maps this signature into an **Identity Manifold**.
 *   **Collaborative Learning:** Users can optionally enable **Inter-Agent Comms**. This allows agents to share "Dynamics Insights"—high-level mathematical patterns of how the world works—facilitating collective growth without sharing private neural data.
 
@@ -35,21 +35,16 @@ Unlike traditional "Universal" AI that tries to understand everyone, Noosphere *
 
 ## 3. Detailed Architecture
 
-### Multi-Sensory Early-Fusion
-Noosphere fuses three primary perception streams into a single Transformer backbone:
-1.  **Stream A (Spatial):** Vision (RGB/Depth), LiDAR, or digital system states (terminal buffers) processed via ViT-style patch tokenization.
-2.  **Stream B (Neural):** Raw EEG (C3, Cz, C4) at 256Hz processed by a State-Space Model (**S4EEGEncoder**).
-3.  **Stream C (Kinematic):** Joint states and device topologies managed by a learned-adjacency **Graph Neural Network (GNN)**.
+### Multi-Sensory Early-Fusion (Dual-Stream S4)
+Noosphere v1.8.0 introduces a **Dual-Stream S4EEGEncoder**:
+1.  **Global Riemannian Stream:** Uses tangent-space projection for stable covariance manifold features.
+2.  **Localized S4 Stream:** Employs deeper State-Space blocks with learned **SpatialAttention** for fine-grained temporal dynamics.
+3.  **Kinematic GNN:** Manages device topologies with learned-adjacency Graph Neural Networks.
 
 ### Physics-Augmented World Model (RSSM)
 The latent state `s_t = (h_t, z_t)` is governed by a strict Hamiltonian physics prior combined with a deep `ResidualCorrector`.
-*   **RK4 Transition Prior:** Hard-coded physics ODEs ensure the AI understands gravity, rotation, and fluid dynamics.
-*   **Hamiltonian Dynamics:** Operator fatigue and workload are modeled as decaying energy in a closed dynamical system, automatically scaling the MCTS path-planning budget.
-
-### SOTA Cognitive Capabilities
-*   **Topological Data Analysis (TDA):** Persistent homology tracking (Betti-0, Betti-1) on neural sequences to distinguish between "flow states" and "task-switching turbulence."
-*   **Predictive Pre-fetching:** S4 decodes the neurological "run-up" to an action, staging OS commands *before* you consciously finalize the intent.
-*   **UI-CLIP:** Local contrastive grounding that embeds terminal buffers directly into the same latent space as BCI signals, allowing "Visual Intent" without OCR.
+*   **Digital Consequence Head:** Predicts structured digital outcomes (Shell exit codes, IoT state changes) with supervised feedback loops.
+*   **Hardened NCP Binary Protocol:** High-density, low-latency binary packing for P2P identity and control frames.
 
 ---
 

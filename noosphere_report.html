@@ -42,7 +42,7 @@ footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #30363d;
 </head>
 <body>
 <h1>Noosphere S4 EEG Encoder &mdash; Benchmark Report</h1>
-<p>Generated 2026-04-12 14:50:42 &nbsp;&middot;&nbsp;
+<p>Generated 2026-04-12 19:20:34 &nbsp;&middot;&nbsp;
 Noosphere v1.6.0 &nbsp;&middot;&nbsp; 5 datasets &nbsp;&middot;&nbsp;
 <a href="https://github.com/JosephWoodall/noosphere">github.com/JosephWoodall/noosphere</a></p>
 
@@ -56,22 +56,22 @@ Noosphere v1.6.0 &nbsp;&middot;&nbsp; 5 datasets &nbsp;&middot;&nbsp;
 <h2>Executive Summary</h2>
 <div class="grid">
 <div class="card amber">
-  <div class="val">61.5%</div>
+  <div class="val">61.2%</div>
   <div class="sub">Within-subject accuracy<br>(S4, post-calibration)</div></div>
 <div class="card ">
   <div class="val">N/A</div>
   <div class="sub">Cross-subject accuracy<br>(LOSO, zero-shot)</div></div>
 <div class="card green">
-  <div class="val">+9.2%</div>
+  <div class="val">+8.9%</div>
   <div class="sub">S4 lift vs CSP+LDA<br>(within-subject)</div></div>
 <div class="card">
-  <div class="val">79.6M</div>
+  <div class="val">113.1M</div>
   <div class="sub">Model Complexity<br>(FLOPs per segment)</div></div>
 <div class="card">
-  <div class="val">4411.0K</div>
+  <div class="val">5285.0K</div>
   <div class="sub">Model Parameters<br>(Total count)</div></div>
 <div class="card red">
-  <div class="val">0.208</div>
+  <div class="val">0.196</div>
   <div class="sub">Cohen's &kappa; (S4)<br>within-subject mean</div></div>
 <div class="card amber">
   <div class="val">0/5</div>
@@ -80,13 +80,13 @@ Noosphere v1.6.0 &nbsp;&middot;&nbsp; 5 datasets &nbsp;&middot;&nbsp;
 <div class="callout"><p>
 <strong>Key finding:</strong>
 The Noosphere S4 EEG Encoder achieves
-<strong>61.5% within-subject accuracy</strong> (after brief calibration)
+<strong>61.2% within-subject accuracy</strong> (after brief calibration)
 and <strong>N/A zero-shot accuracy</strong> on unseen users
 across 5 public motor-imagery datasets.
-S4 outperforms the standard CSP+LDA baseline by <strong>+9.2pp</strong>
+S4 outperforms the standard CSP+LDA baseline by <strong>+8.9pp</strong>
 within-subject and <strong>N/A</strong> cross-subject.
 0 of 5 datasets reach Wilcoxon significance (p&lt;0.05, paired per-subject).
-Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
+Mean Cohen's &kappa; = 0.196 and AUC-ROC = 0.638.
 </p></div>
 
 <h2>Cross-Dataset Comparison</h2>
@@ -124,20 +124,20 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
 <td class="L"><strong>Schirrmeister2017</strong><br>
 <span style="font-size:.73rem;color:#8b949e">HGD -- 14 subjects, 4-class MI, 128-ch, 500 Hz</span></td>
 <td>4</td><td>2</td>
-<td class="warn">68.5%</td>
-<td>24.5%</td><td class="good">+44.0%</td><td><span class="nsig">p=1.000</span></td>
-<td class="good">0.580</td>
-<td class="good">0.868</td>
+<td class="warn">63.5%</td>
+<td>24.5%</td><td class="good">+39.0%</td><td><span class="nsig">p=1.000</span></td>
+<td class="good">0.514</td>
+<td class="good">0.840</td>
 <td class="warn">N/A</td>
 <td>N/A</td><td>N/A</td><td></td>
 </tr><tr>
 <td class="L"><strong>PhysionetMI</strong><br>
 <span style="font-size:.73rem;color:#8b949e">Physionet -- 109 subjects, 4-class MI, 64-ch, 160 Hz</span></td>
 <td>4</td><td>2</td>
-<td class="warn">63.2%</td>
-<td>61.2%</td><td class="good">+2.0%</td><td><span class="nsig">p=1.000</span></td>
-<td class="good">0.459</td>
-<td class="good">0.850</td>
+<td class="warn">67.0%</td>
+<td>61.2%</td><td class="good">+5.7%</td><td><span class="nsig">p=1.000</span></td>
+<td class="good">0.467</td>
+<td class="good">0.849</td>
 <td class="warn">N/A</td>
 <td>N/A</td><td>N/A</td><td></td>
 </tr><tr>
@@ -308,7 +308,7 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
 <h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
 <table>
 <tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
-<tr><td>Threshold &ge; 0.5</td><td>72.4%</td><td>87.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>84.8%</td><td>46.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+<tr><td>Threshold &ge; 0.5</td><td>71.5%</td><td>72.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>77.4%</td><td>15.5%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
 </table>
 
 
@@ -318,22 +318,22 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">68.5%</td>
-<td>68.4%</td>
-<td class="good">0.580</td>
-<td class="good">0.868</td>
-<td class="good">0.068</td>
-<td class="good">36.1</td>
-<td class="good">0.348</td>
-<td>-7.0%</td>
-<td>68.5% &pm; 1.5%</td>
-<td class="good">8/9</td>
+<td class="warn">63.5%</td>
+<td>63.5%</td>
+<td class="good">0.514</td>
+<td class="good">0.840</td>
+<td class="good">0.093</td>
+<td class="good">28.5</td>
+<td class="warn">0.286</td>
+<td>-5.0%</td>
+<td>63.5% &pm; 0.5%</td>
+<td class="good">7/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.60</td><td>0.76</td><td>0.67</td><td>0.86</td><td>49</td></tr><tr><td>1</td><td>0.75</td><td>0.66</td><td>0.70</td><td>0.88</td><td>50</td></tr><tr><td>2</td><td>0.70</td><td>0.46</td><td>0.55</td><td>0.80</td><td>50</td></tr><tr><td>3</td><td>0.72</td><td>0.86</td><td>0.79</td><td>0.93</td><td>51</td></tr>
+<tr><td>0</td><td>0.56</td><td>0.71</td><td>0.63</td><td>0.87</td><td>49</td></tr><tr><td>1</td><td>0.68</td><td>0.64</td><td>0.66</td><td>0.85</td><td>50</td></tr><tr><td>2</td><td>0.55</td><td>0.48</td><td>0.51</td><td>0.74</td><td>50</td></tr><tr><td>3</td><td>0.77</td><td>0.71</td><td>0.73</td><td>0.90</td><td>51</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -365,7 +365,7 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+44.0%</td>
+<tr><td class="good">+39.0%</td>
 <td>1.0000</td><td>0.000</td>
 <td class="warn">No</td>
 <td>2</td></tr>
@@ -380,7 +380,7 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
 <h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
 <table>
 <tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
-<tr><td>Threshold &ge; 0.5</td><td>72.8%</td><td>67.5%</td></tr><tr><td>Threshold &ge; 0.7</td><td>86.7%</td><td>17.2%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+<tr><td>Threshold &ge; 0.5</td><td>76.0%</td><td>75.6%</td></tr><tr><td>Threshold &ge; 0.7</td><td>97.0%</td><td>9.5%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
 </table>
 
 
@@ -390,22 +390,22 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">63.2%</td>
-<td>68.7%</td>
-<td class="good">0.459</td>
-<td class="good">0.850</td>
-<td class="good">0.076</td>
-<td class="good">28.1</td>
-<td class="good">0.377</td>
-<td>-3.4%</td>
-<td>63.2% &pm; 8.6%</td>
+<td class="warn">67.0%</td>
+<td>61.1%</td>
+<td class="good">0.467</td>
+<td class="good">0.849</td>
+<td class="good">0.105</td>
+<td class="good">33.7</td>
+<td class="good">0.452</td>
+<td>-2.9%</td>
+<td>67.0% &pm; 6.6%</td>
 <td class="good">8/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.89</td><td>0.57</td><td>0.70</td><td>0.81</td><td>213</td></tr><tr><td>1</td><td>0.43</td><td>0.76</td><td>0.55</td><td>0.87</td><td>46</td></tr><tr><td>2</td><td>0.59</td><td>0.73</td><td>0.65</td><td>0.90</td><td>44</td></tr><tr><td>3</td><td>0.41</td><td>0.69</td><td>0.51</td><td>0.82</td><td>45</td></tr>
+<tr><td>0</td><td>0.86</td><td>0.73</td><td>0.79</td><td>0.84</td><td>213</td></tr><tr><td>1</td><td>0.47</td><td>0.59</td><td>0.52</td><td>0.86</td><td>46</td></tr><tr><td>2</td><td>0.40</td><td>0.59</td><td>0.48</td><td>0.83</td><td>44</td></tr><tr><td>3</td><td>0.53</td><td>0.53</td><td>0.53</td><td>0.87</td><td>45</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -437,7 +437,7 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+2.0%</td>
+<tr><td class="good">+5.7%</td>
 <td>1.0000</td><td>0.000</td>
 <td class="warn">No</td>
 <td>2</td></tr>
@@ -466,7 +466,7 @@ Mean Cohen's &kappa; = 0.208 and AUC-ROC = 0.644.
 <td>100.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
-<td class="good">0.123</td>
+<td class="good">0.125</td>
 <td class="good">60.0</td>
 <td class="warn">nan</td>
 <td>0.0%</td>

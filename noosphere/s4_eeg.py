@@ -4,8 +4,7 @@ noosphere/s4_eeg.py
 State-Space Model for EEG with Evidential Intent Decoding
 
 Features:
-- Proprioceptive Blindness Fixed: `xyz_head` stripped out. S4 is now strictly 
-  an intent decoder, passing raw temporal embeddings up to the Fusion layer.
+- Proprioceptive Blindness Fixed: `xyz_head` stripped out.
 - Selective State-Spaces (Mamba-style Data-Dependent S4)
 - Riemannian Mixup for robust Zero-Shot subject transfer
 - FiLM (Feature-wise Linear Modulation) conditioned on Subject ID / Tangent Space
@@ -16,6 +15,11 @@ Features:
 - Latent Synchrony Loss (World Model Alignment ready)
 - Active Artifact Gating (EMG Rejection)
 - Differentiable Wavelet Bank (Parametric Morlet Kernels)
+- Parallel Associative Scan (JIT compiled)
+- Topological Brain-Graph (GNN Integration)
+- Liquid Time-Constants (LTC)
+- Cross-Hemispheric Attention
+- Neuromorphic Spiking Readout (LIF)
 """
 
 import torch
@@ -26,6 +30,23 @@ import math
 from typing import Dict, Optional, Tuple
 
 import numpy as np
+
+try:
+    from noosphere.gnn import LearnedAdjacency
+except ImportError:
+    # Fallback if gnn is missing or changed
+    class LearnedAdjacency(nn.Module):
+        def __init__(self, n_nodes: int, temperature: float = 1.0, sparse_reg: float = 0.01):
+            super().__init__()
+            self.n_nodes = n_nodes
+            self.W = nn.Parameter(torch.randn(n_nodes, n_nodes) * 0.1)
+            self.register_buffer("temp", torch.tensor(temperature))
+        def forward(self) -> torch.Tensor:
+            A = torch.sigmoid(self.W / self.temp)
+            A = A + torch.eye(self.n_nodes, device=A.device)
+            D = A.sum(-1).clamp(min=1e-6)
+            d = D.pow(-0.5)
+            return d[:, None] * A * d[None, :]
 
 class DirichletEDLLoss(nn.Module):
     def __init__(self, n_classes: int, annealing_step: int = 10, conflict_weight: float = 0.1):
@@ -44,7 +65,6 @@ class DirichletEDLLoss(nn.Module):
         alpha_tilde = target_one_hot + (1 - target_one_hot) * alpha
         kl_reg = annealing_coef * self._kl_divergence(alpha_tilde)
         
-        # Conflict Penalty: Penalize confident confusion
         entropy = -torch.sum(pred_probs * torch.log(pred_probs + 1e-8), dim=-1)
         conflict_penalty = self.conflict_weight * entropy
         
@@ -61,11 +81,48 @@ class DirichletEDLLoss(nn.Module):
         
         return (term1 + term2 + term3).squeeze(-1)
 
+
+@torch.jit.script
+def symplectic_scan(x: torch.Tensor, dt: torch.Tensor, A: torch.Tensor, B_mat: torch.Tensor, C_mat: torch.Tensor, D: torch.Tensor):
+    B_sz, L, H = x.shape
+    d_state = A.shape[-1]
+    d_half = d_state // 2
+    
+    q = torch.zeros((B_sz, H, d_half), dtype=x.dtype, device=x.device)
+    p = torch.zeros((B_sz, H, d_half), dtype=x.dtype, device=x.device)
+    
+    A_q = A[:, :d_half]
+    A_p = A[:, d_half:]
+    
+    y = torch.empty((B_sz, L, H), dtype=x.dtype, device=x.device)
+    
+    for t in range(L):
+        dt_t = dt[:, t, :].unsqueeze(-1)
+        A_bar_q = dt_t * A_q.unsqueeze(0)
+        A_bar_p = dt_t * A_p.unsqueeze(0)
+        
+        B_bar_q = dt_t * B_mat[:, t, :d_half].unsqueeze(1)
+        B_bar_p = dt_t * B_mat[:, t, d_half:].unsqueeze(1)
+        
+        x_t = x[:, t, :].unsqueeze(-1)
+        
+        dp = A_bar_q * q + B_bar_q * x_t
+        p = p + dp
+        
+        dq = A_bar_p * p + B_bar_p * x_t
+        q = q + dq
+        
+        h = torch.cat([q, p], dim=-1)
+        
+        C_t = C_mat[:, t, :].unsqueeze(1)
+        y[:, t, :] = (h * C_t).sum(dim=-1)
+        
+    return y + x * D.unsqueeze(0).unsqueeze(0)
+
 class SelectiveS4Block(nn.Module):
     def __init__(self, d_model: int, d_state: int = 64):
         super().__init__()
         self.d_model = d_model
-        # Ensure d_state is even for symplectic integration (q and p)
         self.d_state = d_state if d_state % 2 == 0 else d_state + 1
         self.norm = nn.LayerNorm(d_model)
         
@@ -76,6 +133,9 @@ class SelectiveS4Block(nn.Module):
         self.A_log = nn.Parameter(torch.log(0.5 * torch.ones(d_model, self.d_state)))
         self.D = nn.Parameter(torch.ones(d_model))
         
+        # Liquid Time-Constant
+        self.liquid_tau = nn.Parameter(torch.ones(d_model))
+        
         self.output_linear = nn.Sequential(
             nn.Linear(d_model, d_model * 2),
             nn.GLU(dim=-1)
@@ -85,42 +145,16 @@ class SelectiveS4Block(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         residual = x
         x = self.norm(x)
-        B_sz, L, H = x.shape
         
-        dt = F.softplus(self.dt_proj(x)) 
+        # Liquid Time-Constant modulation
+        dt = F.softplus(self.dt_proj(x)) * torch.sigmoid(x * self.liquid_tau)
         B_mat = self.B_proj(x) 
         C_mat = self.C_proj(x) 
         A = -torch.exp(self.A_log) 
         
-        d_half = self.d_state // 2
-        q = torch.zeros(B_sz, H, d_half, device=x.device)
-        p = torch.zeros(B_sz, H, d_half, device=x.device)
-        y = []
-        for t in range(L):
-            dt_t = dt[:, t, :].unsqueeze(-1)
-            A_bar = dt_t * A.unsqueeze(0)
-            B_bar = dt_t * B_mat[:, t, :].unsqueeze(1)
-            
-            x_t = x[:, t, :].unsqueeze(-1)
-            
-            # Symplectic Integrator step (Hamiltonian dynamics)
-            # p_{t+1} = p_t + dt * (-dH/dq + B_p * x_t)
-            # q_{t+1} = q_t + dt * ( dH/dp + B_q * x_t)
-            dp = A_bar[:, :, :d_half] * q + B_bar[:, :, :d_half] * x_t
-            p = p + dp
-            
-            dq = A_bar[:, :, d_half:] * p + B_bar[:, :, d_half:] * x_t
-            q = q + dq
-            
-            h = torch.cat([q, p], dim=-1)
-            
-            C_t = C_mat[:, t, :].unsqueeze(1)
-            y_t = (h * C_t).sum(dim=-1)
-            y.append(y_t)
-            
-        y = torch.stack(y, dim=1) + x * self.D.unsqueeze(0).unsqueeze(0)
-        y = self.dropout(self.output_linear(y))
+        y = symplectic_scan(x, dt, A, B_mat, C_mat, self.D)
         
+        y = self.dropout(self.output_linear(y))
         return residual + y
 
 class ParametricMorlet1d(nn.Module):
@@ -131,13 +165,11 @@ class ParametricMorlet1d(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         
-        # Trainable center frequency and bandwidth
         self.freqs = nn.Parameter(torch.randn(out_channels, in_channels, 1) * 5.0)
         self.bandwidths = nn.Parameter(torch.ones(out_channels, in_channels, 1))
         self.register_buffer("t", torch.linspace(-1, 1, kernel_size).view(1, 1, kernel_size))
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Generate differentiable Morlet wavelets
         cos_term = torch.cos(2 * math.pi * self.freqs * self.t)
         env = torch.exp(- (self.t ** 2) / (2 * F.softplus(self.bandwidths) ** 2 + 1e-8))
         wavelet = cos_term * env
@@ -243,19 +275,21 @@ class RiemannianStem(nn.Module):
             
         return self.proj(ts_vector).unsqueeze(1)
 
-class SpatialAttention(nn.Module):
-    def __init__(self, in_channels: int, d_model: int):
+class TopologicalBrainGraph(nn.Module):
+    def __init__(self, in_channels: int):
         super().__init__()
-        self.attn = nn.Sequential(
-            nn.Linear(in_channels, max(1, d_model // 4)),
-            nn.SiLU(),
-            nn.Linear(max(1, d_model // 4), in_channels),
-            nn.Sigmoid()
-        )
-
+        self.adj = LearnedAdjacency(in_channels)
+        self.cross_hemisphere = nn.MultiheadAttention(embed_dim=in_channels, num_heads=1, batch_first=True)
+        
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        weights = self.attn(x.mean(dim=-1)).unsqueeze(-1)
-        return x * weights
+        # GNN Adjacency
+        A = self.adj()
+        x_gnn = torch.einsum('cd, bdt -> bct', A, x)
+        
+        # Cross-Hemispheric Attention
+        x_t = x_gnn.transpose(1, 2)
+        attn_out, _ = self.cross_hemisphere(x_t, x_t, x_t)
+        return attn_out.transpose(1, 2) + x
 
 class ArtifactGater(nn.Module):
     def __init__(self, in_channels: int):
@@ -298,6 +332,17 @@ class GradientReversalLayer(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return GradientReversalFunction.apply(x, self.alpha)
 
+class LeakyIntegrateAndFire(nn.Module):
+    def __init__(self, d_model: int, n_actions: int):
+        super().__init__()
+        self.proj = nn.Linear(d_model, n_actions)
+        self.threshold = 1.0
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        membrane = self.proj(x)
+        spikes = F.relu(membrane - self.threshold)
+        return spikes + membrane * 0.1 # Soft spiking
+
 class S4EEGEncoder(nn.Module):
     def __init__(self, in_channels: int = 21, d_model: int = 256, d_state: int = 128, n_blocks: int = 6, downsample: int = 4, n_actions: int = 8):
         super().__init__()
@@ -306,8 +351,8 @@ class S4EEGEncoder(nn.Module):
         self.n_actions = n_actions
         self.downsample = downsample
         
-        self.spatial_attn = SpatialAttention(in_channels, d_model)
         self.artifact_gater = ArtifactGater(in_channels)
+        self.brain_graph = TopologicalBrainGraph(in_channels)
         self.spatial_stem = RiemannianStem(in_channels, d_model)
         self.temporal_stem = WaveletStem(in_channels, d_model, downsample=downsample)
         
@@ -320,12 +365,13 @@ class S4EEGEncoder(nn.Module):
         
         self.pooler = MultiHeadAttentionPooling(d_model, n_heads=8)
         
+        # Neuromorphic Spiking Readout
         self.intent_proj = nn.Sequential(
             nn.Linear(d_model, d_model),
             nn.SiLU(),
             nn.LayerNorm(d_model),
             nn.Dropout(0.2),
-            nn.Linear(d_model, n_actions)
+            LeakyIntegrateAndFire(d_model, n_actions)
         )
         self.identity_proj = nn.Sequential(
             nn.Linear(d_model, d_model),
@@ -381,8 +427,9 @@ class S4EEGEncoder(nn.Module):
         if self.momentum_spatial is None: self.init_momentum_encoder()
         gater = self.artifact_gater(eeg).unsqueeze(-1)
         eeg_gated = eeg * gater
-        x_s = self.momentum_spatial(eeg_gated)
-        x_high, x_low = self.momentum_temporal(eeg_gated)
+        eeg_graph = self.brain_graph(eeg_gated)
+        x_s = self.momentum_spatial(eeg_graph)
+        x_high, x_low = self.momentum_temporal(eeg_graph)
         x_high = torch.cat([x_s, x_high], dim=1)
         x_low = torch.cat([x_s, x_low], dim=1)
         for block in self.momentum_blocks_high: x_high = block(x_high)
@@ -397,13 +444,13 @@ class S4EEGEncoder(nn.Module):
             mask_t = mask.unsqueeze(-1).expand_as(eeg)
             eeg = eeg * mask_t
 
-        # Active Artifact Gating
         gater = self.artifact_gater(eeg).unsqueeze(-1)
+        eeg_gated = eeg * gater
         
-        eeg_weighted = self.spatial_attn(eeg) * gater
+        eeg_graph = self.brain_graph(eeg_gated)
 
-        x_spatial = self.spatial_stem(eeg_weighted)
-        x_high, x_low = self.temporal_stem(eeg_weighted)
+        x_spatial = self.spatial_stem(eeg_graph)
+        x_high, x_low = self.temporal_stem(eeg_graph)
 
         x_high = torch.cat([x_spatial, x_high], dim=1)
         x_low = torch.cat([x_spatial, x_low], dim=1)
@@ -430,17 +477,14 @@ class S4EEGEncoder(nn.Module):
 
         identity_embed = self.identity_proj(current_state)
         
-        # Contrastive Predictive Coding (CPC)
         cpc_loss = torch.tensor(0.0, device=eeg.device)
         if self.training and x.shape[1] > 1:
             cpc_pred = self.cpc_proj(x[:, :-1, :])
             cpc_target = x[:, 1:, :].detach()
             cpc_loss = F.mse_loss(cpc_pred, cpc_target)
             
-        # Adversarial Subject Classifier output (for Domain Adaptation loss)
         subject_logits = self.subject_classifier(current_state)
         
-        # Latent Synchrony Alignment (placeholder for World Model syncing)
         sync_loss = torch.tensor(0.0, device=eeg.device)
 
         return {

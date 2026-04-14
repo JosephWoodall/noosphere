@@ -230,11 +230,9 @@ class RiemannianStem(nn.Module):
         x = x - x.mean(dim=-1, keepdim=True)
         cov = torch.bmm(x, x.transpose(1, 2)) / (T - 1)
         
-        # 2. Robust Shrinkage: add trace-relative identity to ensure positive definiteness
-        # Especially important for low-density arrays or noisy signals
+        # 2. Robust Shrinkage: more aggressive to avoid singular matrices
         trace = torch.diagonal(cov, dim1=-2, dim2=-1).sum(-1, keepdim=True).unsqueeze(-1)
-        # Combine trace-relative eps with a small fixed floor to handle zero-padded channels
-        eps = (1e-4 * trace / C) + 1e-6
+        eps = (1e-3 * trace / C) + 1e-5
         eye = torch.eye(C, device=x.device).unsqueeze(0)
         cov = cov + eps * eye
         
@@ -243,11 +241,12 @@ class RiemannianStem(nn.Module):
             from torch.linalg import eigh
             # Cast to float64 for stable decomposition
             vals, vecs = eigh(cov.to(torch.float64))
-            vals = torch.log(vals.clamp(min=1e-9))
+            # Safely clamp and log
+            vals = torch.log(vals.clamp(min=1e-7))
             log_cov = torch.bmm(vecs, torch.bmm(torch.diag_embed(vals), vecs.transpose(1, 2)))
             log_cov = log_cov.to(torch.float32)
         except Exception:
-            # Fallback to zero log-covariance if eigh fails
+            # More robust fallback: identity-like log-cov
             log_cov = torch.zeros_like(cov)
         
         # 4. Extract upper triangle for vectorization
@@ -384,6 +383,7 @@ class S4EEGEncoder(nn.Module):
 
         # 6. Evidential Decoding
         evidence = F.softplus(self.intent_proj(current_state))
+        evidence = torch.clamp(evidence, max=1e10) # Prevent inf
         alpha = evidence + 1.0
         S = torch.sum(alpha, dim=-1, keepdim=True)
         intent_probs = alpha / S

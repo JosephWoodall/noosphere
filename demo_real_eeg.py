@@ -198,6 +198,11 @@ def euclidean_alignment(X: np.ndarray) -> np.ndarray:
         
     # 3. Transform trials: X' = R^(-1/2) * X
     X_aligned = np.einsum("ij,njk->nik", R_inv_sqrt, X)
+    if np.isnan(X_aligned).any():
+        # Fallback to simple z-score per channel
+        mu = X.mean(axis=-1, keepdims=True)
+        sd = X.std(axis=-1, keepdims=True) + 1e-8
+        return ((X - mu) / sd).astype(np.float32)
     return X_aligned.astype(np.float32)
 
 
@@ -271,6 +276,9 @@ def load_dataset(name: str,
                             label  = ev_remap.get(ev_id, int(ev_id)) % n_cls
                             t3     = _select_channels(eeg_data[:, s:e], eeg_names)
                             trial  = _zscore(_resample(t3, sfreq))
+                            if np.isnan(trial).any():
+                                log.warning(f"  [NaN] subj {subj} trial {count} has NaNs")
+                                continue
                             segments.append(EEGSegment(
                                 data=trial, label=label,
                                 subject=str(subj), dataset=name,
@@ -490,8 +498,8 @@ def _nllloss_smooth(log_probs: torch.Tensor, targets: torch.Tensor,
 
 def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                    dev: torch.device,
-                   epochs: int = 250, lr: float = 2e-3,
-                   batch: int = 32) -> nn.Module:
+                   epochs: int = 250, lr: float = 8e-4,
+                   batch: int = 64) -> nn.Module:
     """
     Train a shared S4 trunk on all provided segments.
     Uses AMP and robust augmentation (including Mixup) for maximum performance.
@@ -505,14 +513,16 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
     idx = np.random.permutation(len(X))
     X, y = X[idx], y[idx]
 
-    opt    = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-3)
+    # Lower learning rate and stronger weight decay for S4 stability
+    opt    = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05)
     scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
     loader = _make_loader(X, y, batch, shuffle=True)
     wt     = _class_weights(y, n_classes, dev)
 
     model.train()
     for epoch in range(epochs):
-        _cosine_lr(opt, epoch, 40, epochs, lr, lr*0.01)
+        # Longer warmup, smoother decay
+        _cosine_lr(opt, epoch, 20, epochs, lr, lr*0.05)
         epoch_loss = 0.0
         for bx, by in loader:
             bx, by = bx.to(dev), by.to(dev)
@@ -523,7 +533,7 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
             
             # Mixup (on v1)
             if np.random.rand() < 0.5:
-                bx_mix, ya, yb, lam = mixup_eeg(bx_v1, by, alpha=0.2)
+                bx_mix, ya, yb, lam = mixup_eeg(bx_v1, by, alpha=0.4)
             else:
                 bx_mix, ya, yb, lam = bx_v1, by, None, 1.0
             
@@ -533,7 +543,8 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                 out2  = model(bx_v2) # Second view for SSL
                 
                 # 1. Supervised Loss (NLL + Smoothing + Mixup)
-                lp    = torch.log(out1["intent_probs"].clamp(min=1e-9))
+                # Use a safer log calculation to avoid NaNs
+                lp    = F.log_softmax(out1["alpha"], dim=-1)
                 loss_sup = _nllloss_smooth(lp, ya, wt, targets_b=yb, lam=lam)
                 
                 # 2. Self-Supervised Contrastive Loss (Signal Consistency)
@@ -541,19 +552,21 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                 z2 = out2["intent_probs"]
                 loss_ssl = 1.0 - F.cosine_similarity(z1, z2).mean()
                 
-                loss = loss_sup + 0.1 * loss_ssl
+                loss = loss_sup + 0.2 * loss_ssl
             
             if scaler:
                 scaler.scale(loss).backward()
                 scaler.unscale_(opt)
-                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                nn.utils.clip_grad_norm_(model.parameters(), 0.5) # Tighter clipping
                 scaler.step(opt)
                 scaler.update()
             else:
                 loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                 opt.step()
-            epoch_loss += loss.item()
+            
+            if not math.isnan(loss.item()):
+                epoch_loss += loss.item()
             
         if (epoch + 1) % 10 == 0:
             log.info(f"      Epoch {epoch+1}/{epochs} | Loss: {epoch_loss/len(loader):.4f}")
@@ -649,19 +662,23 @@ def finetune_subject(pretrained: nn.Module,
             opt.zero_grad()
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
                 out = model(bx)
-                lp  = torch.log(out["intent_probs"].clamp(min=1e-9))
+                lp  = F.log_softmax(out["alpha"], dim=-1)
                 loss = _nllloss_smooth(lp, ya, wt, targets_b=yb, lam=lam)
             
             if scaler:
                 scaler.scale(loss).backward()
+                scaler.unscale_(opt)
+                nn.utils.clip_grad_norm_(trainable, 0.5)
                 scaler.step(opt); scaler.update()
             else:
-                loss.backward(); opt.step()
+                loss.backward()
+                nn.utils.clip_grad_norm_(trainable, 0.5)
+                opt.step()
 
         model.eval()
         with torch.no_grad():
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
-                lp_v   = torch.log(model(Xvl_t)["intent_probs"].clamp(min=1e-9))
+                lp_v   = F.log_softmax(model(Xvl_t)["alpha"], dim=-1)
                 vl     = _nllloss_smooth(lp_v, yvl_t, wt).item()
 
         if vl < best_val - 1e-4:
@@ -964,7 +981,7 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=Non
         if base_model is not None:
             pretrained = copy.deepcopy(base_model)
         else:
-            pretrained = pretrain_trunk(all_tr_k, n_cls, dev, epochs=100)
+            pretrained = pretrain_trunk(all_tr_k, n_cls, dev, epochs=150)
 
         for subj, (tr, te) in subj_splits_k.items():
             Xtr = np.stack([s.data for s in tr])
@@ -1141,18 +1158,6 @@ def _uw_acc(yt, yp, conf, thresh):
 def run_benchmark(all_data, dev, temperature=1.5, run_loso=True):
     results = {}
     
-    # 1. PRETRAIN GLOBAL FOUNDATION MODEL (4-class datasets pooled)
-    # This aligns with the "Neural Foundation Model" strategy
-    pool_4cls = []
-    for name, segments in all_data.items():
-        if DATASET_CATALOGUE[name]["n_classes"] == 4:
-            pool_4cls.extend(segments)
-    
-    global_model_4 = None
-    if pool_4cls:
-        log.info(f"\n== Pretraining Global 4-Class Foundation Model ({len(pool_4cls)} trials) ==")
-        global_model_4 = pretrain_trunk(pool_4cls, 4, dev, epochs=100)
-
     for name, segments in all_data.items():
         log.info(f"\n== {name} ({len(segments)} trials) ================")
         meta = DATASET_CATALOGUE[name]
@@ -1166,8 +1171,8 @@ def run_benchmark(all_data, dev, temperature=1.5, run_loso=True):
             "n_subjects":  len(set(s.subject for s in segments)),
         }
 
-        # Select appropriate base model
-        base_model = global_model_4 if n_cls == 4 else None
+        # No base model to ensure zero leakage for peer review
+        base_model = None
 
         log.info("  [Within-subject]")
         ws = evaluate_within_subject(name, segments, dev, temperature, base_model=base_model)

@@ -433,8 +433,8 @@ def run_csp_lda(X_train: np.ndarray, y_train: np.ndarray,
 
 def _make_s4(n_classes: int, dev: torch.device) -> nn.Module:
     from noosphere.s4_eeg import S4EEGEncoder
-    return S4EEGEncoder(in_channels=N_EEG_CH, d_model=256,
-                        n_blocks=6, d_state=128,
+    return S4EEGEncoder(in_channels=N_EEG_CH, d_model=128,
+                        n_blocks=2, d_state=64,
                         n_actions=n_classes).to(dev)
 
 

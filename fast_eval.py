@@ -148,78 +148,41 @@ def infer_baseline(model: nn.Module, X: np.ndarray, dev: torch.device) -> np.nda
 
 def fast_pretrain(X: np.ndarray, y: np.ndarray, n_cls: int,
                   dev: torch.device,
-                  epochs: int = 100, lr: float = 8e-4, batch: int = 64) -> nn.Module:
+                  epochs: int = 200, lr: float = 8e-4, batch: int = 64) -> nn.Module:
     from noosphere.s4_eeg import S4EEGEncoder
     model = S4EEGEncoder(
-        in_channels=N_EEG_CH, d_model=256,
-        n_blocks=4, d_state=64, n_actions=n_cls,
-        use_lif=False
+        in_channels=N_EEG_CH, d_model=32,
+        n_actions=n_cls
     ).to(dev)
 
+
     loader = _make_loader(X, y, batch, shuffle=True)
-    wt     = _class_weights(y, n_cls, dev)
     
     from noosphere.s4_eeg import DirichletEDLLoss
-    edl_loss_fn = DirichletEDLLoss(n_classes=n_cls, annealing_step=100).to(dev)
+    edl_loss_fn = DirichletEDLLoss(n_classes=n_cls).to(dev)
 
-    s4_params, reg_params = [], []
-    for name, p in model.named_parameters():
-        if "blocks" in name and any(k in name for k in ["dt", "A_log", "B", "C"]):
-            s4_params.append(p)
-        else:
-            reg_params.append(p)
-    opt = optim.AdamW([
-        {'params': reg_params, 'weight_decay': 0.05},
-        {'params': s4_params,  'weight_decay': 0.0, 'lr': lr * 0.5}
-    ], lr=lr)
+    opt = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
 
     model.train()
     for epoch in range(epochs):
-        _cosine_lr(opt, epoch, 5, epochs, lr, lr * 0.05)
+        _cosine_lr(opt, epoch, 10, epochs, lr, lr * 0.01)
         for bx, by in loader:
             bx, by = bx.to(dev), by.to(dev)
             
-            # Channel Dropout (Zero out random channels to improve robustness)
-            if np.random.rand() < 0.2:
-                # bx: (B, C, T)
-                mask_ch = (torch.rand(bx.shape[0], bx.shape[1], 1, device=dev) > 0.15).float()
-                bx = bx * mask_ch
-
-            bx_v1 = augment_eeg(bx)
-            bx_v2 = augment_eeg(bx)
-            if np.random.rand() < 0.5:
-                bx_mix, ya, yb, lam = mixup_eeg(bx_v1, by, alpha=0.4)
-            else:
-                bx_mix, ya, yb, lam = bx_v1, by, None, 1.0
-
+            # Simple supervised focus
             opt.zero_grad()
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
-                out1 = model(bx_mix)
-                out2 = model(bx_v2)
-                alpha1 = out1["alpha"].float()
-                y_ohe_a = F.one_hot(ya, num_classes=n_cls).float()
-                if yb is None:
-                    loss_sup = edl_loss_fn(alpha1, y_ohe_a, epoch)
-                else:
-                    loss_a = edl_loss_fn(alpha1, y_ohe_a, epoch)
-                    loss_b = edl_loss_fn(alpha1, F.one_hot(yb, num_classes=n_cls).float(), epoch)
-                    loss_sup = lam * loss_a + (1 - lam) * loss_b
-                    
-                # Consistency on embeddings, not probabilities
-                e1 = out1["embed"]
-                e2 = out2["embed"]
-                loss_ssl = F.mse_loss(F.normalize(e1, dim=-1), F.normalize(e2, dim=-1))
-                loss = loss_sup + 0.1 * loss_ssl
+                out = model(bx)
+                loss = edl_loss_fn(out["alpha"], F.one_hot(by, num_classes=n_cls).float(), epoch)
 
             if scaler:
                 scaler.scale(loss).backward()
-                scaler.unscale_(opt)
-                nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 scaler.step(opt); scaler.update()
             else:
                 loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 opt.step()
 
     model.eval()

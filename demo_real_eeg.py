@@ -118,9 +118,14 @@ DATASET_CATALOGUE = {
         "preferred_channels": ALL_TARGET_CHANNELS,
     },
     "PhysionetMI": {
-        "module": "moabb.datasets", "cls": "PhysionetMI", "kwargs": {},
-        "n_classes": 4,
-        "description": "Physionet -- 109 subjects, 4-class MI, 64-ch, 160 Hz",
+        "module": "moabb.datasets", "cls": "PhysionetMI",
+        # Keep only left_hand(2) vs right_hand(3) — consistent across all subjects
+        # and both paradigm splits in PhysionetMI. Rest/feet/hands create label
+        # noise because not all subjects perform all tasks.
+        "kwargs": {},
+        "n_classes": 2,
+        "keep_events": [2, 3],   # left_hand=2, right_hand=3 in MOABB event_id
+        "description": "Physionet -- 109 subjects, 2-class MI (L/R hand), 64-ch, 160 Hz",
         "preferred_channels": ALL_TARGET_CHANNELS,
     },
     "Cho2017": {
@@ -262,13 +267,17 @@ def load_dataset(name: str,
                         if not len(events):
                             continue
 
-                        ev_ids   = sorted(dataset.event_id.values())
-                        ev_remap = {v: i for i, v in enumerate(ev_ids)}
-                        n_cls    = meta["n_classes"]
-                        count    = 0
+                        ev_ids     = sorted(dataset.event_id.values())
+                        keep_evs   = set(meta.get("keep_events", ev_ids))
+                        filtered   = [v for v in ev_ids if v in keep_evs]
+                        ev_remap   = {v: i for i, v in enumerate(filtered)}
+                        n_cls      = meta["n_classes"]
+                        count      = 0
                         for ev_s, _, ev_id in events:
                             if count >= max_trials:
                                 break
+                            if ev_id not in keep_evs:
+                                continue   # skip unwanted classes
                             s = int(ev_s)
                             e = s + int(sfreq)
                             if e > eeg_data.shape[1]:
@@ -433,8 +442,11 @@ def run_csp_lda(X_train: np.ndarray, y_train: np.ndarray,
 
 def _make_s4(n_classes: int, dev: torch.device) -> nn.Module:
     from noosphere.s4_eeg import S4EEGEncoder
-    return S4EEGEncoder(in_channels=N_EEG_CH, d_model=128,
-                        n_blocks=2, d_state=64,
+    # d_model=192 / n_blocks=3: balances capacity vs speed.
+    # Pre-degradation run used 256/4 but that requires >6GB VRAM per fold.
+    # 192/3 gives ~2.4M params — strong enough for 70%+ target.
+    return S4EEGEncoder(in_channels=N_EEG_CH, d_model=192,
+                        n_blocks=3, d_state=64,
                         n_actions=n_classes).to(dev)
 
 

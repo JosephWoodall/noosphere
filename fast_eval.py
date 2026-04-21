@@ -148,67 +148,41 @@ def infer_baseline(model: nn.Module, X: np.ndarray, dev: torch.device) -> np.nda
 
 def fast_pretrain(X: np.ndarray, y: np.ndarray, n_cls: int,
                   dev: torch.device,
-                  epochs: int = 60, lr: float = 8e-4, batch: int = 64) -> nn.Module:
+                  epochs: int = 200, lr: float = 8e-4, batch: int = 64) -> nn.Module:
     from noosphere.s4_eeg import S4EEGEncoder
     model = S4EEGEncoder(
-        in_channels=N_EEG_CH, d_model=192,
-        n_blocks=3, d_state=64, n_actions=n_cls
+        in_channels=N_EEG_CH, d_model=32,
+        n_actions=n_cls
     ).to(dev)
 
+
     loader = _make_loader(X, y, batch, shuffle=True)
-    wt     = _class_weights(y, n_cls, dev)
+    
+    from noosphere.s4_eeg import DirichletEDLLoss
+    edl_loss_fn = DirichletEDLLoss(n_classes=n_cls).to(dev)
 
-    # Focal-weighted NLL to handle class imbalance (PhysionetMI fix)
-    def focal_nll(lp, targets, wt, gamma=2.0, eps=0.05):
-        """Focal loss variant of label-smoothed NLL."""
-        n_cls  = lp.shape[-1]
-        sl     = eps / n_cls
-        sh     = 1.0 - eps + sl
-        soft   = torch.full_like(lp, sl)
-        soft.scatter_(1, targets.unsqueeze(1), sh)
-        ce     = -(soft * lp).sum(-1)
-        # focal weight: down-weight easy examples
-        with torch.no_grad():
-            p_t = lp.exp().gather(1, targets.unsqueeze(1)).squeeze(1).clamp(1e-8, 1.0)
-            fw  = (1.0 - p_t) ** gamma
-        return (fw * ce * wt[targets]).mean()
-
-    opt    = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05)
+    opt = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
 
     model.train()
     for epoch in range(epochs):
-        _cosine_lr(opt, epoch, 5, epochs, lr, lr * 0.05)
+        _cosine_lr(opt, epoch, 10, epochs, lr, lr * 0.01)
         for bx, by in loader:
             bx, by = bx.to(dev), by.to(dev)
-            bx_v1 = augment_eeg(bx)
-            bx_v2 = augment_eeg(bx)
-            if np.random.rand() < 0.5:
-                bx_mix, ya, yb, lam = mixup_eeg(bx_v1, by, alpha=0.4)
-            else:
-                bx_mix, ya, yb, lam = bx_v1, by, None, 1.0
-
+            
+            # Simple supervised focus
             opt.zero_grad()
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
-                out1 = model(bx_mix)
-                out2 = model(bx_v2)
-                lp   = F.log_softmax(out1["alpha"], dim=-1)
-                loss_sup = focal_nll(lp, ya, wt) if yb is None else (
-                    lam * focal_nll(lp, ya, wt) + (1 - lam) * focal_nll(lp, yb, wt)
-                )
-                z1 = out1["intent_probs"]
-                z2 = out2["intent_probs"]
-                loss_ssl = 1.0 - F.cosine_similarity(z1, z2).mean()
-                loss = loss_sup + 0.2 * loss_ssl
+                out = model(bx)
+                loss = edl_loss_fn(out["alpha"], F.one_hot(by, num_classes=n_cls).float(), epoch)
 
             if scaler:
                 scaler.scale(loss).backward()
-                scaler.unscale_(opt)
-                nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 scaler.step(opt); scaler.update()
             else:
                 loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 opt.step()
 
     model.eval()
@@ -227,6 +201,9 @@ def fast_finetune(pretrained: nn.Module, Xtr: np.ndarray, ytr: np.ndarray,
         trainable = list(model.parameters())
 
     wt  = _class_weights(ytr, n_cls, dev)
+    from noosphere.s4_eeg import DirichletEDLLoss
+    edl_loss_fn = DirichletEDLLoss(n_classes=n_cls, annealing_step=25).to(dev)
+    
     opt = optim.AdamW(trainable, lr=lr, weight_decay=1e-4)
     scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
     loader = _make_loader(Xtr, ytr, min(batch, max(1, len(Xtr))), shuffle=True)
@@ -240,8 +217,9 @@ def fast_finetune(pretrained: nn.Module, Xtr: np.ndarray, ytr: np.ndarray,
             opt.zero_grad()
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
                 out  = model(bx)
-                lp   = F.log_softmax(out["alpha"], dim=-1)
-                loss = _nllloss_smooth(lp, by, wt)
+                alpha = out["alpha"].float()  # Avoid float16 lgamma overflow
+                y_ohe = F.one_hot(by, num_classes=n_cls).float()
+                loss = edl_loss_fn(alpha, y_ohe, epoch)
             if scaler:
                 scaler.scale(loss).backward()
                 scaler.unscale_(opt)

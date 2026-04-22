@@ -182,26 +182,26 @@ def _resample(data: np.ndarray, orig_sfreq: float) -> np.ndarray:
     return np.pad(r, ((0, 0), (0, SEGMENT_SAMPLES - r.shape[1])), mode="edge")
 
 
-def euclidean_alignment(X: np.ndarray) -> np.ndarray:
+def compute_ea_reference(X: np.ndarray) -> np.ndarray:
     """
-    Normalizes EEG trials to a reference manifold (He & Wu, 2019).
+    Compute the reference matrix R (mean covariance) from training trials.
     X: (N_trials, C, T)
-    Returns: (N_trials, C, T) aligned data.
     """
-    if len(X) == 0: return X
-    # 1. Compute average covariance across all trials
+    if len(X) == 0: return np.eye(2) # Fallback
     covs = np.array([np.cov(trial) for trial in X])
     R = np.mean(covs, axis=0)
-    
-    # 2. Compute R^(-1/2) using eigenvalue decomposition
     from scipy.linalg import fractional_matrix_power
     try:
         R_inv_sqrt = fractional_matrix_power(R, -0.5).real
     except Exception:
-        # Fallback for singular matrices
         R_inv_sqrt = np.eye(X.shape[1])
-        
-    # 3. Transform trials: X' = R^(-1/2) * X
+    return R_inv_sqrt
+
+def apply_ea(X: np.ndarray, R_inv_sqrt: np.ndarray) -> np.ndarray:
+    """
+    Apply a pre-computed EA reference to data.
+    """
+    # X' = R^(-1/2) * X
     X_aligned = np.einsum("ij,njk->nik", R_inv_sqrt, X)
     if np.isnan(X_aligned).any():
         # Fallback to simple z-score per channel
@@ -209,6 +209,14 @@ def euclidean_alignment(X: np.ndarray) -> np.ndarray:
         sd = X.std(axis=-1, keepdims=True) + 1e-8
         return ((X - mu) / sd).astype(np.float32)
     return X_aligned.astype(np.float32)
+
+def euclidean_alignment(X: np.ndarray) -> np.ndarray:
+    """
+    Legacy wrapper: fits and transforms on same data.
+    WARNING: Only use this when X is strictly training data.
+    """
+    R_inv = compute_ea_reference(X)
+    return apply_ea(X, R_inv)
 
 
 def _zscore(data: np.ndarray) -> np.ndarray:
@@ -510,80 +518,78 @@ def _nllloss_smooth(log_probs: torch.Tensor, targets: torch.Tensor,
 
 def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                    dev: torch.device,
-                   epochs: int = 250, lr: float = 8e-4,
-                   batch: int = 64) -> nn.Module:
+                   epochs: int = 150, lr: float = 8e-4,
+                   batch: int = 64, val_frac: float = 0.15) -> nn.Module:
     """
-    Train a shared S4 trunk on all provided segments.
-    Uses AMP and robust augmentation (including Mixup) for maximum performance.
+    Train a shared S4 trunk with a dedicated validation set for early stopping.
     """
     model = _make_s4(n_classes, dev)
-    if not segments:
-        return model
+    if not segments: return model
 
-    X   = np.stack([s.data for s in segments])
-    y   = np.array([s.label % n_classes for s in segments])
-    idx = np.random.permutation(len(X))
-    X, y = X[idx], y[idx]
+    X = np.stack([s.data for s in segments])
+    y = np.array([s.label % n_classes for s in segments])
+    
+    # Stratified Train/Val split
+    val_idx, tr_idx = [], []
+    for c in range(n_classes):
+        ci = np.where(y == c)[0]
+        if not len(ci): continue
+        nv = max(1, int(len(ci) * val_frac))
+        np.random.shuffle(ci)
+        val_idx.extend(ci[:nv].tolist())
+        tr_idx.extend(ci[nv:].tolist())
+        
+    Xtr, ytr = X[tr_idx], y[tr_idx]
+    Xval, yval = X[val_idx], y[val_idx]
 
-    # Lower learning rate and stronger weight decay for S4 stability
     opt    = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05)
     scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
-    loader = _make_loader(X, y, batch, shuffle=True)
-    wt     = _class_weights(y, n_classes, dev)
+    loader = _make_loader(Xtr, ytr, batch, shuffle=True)
+    wt     = _class_weights(ytr, n_classes, dev)
+
+    best_val_acc = 0.0
+    best_state = copy.deepcopy(model.state_dict())
+    patience_counter = 0
+    patience = 25
 
     model.train()
     for epoch in range(epochs):
-        # Longer warmup, smoother decay
-        _cosine_lr(opt, epoch, 20, epochs, lr, lr*0.05)
-        epoch_loss = 0.0
+        _cosine_lr(opt, epoch, 10, epochs, lr, lr*0.05)
         for bx, by in loader:
             bx, by = bx.to(dev), by.to(dev)
-            
-            # Contrastive SSL: Generate two views of the same batch
-            bx_v1 = augment_eeg(bx)
-            bx_v2 = augment_eeg(bx)
-            
-            # Mixup (on v1)
-            if np.random.rand() < 0.5:
-                bx_mix, ya, yb, lam = mixup_eeg(bx_v1, by, alpha=0.4)
-            else:
-                bx_mix, ya, yb, lam = bx_v1, by, None, 1.0
-            
+            bx_aug = augment_eeg(bx)
             opt.zero_grad()
             with torch.amp.autocast("cuda", enabled=(scaler is not None)):
-                out1  = model(bx_mix)
-                out2  = model(bx_v2) # Second view for SSL
-                
-                # 1. Supervised Loss (NLL + Smoothing + Mixup)
-                # Use a safer log calculation to avoid NaNs
-                lp    = F.log_softmax(out1["alpha"], dim=-1)
-                loss_sup = _nllloss_smooth(lp, ya, wt, targets_b=yb, lam=lam)
-                
-                # 2. Self-Supervised Contrastive Loss (Signal Consistency)
-                z1 = out1["intent_probs"]
-                z2 = out2["intent_probs"]
-                loss_ssl = 1.0 - F.cosine_similarity(z1, z2).mean()
-                
-                loss = loss_sup + 0.2 * loss_ssl
+                out = model(bx_aug)
+                loss = _nllloss_smooth(F.log_softmax(out["alpha"], dim=-1), by, wt)
             
             if scaler:
                 scaler.scale(loss).backward()
-                scaler.unscale_(opt)
-                nn.utils.clip_grad_norm_(model.parameters(), 0.5) # Tighter clipping
-                scaler.step(opt)
-                scaler.update()
+                nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+                scaler.step(opt); scaler.update()
             else:
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                 opt.step()
-            
-            if not math.isnan(loss.item()):
-                epoch_loss += loss.item()
-            
-        if (epoch + 1) % 10 == 0:
-            log.info(f"      Epoch {epoch+1}/{epochs} | Loss: {epoch_loss/len(loader):.4f}")
+        
+        # Validation Check
+        model.eval()
+        with torch.no_grad():
+            v_out = model(torch.from_numpy(Xval).to(dev))
+            v_acc = (v_out["intent_probs"].argmax(-1).cpu().numpy() == yval).mean()
+            if v_acc > best_val_acc:
+                best_val_acc = v_acc
+                best_state = copy.deepcopy(model.state_dict())
+                patience_counter = 0
+            else:
+                patience_counter += 1
+        model.train()
+        
+        if patience_counter >= patience:
+            log.info(f"    Early stopping at epoch {epoch+1}")
+            break
 
-    log.info(f"    Pretrain done ({epochs} ep, {len(segments)} segs)")
+    model.load_state_dict(best_state)
     return model
 
 
@@ -935,98 +941,78 @@ def _compute_metrics(y_true, y_pred, y_prob, confs, lats_ms,
 
 def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=None):
     """
-    10-fold Stratified Cross-Validation with Euclidean Alignment.
+    Performs a 75/25 chronological split per subject.
+    EA reference is calculated strictly on the first 75% of trials.
     """
     meta      = DATASET_CATALOGUE[name]
     n_cls     = meta["n_classes"]
     subj_map  = defaultdict(list)
     for s in segments: subj_map[s.subject].append(s)
-
     subjects = sorted(subj_map.keys())
-    subj_folds = {}
-    skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-    
-    # Pre-align each subject globally to center their distribution
-    aligned_subj_data = {}
-    for subj in subjects:
-        segs = subj_map[subj]
-        X = np.stack([s.data for s in segs])
-        X_ea = euclidean_alignment(X)
-        aligned_subj_data[subj] = X_ea
-        
-        y = np.array([s.label % n_cls for s in segs])
-        try:
-            subj_folds[subj] = list(skf.split(np.zeros(len(segs)), y))
-        except ValueError:
-            skf_small = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
-            subj_folds[subj] = list(skf_small.split(np.zeros(len(segs)), y))
 
     s4_yt, s4_yp, s4_yprob, s4_conf, s4_lat = [], [], [], [], []
     csp_yt, csp_yp, csp_yprob               = [], [], []
     test_segs: List[EEGSegment]              = []
 
-    for fold_idx in range(10):
-        log.info(f"    --- Fold {fold_idx+1}/10 ---")
-        all_tr_k = []
-        subj_splits_k = {}
+    log.info(f"    [Within-Subject] Chronological Split 75/25")
+    
+    all_tr = []
+    subject_evals = {}
+
+    for subj in subjects:
+        segs = subj_map[subj]
+        n_trials = len(segs)
+        if n_trials < 4: continue
         
-        for subj in subjects:
-            segs = subj_map[subj]
-            folds = subj_folds[subj]
-            if fold_idx >= len(folds): continue
-                
-            train_idx, test_idx = folds[fold_idx]
-            
-            # Create segments with EA-transformed data
-            X_ea = aligned_subj_data[subj]
-            tr = [EEGSegment(X_ea[i], segs[i].label, segs[i].subject, segs[i].dataset, segs[i].sfreq_orig) 
-                  for i in train_idx]
-            te = [EEGSegment(X_ea[i], segs[i].label, segs[i].subject, segs[i].dataset, segs[i].sfreq_orig) 
-                  for i in test_idx]
-            
-            all_tr_k.extend(tr)
-            subj_splits_k[subj] = (tr, te)
+        # Chronological split: first 75% train, last 25% test
+        split_idx = int(n_trials * 0.75)
+        tr_orig = segs[:split_idx]
+        te_orig = segs[split_idx:]
+        
+        # 1. Fit EA reference strictly on training set
+        Xtr_raw = np.stack([s.data for s in tr_orig])
+        R_inv_sqrt = compute_ea_reference(Xtr_raw)
+        
+        # 2. Apply alignment to both splits using ONLY the training reference
+        tr = [EEGSegment(apply_ea(s.data[None], R_inv_sqrt)[0], s.label, s.subject, s.dataset, s.sfreq_orig) 
+              for s in tr_orig]
+        te = [EEGSegment(apply_ea(s.data[None], R_inv_sqrt)[0], s.label, s.subject, s.dataset, s.sfreq_orig) 
+              for s in te_orig]
+        
+        all_tr.extend(tr)
+        subject_evals[subj] = (tr, te)
 
-        if not all_tr_k: continue
+    if not all_tr: return {}
 
-        # Use foundation model if provided, else train fresh trunk
-        if base_model is not None:
-            pretrained = copy.deepcopy(base_model)
-        else:
-            pretrained = pretrain_trunk(all_tr_k, n_cls, dev, epochs=150)
+    # Pretrain shared trunk on all-subjects' training splits
+    if base_model is not None:
+        pretrained = copy.deepcopy(base_model)
+    else:
+        pretrained = pretrain_trunk(all_tr, n_cls, dev, epochs=150)
 
-        for subj, (tr, te) in subj_splits_k.items():
-            Xtr = np.stack([s.data for s in tr])
-            ytr = np.array([s.label % n_cls for s in tr])
-            Xte = np.stack([s.data for s in te])
-            yte = np.array([s.label % n_cls for s in te])
+    for subj, (tr, te) in subject_evals.items():
+        Xtr = np.stack([s.data for s in tr])
+        ytr = np.array([s.label % n_cls for s in tr])
+        Xte = np.stack([s.data for s in te])
+        yte = np.array([s.label % n_cls for s in te])
 
-            model = finetune_subject(pretrained, Xtr, ytr, n_cls, dev)
-            pred, prob, lat = infer_s4(model, Xte, dev, T=temperature)
-            
-            s4_yt.extend(yte)
-            s4_yp.extend(pred)
-            s4_yprob.extend(prob)
-            s4_conf.extend(prob.max(1))
-            s4_lat.extend([lat]*len(yte))
-            test_segs.extend(te)
+        model = finetune_subject(pretrained, Xtr, ytr, n_cls, dev)
+        pred, prob, lat = infer_s4(model, Xte, dev, T=temperature)
+        
+        s4_yt.extend(yte); s4_yp.extend(pred); s4_yprob.extend(prob)
+        s4_conf.extend(prob.max(1)); s4_lat.extend([lat]*len(yte))
+        test_segs.extend(te)
 
-            cp, cp_prob = run_csp_lda(Xtr, ytr, Xte)
-            csp_yt.extend(yte)
-            csp_yp.extend(cp)
-            csp_yprob.extend(cp_prob)
+        cp, cp_prob = run_csp_lda(Xtr, ytr, Xte)
+        csp_yt.extend(yte); csp_yp.extend(cp); csp_yprob.extend(cp_prob)
 
-            del model
-            if dev.type == "cuda": torch.cuda.empty_cache()
+        del model
+        if dev.type == "cuda": torch.cuda.empty_cache()
 
     if not s4_yt: return {}
 
-    s4_yt   = np.array(s4_yt)
-    s4_yp    = np.array(s4_yp)
-    s4_yprob = np.array(s4_yprob)
-    s4_conf = np.array(s4_conf)
-    csp_yt  = np.array(csp_yt)
-    csp_yp   = np.array(csp_yp)
+    s4_yt   = np.array(s4_yt); s4_yp = np.array(s4_yp); s4_yprob = np.array(s4_yprob)
+    s4_conf = np.array(s4_conf); csp_yt = np.array(csp_yt); csp_yp = np.array(csp_yp)
     csp_yprob = np.array(csp_yprob)
 
     s4m  = _compute_metrics(s4_yt,  s4_yp,  s4_yprob,  s4_conf,
@@ -1061,7 +1047,8 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=Non
 
 def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
     """
-    Leave-one-subject-out with Euclidean Alignment.
+    Leave-one-subject-out (LOSO) with zero-shot generalization.
+    Held-out subject is aligned using only a 10-trial calibration window.
     """
     meta      = DATASET_CATALOGUE[name]
     n_cls     = meta["n_classes"]
@@ -1073,30 +1060,40 @@ def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
         log.warning(f"    LOSO skipped ({name}): need >= 2 subjects")
         return {}
 
-    # Pre-align all subjects for cross-subject consistency
-    aligned_subj_data = {}
-    for subj in subjects:
-        segs = subj_map[subj]
-        X = np.stack([s.data for s in segs])
-        aligned_subj_data[subj] = euclidean_alignment(X)
-
     s4_yt, s4_yp, s4_yprob, s4_conf, s4_lat = [], [], [], [], []
     csp_yt, csp_yp, csp_yprob               = [], [], []
     test_segs: List[EEGSegment]              = []
 
     for held in subjects:
+        log.info(f"    LOSO held-out subject: {held}")
+        
+        # 1. Prepare training data (N-1 subjects)
         tr_segs = []
         for subj in subjects:
             if subj == held: continue
-            X_ea = aligned_subj_data[subj]
+            
+            # Align each training subject strictly using their own session
+            # (valid as they are strictly training data relative to the held-out test)
+            X_subj_raw = np.stack([s.data for s in subj_map[subj]])
+            R_inv = compute_ea_reference(X_subj_raw)
+            X_aligned = apply_ea(X_subj_raw, R_inv)
+            
             orig = subj_map[subj]
-            for i in range(len(X_ea)):
-                tr_segs.append(EEGSegment(X_ea[i], orig[i].label, orig[i].subject, orig[i].dataset, orig[i].sfreq_orig))
+            for i in range(len(X_aligned)):
+                tr_segs.append(EEGSegment(X_aligned[i], orig[i].label, orig[i].subject, orig[i].dataset, orig[i].sfreq_orig))
         
+        # 2. Prepare test data (held-out subject)
+        # CRITICAL: Align held-out subject using ONLY their first 10 trials as calibration
         te_orig = subj_map[held]
-        X_ea_te = aligned_subj_data[held]
-        te_segs = [EEGSegment(X_ea_te[i], te_orig[i].label, te_orig[i].subject, te_orig[i].dataset, te_orig[i].sfreq_orig)
-                   for i in range(len(X_ea_te))]
+        X_te_raw = np.stack([s.data for s in te_orig])
+        
+        # Calibration window (e.g. first 10 trials)
+        X_cal = X_te_raw[:10]
+        R_inv_te = compute_ea_reference(X_cal)
+        X_te_aligned = apply_ea(X_te_raw, R_inv_te)
+        
+        te_segs = [EEGSegment(X_te_aligned[i], te_orig[i].label, te_orig[i].subject, te_orig[i].dataset, te_orig[i].sfreq_orig)
+                   for i in range(len(X_te_aligned))]
 
         if not tr_segs or not te_segs: continue
 
@@ -1105,16 +1102,19 @@ def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
         Xte = np.stack([s.data for s in te_segs])
         yte = np.array([s.label % n_cls for s in te_segs])
 
+        # Train on N-1 subjects
         if base_model is not None:
             model = copy.deepcopy(base_model)
         else:
             model = pretrain_trunk(tr_segs, n_cls, dev, epochs=150)
             
+        # Zero-shot inference on held-out subject
         pred, prob, lat = infer_s4(model, Xte, dev, T=temperature)
         s4_yt.extend(yte);  s4_yp.extend(pred)
         s4_yprob.extend(prob); s4_conf.extend(prob.max(1))
         s4_lat.extend([lat]*len(yte)); test_segs.extend(te_segs)
 
+        # Baseline: CSP+LDA fitted on N-1 subjects
         cp, cp_prob = run_csp_lda(Xtr, ytr, Xte)
         csp_yt.extend(yte); csp_yp.extend(cp); csp_yprob.extend(cp_prob)
 

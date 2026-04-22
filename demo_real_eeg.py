@@ -572,14 +572,20 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
                 nn.utils.clip_grad_norm_(model.parameters(), 0.5)
                 opt.step()
         
-        # Validation Check
+        # Validation Check (Batched to prevent OOM)
         model.eval()
+        v_accs = []
+        v_loader = _make_loader(Xval, yval, batch, shuffle=False)
         with torch.no_grad():
-            v_out = model(torch.from_numpy(Xval).to(dev))
-            v_acc = (v_out["intent_probs"].argmax(-1).cpu().numpy() == yval).mean()
+            for bvx, bvy in v_loader:
+                bvx, bvy = bvx.to(dev), bvy.to(dev)
+                v_out = model(bvx)
+                v_accs.append((v_out["intent_probs"].argmax(-1) == bvy).float().mean().item())
+            
+            v_acc = np.mean(v_accs)
             if v_acc > best_val_acc:
                 best_val_acc = v_acc
-                best_state = copy.deepcopy(model.state_dict())
+                best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
                 patience_counter = 0
             else:
                 patience_counter += 1
@@ -936,6 +942,104 @@ def _compute_metrics(y_true, y_pred, y_prob, confs, lats_ms,
 
 
 # =============================================================================
+# SECTION 6.5 -- BASELINE DEEP LEARNING MODELS (EEGNet, Shallow)
+# =============================================================================
+
+class EEGNet(nn.Module):
+    def __init__(self, n_channels, n_classes, n_samples):
+        super().__init__()
+        # Optimized EEGNet-8,2 (Lawhern et al. 2018)
+        self.temp_conv = nn.Sequential(
+            nn.Conv2d(1, 8, (1, 64), padding=(0, 32), bias=False),
+            nn.BatchNorm2d(8)
+        )
+        self.depth_conv = nn.Sequential(
+            nn.Conv2d(8, 16, (n_channels, 1), groups=8, bias=False),
+            nn.BatchNorm2d(16),
+            nn.ELU(),
+            nn.AvgPool2d((1, 4)),
+            nn.Dropout(0.5)
+        )
+        self.sep_conv = nn.Sequential(
+            nn.Conv2d(16, 16, (1, 16), padding=(0, 8), groups=16, bias=False),
+            nn.Conv2d(16, 16, 1, bias=False),
+            nn.BatchNorm2d(16),
+            nn.ELU(),
+            nn.AvgPool2d((1, 8)),
+            nn.Dropout(0.5)
+        )
+        # Calculate feature dim after pooling
+        fc_in = 16 * (n_samples // 32)
+        self.fc = nn.Linear(fc_in, n_classes)
+
+    def forward(self, x):
+        if x.dim() == 3: x = x.unsqueeze(1)
+        x = self.temp_conv(x)
+        x = self.depth_conv(x)
+        x = self.sep_conv(x)
+        x = x.view(x.size(0), -1)
+        return self.fc(x)
+
+class ShallowConvNet(nn.Module):
+    def __init__(self, n_channels, n_classes, n_samples):
+        super().__init__()
+        self.temp_conv = nn.Conv2d(1, 40, (1, 25), bias=False)
+        self.spatial_conv = nn.Conv2d(40, 40, (n_channels, 1), bias=False)
+        self.bn = nn.BatchNorm2d(40)
+        self.pool = nn.AvgPool2d((1, 75), stride=(1, 15))
+        self.drop = nn.Dropout(0.5)
+        # Adaptive pooling to ensure fixed feature size across trial lengths
+        self.ap = nn.AdaptiveAvgPool2d((1, 12))
+        self.fc = nn.Linear(40 * 12, n_classes)
+
+    def forward(self, x):
+        if x.dim() == 3: x = x.unsqueeze(1)
+        x = self.temp_conv(x)
+        x = self.spatial_conv(x)
+        x = self.bn(x)
+        x = torch.log(self.pool(x.pow(2)).clamp(min=1e-6))
+        x = self.ap(x).view(x.size(0), -1)
+        return self.fc(self.drop(x))
+
+def train_baseline(model_type, Xtr, ytr, Xval, yval, n_cls, dev, epochs=150):
+    C, T = Xtr.shape[1], Xtr.shape[2]
+    if model_type == "eegnet":
+        model = EEGNet(C, n_cls, T).to(dev)
+    else:
+        model = ShallowConvNet(C, n_cls, T).to(dev)
+    
+    opt = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-3)
+    loader = _make_loader(Xtr, ytr, 32, shuffle=True)
+    
+    best_val_acc = 0.0
+    best_state = None
+    patience, counter = 25, 0
+    
+    for epoch in range(epochs):
+        model.train()
+        for bx, by in loader:
+            bx, by = bx.to(dev), by.to(dev)
+            opt.zero_grad()
+            loss = F.cross_entropy(model(bx), by)
+            loss.backward()
+            opt.step()
+            
+        model.eval()
+        with torch.no_grad():
+            v_out = model(torch.from_numpy(Xval).to(dev))
+            v_acc = (v_out.argmax(-1).cpu().numpy() == yval).mean()
+            if v_acc > best_val_acc:
+                best_val_acc = v_acc
+                best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+                counter = 0
+            else:
+                counter += 1
+        if counter >= patience: break
+        
+    if best_state: model.load_state_dict(best_state)
+    return model
+
+# =============================================================================
 # SECTION 7 -- WITHIN-SUBJECT EVALUATION
 # =============================================================================
 
@@ -951,10 +1055,12 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=Non
     subjects = sorted(subj_map.keys())
 
     s4_yt, s4_yp, s4_yprob, s4_conf, s4_lat = [], [], [], [], []
+    en_yt, en_yp, en_yprob                  = [], [], []
+    sc_yt, sc_yp, sc_yprob                  = [], [], []
     csp_yt, csp_yp, csp_yprob               = [], [], []
     test_segs: List[EEGSegment]              = []
 
-    log.info(f"    [Within-Subject] Chronological Split 75/25")
+    log.info(f"    [Within-Subject] Chronological Split 75/25 with Full Baselines")
     
     all_tr = []
     subject_evals = {}
@@ -962,7 +1068,7 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=Non
     for subj in subjects:
         segs = subj_map[subj]
         n_trials = len(segs)
-        if n_trials < 4: continue
+        if n_trials < 10: continue
         
         # Chronological split: first 75% train, last 25% test
         split_idx = int(n_trials * 0.75)
@@ -995,48 +1101,49 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=Non
         ytr = np.array([s.label % n_cls for s in tr])
         Xte = np.stack([s.data for s in te])
         yte = np.array([s.label % n_cls for s in te])
+        
+        # Internal validation split for baselines
+        v_idx = int(len(Xtr) * 0.8)
+        Xtr_b, ytr_b = Xtr[:v_idx], ytr[:v_idx]
+        Xvl_b, yval_b = Xtr[v_idx:], ytr[v_idx:]
 
+        # 1. RS-S4
         model = finetune_subject(pretrained, Xtr, ytr, n_cls, dev)
         pred, prob, lat = infer_s4(model, Xte, dev, T=temperature)
-        
         s4_yt.extend(yte); s4_yp.extend(pred); s4_yprob.extend(prob)
         s4_conf.extend(prob.max(1)); s4_lat.extend([lat]*len(yte))
         test_segs.extend(te)
 
+        # 2. EEGNet
+        en_model = train_baseline("eegnet", Xtr_b, ytr_b, Xvl_b, yval_b, n_cls, dev)
+        en_out = F.softmax(en_model(torch.from_numpy(Xte).to(dev)), dim=-1).cpu().detach().numpy()
+        en_yt.extend(yte); en_yp.extend(en_out.argmax(1)); en_yprob.extend(en_out)
+
+        # 3. ShallowConvNet
+        sc_model = train_baseline("shallow", Xtr_b, ytr_b, Xvl_b, yval_b, n_cls, dev)
+        sc_out = F.softmax(sc_model(torch.from_numpy(Xte).to(dev)), dim=-1).cpu().detach().numpy()
+        sc_yt.extend(yte); sc_yp.extend(sc_out.argmax(1)); sc_yprob.extend(sc_out)
+
+        # 4. CSP+LDA
         cp, cp_prob = run_csp_lda(Xtr, ytr, Xte)
         csp_yt.extend(yte); csp_yp.extend(cp); csp_yprob.extend(cp_prob)
 
-        del model
+        del model, en_model, sc_model
         if dev.type == "cuda": torch.cuda.empty_cache()
 
     if not s4_yt: return {}
 
-    s4_yt   = np.array(s4_yt); s4_yp = np.array(s4_yp); s4_yprob = np.array(s4_yprob)
-    s4_conf = np.array(s4_conf); csp_yt = np.array(csp_yt); csp_yp = np.array(csp_yp)
-    csp_yprob = np.array(csp_yprob)
-
-    s4m  = _compute_metrics(s4_yt,  s4_yp,  s4_yprob,  s4_conf,
-                             np.array(s4_lat), n_cls, test_segs, "within_subject_s4")
-    cspm = _compute_metrics(csp_yt, csp_yp, csp_yprob,
-                             csp_yprob.max(1), np.full(len(csp_yt), 0.5),
-                             n_cls, test_segs, "within_subject_csp_lda")
-
-    subj_s4  = s4m.get("subject_accuracies", {})
-    subj_csp = cspm.get("subject_accuracies", {})
-    common   = sorted(set(subj_s4) & set(subj_csp))
-    pval, eff = _wilcoxon(
-        np.array([subj_s4[s]  for s in common]),
-        np.array([subj_csp[s] for s in common])) if len(common)>=3 else (1.0, 0.0)
+    # Final Metric Compilation
+    s4m  = _compute_metrics(np.array(s4_yt), np.array(s4_yp), np.array(s4_yprob), np.array(s4_conf), np.array(s4_lat), n_cls, test_segs, "within_subject_s4")
+    enm  = _compute_metrics(np.array(en_yt), np.array(en_yp), np.array(en_yprob), np.array(en_yprob).max(1), np.zeros(len(en_yt)), n_cls, test_segs, "within_subject_eegnet")
+    scm  = _compute_metrics(np.array(sc_yt), np.array(sc_yp), np.array(sc_yprob), np.array(sc_yprob).max(1), np.zeros(len(sc_yt)), n_cls, test_segs, "within_subject_shallow")
+    cspm = _compute_metrics(np.array(csp_yt), np.array(csp_yp), np.array(csp_yprob), np.array(csp_yprob).max(1), np.zeros(len(csp_yt)), n_cls, test_segs, "within_subject_csp_lda")
 
     return {
-        "s4": s4m, "csp_lda": cspm,
-        "raw_s4": {"yt": s4_yt, "yp": s4_yp, "conf": s4_conf},
+        "s4": s4m, "eegnet": enm, "shallow": scm, "csp_lda": cspm,
         "comparison": {
-            "s4_vs_csp_delta": s4m["accuracy"] - cspm["accuracy"],
-            "wilcoxon_p":      pval,
-            "effect_r":        eff,
-            "significant_p05": pval < 0.05,
-            "n_subjects":      len(common),
+            "s4_vs_eegnet": s4m["accuracy"] - enm["accuracy"],
+            "s4_vs_shallow": s4m["accuracy"] - scm["accuracy"],
         },
     }
 
@@ -1061,6 +1168,8 @@ def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
         return {}
 
     s4_yt, s4_yp, s4_yprob, s4_conf, s4_lat = [], [], [], [], []
+    en_yt, en_yp, en_yprob                  = [], [], []
+    sc_yt, sc_yp, sc_yprob                  = [], [], []
     csp_yt, csp_yp, csp_yprob               = [], [], []
     test_segs: List[EEGSegment]              = []
 
@@ -1071,27 +1180,19 @@ def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
         tr_segs = []
         for subj in subjects:
             if subj == held: continue
-            
-            # Align each training subject strictly using their own session
-            # (valid as they are strictly training data relative to the held-out test)
             X_subj_raw = np.stack([s.data for s in subj_map[subj]])
             R_inv = compute_ea_reference(X_subj_raw)
             X_aligned = apply_ea(X_subj_raw, R_inv)
-            
             orig = subj_map[subj]
             for i in range(len(X_aligned)):
                 tr_segs.append(EEGSegment(X_aligned[i], orig[i].label, orig[i].subject, orig[i].dataset, orig[i].sfreq_orig))
         
-        # 2. Prepare test data (held-out subject)
-        # CRITICAL: Align held-out subject using ONLY their first 10 trials as calibration
+        # 2. Prepare test data (held-out subject) aligned via 10-trial calibration
         te_orig = subj_map[held]
         X_te_raw = np.stack([s.data for s in te_orig])
-        
-        # Calibration window (e.g. first 10 trials)
         X_cal = X_te_raw[:10]
         R_inv_te = compute_ea_reference(X_cal)
         X_te_aligned = apply_ea(X_te_raw, R_inv_te)
-        
         te_segs = [EEGSegment(X_te_aligned[i], te_orig[i].label, te_orig[i].subject, te_orig[i].dataset, te_orig[i].sfreq_orig)
                    for i in range(len(X_te_aligned))]
 
@@ -1101,58 +1202,44 @@ def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
         ytr = np.array([s.label % n_cls for s in tr_segs])
         Xte = np.stack([s.data for s in te_segs])
         yte = np.array([s.label % n_cls for s in te_segs])
+        
+        v_idx = int(len(Xtr) * 0.8)
+        Xtr_b, ytr_b = Xtr[:v_idx], ytr[:v_idx]
+        Xvl_b, yval_b = Xtr[v_idx:], ytr[v_idx:]
 
-        # Train on N-1 subjects
-        if base_model is not None:
-            model = copy.deepcopy(base_model)
-        else:
-            model = pretrain_trunk(tr_segs, n_cls, dev, epochs=150)
-            
-        # Zero-shot inference on held-out subject
+        # 1. RS-S4 (Foundation model)
+        model = pretrain_trunk(tr_segs, n_cls, dev, epochs=150)
         pred, prob, lat = infer_s4(model, Xte, dev, T=temperature)
-        s4_yt.extend(yte);  s4_yp.extend(pred)
-        s4_yprob.extend(prob); s4_conf.extend(prob.max(1))
-        s4_lat.extend([lat]*len(yte)); test_segs.extend(te_segs)
+        s4_yt.extend(yte); s4_yp.extend(pred); s4_yprob.extend(prob); s4_conf.extend(prob.max(1)); s4_lat.extend([lat]*len(yte))
+        test_segs.extend(te_segs)
 
-        # Baseline: CSP+LDA fitted on N-1 subjects
+        # 2. EEGNet
+        en_model = train_baseline("eegnet", Xtr_b, ytr_b, Xvl_b, yval_b, n_cls, dev)
+        en_out = F.softmax(en_model(torch.from_numpy(Xte).to(dev)), dim=-1).cpu().detach().numpy()
+        en_yt.extend(yte); en_yp.extend(en_out.argmax(1)); en_yprob.extend(en_out)
+
+        # 3. ShallowConvNet
+        sc_model = train_baseline("shallow", Xtr_b, ytr_b, Xvl_b, yval_b, n_cls, dev)
+        sc_out = F.softmax(sc_model(torch.from_numpy(Xte).to(dev)), dim=-1).cpu().detach().numpy()
+        sc_yt.extend(yte); sc_yp.extend(sc_out.argmax(1)); sc_yprob.extend(sc_out)
+
+        # 4. CSP+LDA
         cp, cp_prob = run_csp_lda(Xtr, ytr, Xte)
         csp_yt.extend(yte); csp_yp.extend(cp); csp_yprob.extend(cp_prob)
-
-        log.info(f"    LOSO held={held}  S4={float((pred==yte).mean()):.1%}"
-                 f"  CSP={float((cp==yte).mean()):.1%}")
         
-        del model
+        del model, en_model, sc_model
         if dev.type == "cuda": torch.cuda.empty_cache()
 
-    if not s4_yt: return {}
-
-    s4_yt   = np.array(s4_yt);   s4_yp    = np.array(s4_yp)
-    s4_yprob = np.array(s4_yprob); s4_conf = np.array(s4_conf)
-    csp_yt  = np.array(csp_yt);  csp_yp   = np.array(csp_yp)
-    csp_yprob = np.array(csp_yprob)
-
-    s4m  = _compute_metrics(s4_yt,  s4_yp,  s4_yprob,  s4_conf,
-                             np.array(s4_lat), n_cls, test_segs, "loso_s4")
-    cspm = _compute_metrics(csp_yt, csp_yp, csp_yprob,
-                             csp_yprob.max(1), np.full(len(csp_yt), 0.5),
-                             n_cls, test_segs, "loso_csp_lda")
-
-    subj_s4  = s4m.get("subject_accuracies", {})
-    subj_csp = cspm.get("subject_accuracies", {})
-    common   = sorted(set(subj_s4) & set(subj_csp))
-    pval, eff = _wilcoxon(
-        np.array([subj_s4[s]  for s in common]),
-        np.array([subj_csp[s] for s in common])) if len(common)>=3 else (1.0, 0.0)
+    s4m  = _compute_metrics(np.array(s4_yt), np.array(s4_yp), np.array(s4_yprob), np.array(s4_conf), np.array(s4_lat), n_cls, test_segs, "loso_s4")
+    enm  = _compute_metrics(np.array(en_yt), np.array(en_yp), np.array(en_yprob), np.array(en_yprob).max(1), np.zeros(len(en_yt)), n_cls, test_segs, "loso_eegnet")
+    scm  = _compute_metrics(np.array(sc_yt), np.array(sc_yp), np.array(sc_yprob), np.array(sc_yprob).max(1), np.zeros(len(sc_yt)), n_cls, test_segs, "loso_shallow")
+    cspm = _compute_metrics(np.array(csp_yt), np.array(csp_yp), np.array(csp_yprob), np.array(csp_yprob).max(1), np.zeros(len(csp_yt)), n_cls, test_segs, "loso_csp_lda")
 
     return {
-        "s4": s4m, "csp_lda": cspm,
-        "raw_s4": {"yt": s4_yt, "yp": s4_yp, "conf": s4_conf},
+        "s4": s4m, "eegnet": enm, "shallow": scm, "csp_lda": cspm,
         "comparison": {
-            "s4_vs_csp_delta": s4m["accuracy"] - cspm["accuracy"],
-            "wilcoxon_p":      pval,
-            "effect_r":        eff,
-            "significant_p05": pval < 0.05,
-            "n_subjects":      len(common),
+            "s4_vs_eegnet": s4m["accuracy"] - enm["accuracy"],
+            "s4_vs_shallow": s4m["accuracy"] - scm["accuracy"],
         },
     }
 
@@ -1211,19 +1298,18 @@ def run_benchmark(all_data, dev, temperature=1.5, run_loso=True):
         ws = ds["within_subject"]
         if ws and ws.get("s4"):
             s4a  = ws["s4"]["accuracy"]
+            ena  = ws["eegnet"]["accuracy"]
+            sca  = ws["shallow"]["accuracy"]
             cspa = ws["csp_lda"]["accuracy"]
-            d    = ws["comparison"]["s4_vs_csp_delta"]
-            p    = ws["comparison"]["wilcoxon_p"]
-            log.info(f"  WS  S4={s4a:.1%}  CSP+LDA={cspa:.1%}  d={d:+.1%}  p={p:.3f}")
+            log.info(f"  WS   S4={s4a:.1%}  EEGNet={ena:.1%}  Shallow={sca:.1%}  CSP={cspa:.1%}")
         if run_loso:
             lo = ds.get("loso", {})
             if lo and lo.get("s4"):
                 ls4  = lo["s4"]["accuracy"]
+                lena = lo["eegnet"]["accuracy"]
+                lsca = lo["shallow"]["accuracy"]
                 lcs  = lo["csp_lda"]["accuracy"]
-                ld   = lo["comparison"]["s4_vs_csp_delta"]
-                lp   = lo["comparison"]["wilcoxon_p"]
-                log.info(f"  LOSO S4={ls4:.1%}  CSP+LDA={lcs:.1%}"
-                         f"  d={ld:+.1%}  p={lp:.3f}")
+                log.info(f"  LOSO S4={ls4:.1%}  EEGNet={lena:.1%}  Shallow={lsca:.1%}  CSP={lcs:.1%}")
 
         results[name] = ds
     return results

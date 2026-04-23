@@ -1,11 +1,11 @@
-2026-04-13 10:30:04,889 INFO Device: cuda
-2026-04-13 10:30:04,889 INFO 
+2026-04-22 12:25:18,123 INFO Device: cuda
+2026-04-22 12:25:18,123 INFO 
 == LOADING DATASETS =================================
-2026-04-13 10:30:06,213 INFO   Loading BNCI2014_001 -- 9 subject(s)...
-2026-04-13 10:30:18,288 INFO   OK BNCI2014_001: 5184 segments
-2026-04-13 10:30:18,289 INFO   Loading BNCI2014_004 -- 9 subject(s)...
-2026-04-13 10:30:25,675 INFO   OK BNCI2014_004: 6520 segments
-2026-04-13 10:30:25,676 INFO   Loading Schirrmeister2017 -- 14 subject(s)...
+2026-04-22 12:25:19,291 INFO   Loading BNCI2014_001 -- 9 subject(s)...
+2026-04-22 12:25:29,939 INFO   OK BNCI2014_001: 5184 segments
+2026-04-22 12:25:29,939 INFO   Loading BNCI2014_004 -- 9 subject(s)...
+2026-04-22 12:25:36,778 INFO   OK BNCI2014_004: 6520 segments
+2026-04-22 12:25:36,779 INFO   Loading Schirrmeister2017 -- 14 subject(s)...
 Extracting EDF parameters from /home/redleadr/mne_data/MNE-schirrmeister2017-data/train/1.edf...
 Channel 'EEG Fp1' recognized as type EEG (renamed to 'Fp1').
 Channel 'EEG Fp2' recognized as type EEG (renamed to 'Fp2').
@@ -3870,8 +3870,8 @@ Creating raw.info structure...
 Reading 0 ... 608999  =      0.000 ...  1217.998 secs...
 NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
 NOTE: pick_types() is a legacy function. New code should use inst.pick(...).
-2026-04-13 10:33:28,594 INFO   OK Schirrmeister2017: 6440 segments
-2026-04-13 10:33:28,602 INFO   Loading PhysionetMI -- 20 subject(s)...
+2026-04-22 12:27:49,851 INFO   OK Schirrmeister2017: 6440 segments
+2026-04-22 12:27:49,859 INFO   Loading PhysionetMI -- 109 subject(s)...
 Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
 Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
 Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
@@ -3992,73 +3992,1029 @@ Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('
 Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
 Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
 Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
-2026-04-13 10:33:36,371 INFO   OK PhysionetMI: 3480 segments
-2026-04-13 10:33:36,372 INFO   Loading Cho2017 -- 20 subject(s)...
-2026-04-13 10:33:38,564 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:40,925 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:43,208 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:45,571 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:47,913 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:50,290 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:53,052 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:55,477 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:33:58,246 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:00,930 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:03,923 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:07,251 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:18,872 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:22,371 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:24,795 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:27,299 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:29,818 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:32,389 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:35,577 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:39,098 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
-2026-04-13 10:34:39,299 INFO   OK Cho2017: 4080 segments
-2026-04-13 10:34:39,301 INFO   Total: 25,704 segments across 5 datasets
-2026-04-13 10:34:39,301 INFO 
-== Pretraining Global 4-Class Foundation Model (15104 trials) ==
-2026-04-13 10:39:53,663 INFO       Epoch 10/100 | Loss: 1.1268
-2026-04-13 10:45:01,952 INFO       Epoch 20/100 | Loss: 0.9410
-2026-04-13 10:50:48,361 INFO       Epoch 30/100 | Loss: 0.7456
-2026-04-13 10:57:10,817 INFO       Epoch 40/100 | Loss: 0.6000
-2026-04-13 11:03:30,363 INFO       Epoch 50/100 | Loss: 0.5676
-2026-04-13 11:09:56,485 INFO       Epoch 60/100 | Loss: 0.5360
-2026-04-13 11:16:10,581 INFO       Epoch 70/100 | Loss: 0.5009
-2026-04-13 11:21:11,756 INFO       Epoch 80/100 | Loss: 0.5014
-2026-04-13 11:26:13,003 INFO       Epoch 90/100 | Loss: 0.5206
-2026-04-13 11:31:14,177 INFO       Epoch 100/100 | Loss: 0.5224
-2026-04-13 11:31:14,177 INFO     Pretrain done (100 ep, 15104 segs)
-2026-04-13 11:31:14,185 INFO 
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('left_hand'), np.str_('rest'), np.str_('right_hand')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+Used Annotations descriptions: [np.str_('feet'), np.str_('hands'), np.str_('rest')]
+2026-04-22 12:28:29,116 INFO   OK PhysionetMI: 4918 segments
+2026-04-22 12:28:29,118 INFO   Loading Cho2017 -- 52 subject(s)...
+2026-04-22 12:28:31,345 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:33,665 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:35,958 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:38,277 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:40,626 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:42,893 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:45,571 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:47,896 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:50,566 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:52,877 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:55,170 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:57,486 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:28:59,744 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:02,021 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:04,431 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:06,837 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:09,211 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:11,517 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:13,914 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:16,192 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:18,517 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:20,871 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:23,210 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:25,521 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:27,916 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:30,251 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:32,566 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:34,871 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:37,262 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:39,648 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:42,034 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:44,252 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:46,424 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:48,613 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:50,787 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:52,961 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:55,202 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:57,386 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:29:59,537 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:01,712 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:03,890 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:06,115 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:08,302 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:10,508 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:12,737 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:15,356 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:17,629 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:19,831 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:22,084 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:24,356 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:26,599 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:28,854 WARNING Trials demeaned and stacked with zero buffer to create continuous data -- edge effects present
+2026-04-22 12:30:29,016 INFO   OK Cho2017: 10520 segments
+2026-04-22 12:30:29,017 INFO   Total: 33,582 segments across 5 datasets
+2026-04-22 12:30:29,018 INFO 
 == BNCI2014_001 (5184 trials) ================
-2026-04-13 11:31:14,185 INFO   [Within-subject]
-2026-04-13 11:31:14,667 INFO     --- Fold 1/10 ---
-2026-04-13 11:31:52,940 INFO     --- Fold 2/10 ---
-2026-04-13 11:32:31,329 INFO     --- Fold 3/10 ---
-2026-04-13 11:33:09,684 INFO     --- Fold 4/10 ---
-2026-04-13 11:33:48,032 INFO     --- Fold 5/10 ---
-2026-04-13 11:34:26,400 INFO     --- Fold 6/10 ---
-2026-04-13 11:35:04,768 INFO     --- Fold 7/10 ---
-2026-04-13 11:35:43,187 INFO     --- Fold 8/10 ---
-2026-04-13 11:36:21,653 INFO     --- Fold 9/10 ---
-2026-04-13 11:37:00,117 INFO     --- Fold 10/10 ---
-2026-04-13 11:37:38,640 INFO   [LOSO]
-2026-04-13 11:37:39,489 INFO     LOSO held=1  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:39,845 INFO     LOSO held=2  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:40,206 INFO     LOSO held=3  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:40,563 INFO     LOSO held=4  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:40,920 INFO     LOSO held=5  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:41,276 INFO     LOSO held=6  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:41,634 INFO     LOSO held=7  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:41,993 INFO     LOSO held=8  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:42,351 INFO     LOSO held=9  S4=25.0%  CSP=25.0%
-2026-04-13 11:37:42,408 INFO   WS  S4=25.0%  CSP+LDA=25.0%  d=+0.0%  p=1.000
-2026-04-13 11:37:42,409 INFO   LOSO S4=25.0%  CSP+LDA=25.0%  d=+0.0%  p=1.000
-2026-04-13 11:37:42,409 INFO 
+2026-04-22 12:30:29,018 INFO   [Within-subject]
+2026-04-22 12:30:29,018 INFO     [Within-Subject] Chronological Split 75/25 with Full Baselines
+2026-04-22 12:32:25,108 INFO     Early stopping at epoch 92
+2026-04-22 12:33:21,485 INFO   [LOSO]
+2026-04-22 12:33:21,485 INFO     LOSO held-out subject: 1
+2026-04-22 12:36:04,075 INFO     Early stopping at epoch 114
+2026-04-22 12:36:49,890 INFO     LOSO held-out subject: 2
+2026-04-22 12:39:19,506 INFO     Early stopping at epoch 105
+2026-04-22 12:39:56,530 INFO     LOSO held-out subject: 3
+2026-04-22 12:41:07,175 INFO     Early stopping at epoch 49
+2026-04-22 12:41:30,989 INFO     LOSO held-out subject: 4
+2026-04-22 12:43:19,803 INFO     Early stopping at epoch 76
+2026-04-22 12:43:48,817 INFO     LOSO held-out subject: 5
+2026-04-22 12:46:33,086 INFO     Early stopping at epoch 105
+2026-04-22 12:47:40,403 INFO     LOSO held-out subject: 6
+2026-04-22 12:50:01,934 INFO     Early stopping at epoch 73
+2026-04-22 12:50:51,852 INFO     LOSO held-out subject: 7
+2026-04-22 12:53:20,021 INFO     Early stopping at epoch 72
+2026-04-22 12:54:12,735 INFO     LOSO held-out subject: 8
+2026-04-22 12:56:43,785 INFO     Early stopping at epoch 73
+2026-04-22 12:57:21,657 INFO     LOSO held-out subject: 9
+2026-04-22 13:00:14,107 INFO     Early stopping at epoch 90
+2026-04-22 13:01:10,928 INFO   WS   S4=63.1%  EEGNet=60.6%  Shallow=60.6%  CSP=25.0%
+2026-04-22 13:01:10,929 INFO   LOSO S4=51.7%  EEGNet=51.5%  Shallow=50.5%  CSP=25.0%
+2026-04-22 13:01:10,929 INFO 
 == BNCI2014_004 (6520 trials) ================
-2026-04-13 11:37:42,409 INFO   [Within-subject]
-2026-04-13 11:37:42,965 INFO     --- Fold 1/10 ---
-2026-04-13 11:39:59,674 INFO       Epoch 10/100 | Loss: 0.0000
-2026-04-13 11:42:30,497 INFO       Epoch 20/100 | Loss: 0.0000
-2026-04-13 11:44:49,020 INFO       Epoch 30/100 | Loss: 0.0000
-2026-04-13 11:47:07,348 INFO       Epoch 40/100 | Loss: 0.0000
+2026-04-22 13:01:10,929 INFO   [Within-subject]
+2026-04-22 13:01:10,929 INFO     [Within-Subject] Chronological Split 75/25 with Full Baselines
+2026-04-22 13:02:47,363 INFO     Early stopping at epoch 46
+2026-04-22 13:04:12,974 INFO   [LOSO]
+2026-04-22 13:04:12,975 INFO     LOSO held-out subject: 1
+2026-04-22 13:05:44,762 INFO     Early stopping at epoch 38
+2026-04-22 13:07:08,195 INFO     LOSO held-out subject: 2
+2026-04-22 13:08:51,016 INFO     Early stopping at epoch 41
+2026-04-22 13:10:19,795 INFO     LOSO held-out subject: 3
+2026-04-22 13:11:48,421 INFO     Early stopping at epoch 40
+2026-04-22 13:12:30,601 INFO     LOSO held-out subject: 4
+2026-04-22 13:14:36,199 INFO     Early stopping at epoch 46
+2026-04-22 13:15:48,594 INFO     LOSO held-out subject: 5
+2026-04-22 13:18:51,605 INFO     Early stopping at epoch 65
+2026-04-22 13:20:08,443 INFO     LOSO held-out subject: 6
+2026-04-22 13:22:36,571 INFO     Early stopping at epoch 58
+2026-04-22 13:23:19,199 INFO     LOSO held-out subject: 7
+2026-04-22 13:25:46,862 INFO     Early stopping at epoch 53
+2026-04-22 13:27:10,441 INFO     LOSO held-out subject: 8
+2026-04-22 13:30:11,783 INFO     Early stopping at epoch 63
+2026-04-22 13:31:08,911 INFO     LOSO held-out subject: 9
+2026-04-22 13:35:01,110 INFO     Early stopping at epoch 81
+2026-04-22 13:36:12,997 INFO   WS   S4=79.3%  EEGNet=75.3%  Shallow=75.3%  CSP=49.8%
+2026-04-22 13:36:12,997 INFO   LOSO S4=71.6%  EEGNet=72.0%  Shallow=71.0%  CSP=50.0%
+2026-04-22 13:36:12,997 INFO 
+== Schirrmeister2017 (6440 trials) ================
+2026-04-22 13:36:12,998 INFO   [Within-subject]
+2026-04-22 13:36:12,999 INFO     [Within-Subject] Chronological Split 75/25 with Full Baselines
+2026-04-22 13:37:25,064 INFO     Early stopping at epoch 30
+2026-04-22 13:39:11,882 INFO   [LOSO]
+2026-04-22 13:39:11,883 INFO     LOSO held-out subject: 1
+2026-04-22 13:40:33,503 INFO     Early stopping at epoch 31
+2026-04-22 13:41:28,359 INFO     LOSO held-out subject: 10
+2026-04-22 13:42:53,981 INFO     Early stopping at epoch 36
+2026-04-22 13:43:24,854 INFO     LOSO held-out subject: 11
+2026-04-22 13:44:45,815 INFO     Early stopping at epoch 34
+2026-04-22 13:45:48,136 INFO     LOSO held-out subject: 12
+2026-04-22 13:47:13,932 INFO     Early stopping at epoch 36
+2026-04-22 13:48:22,905 INFO     LOSO held-out subject: 13
+2026-04-22 13:49:36,455 INFO     Early stopping at epoch 31
+2026-04-22 13:50:06,219 INFO     LOSO held-out subject: 14
+2026-04-22 13:51:26,506 INFO     Early stopping at epoch 34
+2026-04-22 13:52:28,850 INFO     LOSO held-out subject: 2
+2026-04-22 13:53:44,981 INFO     Early stopping at epoch 32
+2026-04-22 13:54:17,357 INFO     LOSO held-out subject: 3
+2026-04-22 13:55:35,317 INFO     Early stopping at epoch 33
+2026-04-22 13:56:39,908 INFO     LOSO held-out subject: 4
+2026-04-22 13:58:12,274 INFO     Early stopping at epoch 39
+2026-04-22 13:59:07,773 INFO     LOSO held-out subject: 5
+2026-04-22 14:00:23,623 INFO     Early stopping at epoch 32
+2026-04-22 14:01:25,700 INFO     LOSO held-out subject: 6
+2026-04-22 14:02:51,091 INFO     Early stopping at epoch 36
+2026-04-22 14:03:44,961 INFO     LOSO held-out subject: 7
+2026-04-22 14:05:03,316 INFO     Early stopping at epoch 33
+2026-04-22 14:05:31,929 INFO     LOSO held-out subject: 8
+2026-04-22 14:07:20,686 INFO     Early stopping at epoch 46
+2026-04-22 14:08:09,755 INFO     LOSO held-out subject: 9
+2026-04-22 14:09:23,105 INFO     Early stopping at epoch 31
+2026-04-22 14:09:50,422 INFO   WS   S4=74.8%  EEGNet=59.9%  Shallow=58.8%  CSP=24.8%
+2026-04-22 14:09:50,422 INFO   LOSO S4=63.7%  EEGNet=60.3%  Shallow=60.8%  CSP=25.0%
+2026-04-22 14:09:50,423 INFO 
+== PhysionetMI (4918 trials) ================
+2026-04-22 14:09:50,423 INFO   [Within-subject]
+2026-04-22 14:09:50,423 INFO     [Within-Subject] Chronological Split 75/25 with Full Baselines
+2026-04-22 14:10:31,353 INFO     Early stopping at epoch 27
+2026-04-22 14:11:44,150 INFO   [LOSO]
+2026-04-22 14:11:44,150 INFO     LOSO held-out subject: 1
+2026-04-22 14:13:35,947 INFO     Early stopping at epoch 56
+2026-04-22 14:14:18,260 INFO     LOSO held-out subject: 10
+2026-04-22 14:15:33,820 INFO     Early stopping at epoch 37
+2026-04-22 14:16:18,631 INFO     LOSO held-out subject: 100
+2026-04-22 14:17:48,240 INFO     Early stopping at epoch 44
+2026-04-22 14:18:31,555 INFO     LOSO held-out subject: 101
+2026-04-22 14:19:29,444 INFO     Early stopping at epoch 28
+2026-04-22 14:20:23,506 INFO     LOSO held-out subject: 102
+2026-04-22 14:23:19,809 INFO     Early stopping at epoch 89
+2026-04-22 14:23:52,936 INFO     LOSO held-out subject: 103
+2026-04-22 14:27:11,666 INFO     Early stopping at epoch 101
+2026-04-22 14:27:33,492 INFO     LOSO held-out subject: 104
+2026-04-22 14:29:11,618 INFO     Early stopping at epoch 49
+2026-04-22 14:29:39,967 INFO     LOSO held-out subject: 105
+2026-04-22 14:31:33,672 INFO     Early stopping at epoch 57
+2026-04-22 14:31:58,810 INFO     LOSO held-out subject: 106
+2026-04-22 14:34:13,774 INFO     Early stopping at epoch 66
+2026-04-22 14:34:43,229 INFO     LOSO held-out subject: 107
+2026-04-22 14:36:09,942 INFO     Early stopping at epoch 43
+2026-04-22 14:36:37,266 INFO     LOSO held-out subject: 108
+2026-04-22 14:37:36,274 INFO     Early stopping at epoch 29
+2026-04-22 14:38:02,378 INFO     LOSO held-out subject: 109
+2026-04-22 14:39:07,115 INFO     Early stopping at epoch 32
+2026-04-22 14:39:58,338 INFO     LOSO held-out subject: 11
+2026-04-22 14:41:22,605 INFO     Early stopping at epoch 42
+2026-04-22 14:42:16,578 INFO     LOSO held-out subject: 12
+2026-04-22 14:44:46,639 INFO     Early stopping at epoch 76
+2026-04-22 14:45:23,078 INFO     LOSO held-out subject: 13
+2026-04-22 14:46:27,905 INFO     Early stopping at epoch 32
+2026-04-22 14:46:54,768 INFO     LOSO held-out subject: 14
+2026-04-22 14:48:36,288 INFO     Early stopping at epoch 51
+2026-04-22 14:49:01,569 INFO     LOSO held-out subject: 15
+2026-04-22 14:50:46,140 INFO     Early stopping at epoch 53
+2026-04-22 14:51:08,284 INFO     LOSO held-out subject: 16
+2026-04-22 14:52:07,254 INFO     Early stopping at epoch 29
+2026-04-22 14:52:29,946 INFO     LOSO held-out subject: 17
+2026-04-22 14:54:37,371 INFO     Early stopping at epoch 64
+2026-04-22 14:55:21,453 INFO     LOSO held-out subject: 18
+2026-04-22 14:56:50,246 INFO     Early stopping at epoch 44
+2026-04-22 14:57:10,668 INFO     LOSO held-out subject: 19
+2026-04-22 14:58:46,691 INFO     Early stopping at epoch 48
+2026-04-22 14:59:11,276 INFO     LOSO held-out subject: 2
+2026-04-22 15:01:28,053 INFO     Early stopping at epoch 69
+2026-04-22 15:01:53,948 INFO     LOSO held-out subject: 20
+2026-04-22 15:02:56,135 INFO     Early stopping at epoch 30
+2026-04-22 15:03:33,544 INFO     LOSO held-out subject: 21
+2026-04-22 15:05:35,481 INFO     Early stopping at epoch 61
+2026-04-22 15:06:05,741 INFO     LOSO held-out subject: 22
+2026-04-22 15:07:06,549 INFO     Early stopping at epoch 30
+2026-04-22 15:07:37,277 INFO     LOSO held-out subject: 23
+2026-04-22 15:08:42,405 INFO     Early stopping at epoch 32
+2026-04-22 15:09:17,822 INFO     LOSO held-out subject: 24
+2026-04-22 15:10:45,927 INFO     Early stopping at epoch 44
+2026-04-22 15:11:13,745 INFO     LOSO held-out subject: 25
+2026-04-22 15:12:08,189 INFO     Early stopping at epoch 27
+2026-04-22 15:12:50,622 INFO     LOSO held-out subject: 26
+2026-04-22 15:13:52,850 INFO     Early stopping at epoch 31
+2026-04-22 15:14:20,147 INFO     LOSO held-out subject: 27
+2026-04-22 15:16:07,347 INFO     Early stopping at epoch 54
+2026-04-22 15:16:52,519 INFO     LOSO held-out subject: 28
+2026-04-22 15:18:00,821 INFO     Early stopping at epoch 34
+2026-04-22 15:18:29,756 INFO     LOSO held-out subject: 29
+2026-04-22 15:21:16,809 INFO     Early stopping at epoch 85
+2026-04-22 15:21:49,180 INFO     LOSO held-out subject: 3
+2026-04-22 15:23:30,376 INFO     Early stopping at epoch 51
+2026-04-22 15:23:51,540 INFO     LOSO held-out subject: 30
+2026-04-22 15:24:47,732 INFO     Early stopping at epoch 28
+2026-04-22 15:25:16,501 INFO     LOSO held-out subject: 31
+2026-04-22 15:27:19,483 INFO     Early stopping at epoch 62
+2026-04-22 15:27:45,918 INFO     LOSO held-out subject: 32
+2026-04-22 15:29:48,345 INFO     Early stopping at epoch 62
+2026-04-22 15:30:18,971 INFO     LOSO held-out subject: 33
+2026-04-22 15:32:50,933 INFO     Early stopping at epoch 78
+2026-04-22 15:33:26,196 INFO     LOSO held-out subject: 34
+2026-04-22 15:35:01,283 INFO     Early stopping at epoch 55
+2026-04-22 15:35:22,986 INFO     LOSO held-out subject: 35
+2026-04-22 15:36:18,479 INFO     Early stopping at epoch 31
+2026-04-22 15:37:05,763 INFO     LOSO held-out subject: 36
+2026-04-22 15:38:01,448 INFO     Early stopping at epoch 32
+2026-04-22 15:38:34,838 INFO     LOSO held-out subject: 37
+2026-04-22 15:40:01,379 INFO     Early stopping at epoch 50
+2026-04-22 15:40:24,462 INFO     LOSO held-out subject: 38
+2026-04-22 15:41:33,884 INFO     Early stopping at epoch 40
+2026-04-22 15:41:49,971 INFO     LOSO held-out subject: 39
+2026-04-22 15:43:28,325 INFO     Early stopping at epoch 57
+2026-04-22 15:43:48,367 INFO     LOSO held-out subject: 4
+2026-04-22 15:44:37,240 INFO     Early stopping at epoch 28
+2026-04-22 15:45:00,298 INFO     LOSO held-out subject: 40
+2026-04-22 15:45:54,341 INFO     Early stopping at epoch 31
+2026-04-22 15:46:13,363 INFO     LOSO held-out subject: 41
+2026-04-22 15:47:39,725 INFO     Early stopping at epoch 50
+2026-04-22 15:48:08,413 INFO     LOSO held-out subject: 42
+2026-04-22 15:49:00,688 INFO     Early stopping at epoch 30
+2026-04-22 15:49:31,675 INFO     LOSO held-out subject: 43
+2026-04-22 15:51:49,466 INFO     Early stopping at epoch 80
+2026-04-22 15:52:07,469 INFO     LOSO held-out subject: 44
+2026-04-22 15:54:19,721 INFO     Early stopping at epoch 77
+2026-04-22 15:54:50,133 INFO     LOSO held-out subject: 45
+2026-04-22 15:55:40,659 INFO     Early stopping at epoch 29
+2026-04-22 15:56:10,599 INFO     LOSO held-out subject: 46
+2026-04-22 15:57:04,786 INFO     Early stopping at epoch 31
+2026-04-22 15:57:22,389 INFO     LOSO held-out subject: 47
+2026-04-22 15:58:19,831 INFO     Early stopping at epoch 33
+2026-04-22 15:58:41,948 INFO     LOSO held-out subject: 48
+2026-04-22 16:01:25,071 INFO     Early stopping at epoch 95
+2026-04-22 16:01:50,967 INFO     LOSO held-out subject: 49
+2026-04-22 16:03:21,011 INFO     Early stopping at epoch 52
+2026-04-22 16:03:49,230 INFO     LOSO held-out subject: 5
+2026-04-22 16:05:12,223 INFO     Early stopping at epoch 48
+2026-04-22 16:05:37,905 INFO     LOSO held-out subject: 50
+2026-04-22 16:06:37,402 INFO     Early stopping at epoch 34
+2026-04-22 16:07:01,205 INFO     LOSO held-out subject: 51
+2026-04-22 16:07:57,124 INFO     Early stopping at epoch 32
+2026-04-22 16:08:24,159 INFO     LOSO held-out subject: 52
+2026-04-22 16:09:53,826 INFO     Early stopping at epoch 52
+2026-04-22 16:10:28,146 INFO     LOSO held-out subject: 53
+2026-04-22 16:11:25,524 INFO     Early stopping at epoch 33
+2026-04-22 16:11:58,724 INFO     LOSO held-out subject: 54
+2026-04-22 16:14:50,545 INFO     Early stopping at epoch 100
+2026-04-22 16:15:22,460 INFO     LOSO held-out subject: 55
+2026-04-22 16:16:57,411 INFO     Early stopping at epoch 55
+2026-04-22 16:17:18,431 INFO     LOSO held-out subject: 56
+2026-04-22 16:18:15,912 INFO     Early stopping at epoch 33
+2026-04-22 16:18:36,752 INFO     LOSO held-out subject: 57
+2026-04-22 16:20:11,824 INFO     Early stopping at epoch 55
+2026-04-22 16:20:29,649 INFO     LOSO held-out subject: 58
+2026-04-22 16:21:27,041 INFO     Early stopping at epoch 33
+2026-04-22 16:21:57,092 INFO     LOSO held-out subject: 59
+2026-04-22 16:23:09,875 INFO     Early stopping at epoch 42
+2026-04-22 16:23:30,024 INFO     LOSO held-out subject: 6
+2026-04-22 16:24:19,018 INFO     Early stopping at epoch 28
+2026-04-22 16:24:41,923 INFO     LOSO held-out subject: 60
+2026-04-22 16:26:30,424 INFO     Early stopping at epoch 63
+2026-04-22 16:26:55,435 INFO     LOSO held-out subject: 61
+2026-04-22 16:28:37,596 INFO     Early stopping at epoch 59
+2026-04-22 16:28:55,351 INFO     LOSO held-out subject: 62
+2026-04-22 16:30:21,876 INFO     Early stopping at epoch 50
+2026-04-22 16:31:01,231 INFO     LOSO held-out subject: 63
+2026-04-22 16:31:58,492 INFO     Early stopping at epoch 33
+2026-04-22 16:32:34,430 INFO     LOSO held-out subject: 64
+2026-04-22 16:34:57,198 INFO     Early stopping at epoch 83
+2026-04-22 16:35:12,312 INFO     LOSO held-out subject: 65
+2026-04-22 16:36:35,267 INFO     Early stopping at epoch 48
+2026-04-22 16:36:54,151 INFO     LOSO held-out subject: 66
+2026-04-22 16:38:46,182 INFO     Early stopping at epoch 47
+2026-04-22 16:39:32,045 INFO     LOSO held-out subject: 67
+2026-04-22 16:40:52,658 INFO     Early stopping at epoch 35
+2026-04-22 16:41:36,583 INFO     LOSO held-out subject: 68
+2026-04-22 16:43:20,210 INFO     Early stopping at epoch 48
+2026-04-22 16:43:48,021 INFO     LOSO held-out subject: 69
+2026-04-22 16:45:56,931 INFO     Early stopping at epoch 62
+2026-04-22 16:46:35,873 INFO     LOSO held-out subject: 7
+2026-04-22 16:47:46,764 INFO     Early stopping at epoch 30
+2026-04-22 16:48:16,584 INFO     LOSO held-out subject: 70
+2026-04-22 16:49:23,261 INFO     Early stopping at epoch 29
+2026-04-22 16:49:48,499 INFO     LOSO held-out subject: 71
+2026-04-22 16:51:02,562 INFO     Early stopping at epoch 33
+2026-04-22 16:51:23,466 INFO     LOSO held-out subject: 72
+2026-04-22 16:52:29,587 INFO     Early stopping at epoch 29
+2026-04-22 16:53:33,427 INFO     LOSO held-out subject: 73
+2026-04-22 16:55:04,204 INFO     Early stopping at epoch 40
+2026-04-22 16:55:43,858 INFO     LOSO held-out subject: 74
+2026-04-22 16:57:59,987 INFO     Early stopping at epoch 59
+2026-04-22 16:58:36,525 INFO     LOSO held-out subject: 75
+2026-04-22 16:59:37,638 INFO     Early stopping at epoch 27
+2026-04-22 17:00:02,618 INFO     LOSO held-out subject: 76
+2026-04-22 17:01:16,672 INFO     Early stopping at epoch 33
+2026-04-22 17:01:45,190 INFO     LOSO held-out subject: 77
+2026-04-22 17:05:06,913 INFO     Early stopping at epoch 93
+2026-04-22 17:05:36,011 INFO     LOSO held-out subject: 78
+2026-04-22 17:08:32,293 INFO     Early stopping at epoch 84
+2026-04-22 17:09:06,279 INFO     LOSO held-out subject: 79
+2026-04-22 17:11:06,564 INFO     Early stopping at epoch 55
+2026-04-22 17:11:51,354 INFO     LOSO held-out subject: 8
+2026-04-22 17:13:38,265 INFO     Early stopping at epoch 45
+2026-04-22 17:14:17,640 INFO     LOSO held-out subject: 80
+2026-04-22 17:16:04,841 INFO     Early stopping at epoch 51
+2026-04-22 17:16:29,788 INFO     LOSO held-out subject: 81
+2026-04-22 17:17:35,183 INFO     Early stopping at epoch 28
+2026-04-22 17:18:10,662 INFO     LOSO held-out subject: 82
+2026-04-22 17:19:18,262 INFO     Early stopping at epoch 28
+2026-04-22 17:19:43,291 INFO     LOSO held-out subject: 83
+2026-04-22 17:20:57,000 INFO     Early stopping at epoch 30
+2026-04-22 17:21:25,559 INFO     LOSO held-out subject: 84
+2026-04-22 17:23:02,544 INFO     Early stopping at epoch 38
+2026-04-22 17:23:34,960 INFO     LOSO held-out subject: 85
+2026-04-22 17:25:00,140 INFO     Early stopping at epoch 36
+2026-04-22 17:25:41,512 INFO     LOSO held-out subject: 86
+2026-04-22 17:27:37,516 INFO     Early stopping at epoch 48
+2026-04-22 17:28:47,948 INFO     LOSO held-out subject: 87
+2026-04-22 17:31:41,698 INFO     Early stopping at epoch 69
+2026-04-22 17:32:27,747 INFO     LOSO held-out subject: 88
+2026-04-22 17:34:18,694 INFO     Early stopping at epoch 56
+2026-04-22 17:35:17,627 INFO     LOSO held-out subject: 89
+2026-04-22 17:37:18,274 INFO     Early stopping at epoch 53
+2026-04-22 17:37:56,662 INFO     LOSO held-out subject: 9
+2026-04-22 17:38:59,145 INFO     Early stopping at epoch 27
+2026-04-22 17:39:22,037 INFO     LOSO held-out subject: 90
+2026-04-22 17:41:07,854 INFO     Early stopping at epoch 47
+2026-04-22 17:41:41,423 INFO     LOSO held-out subject: 91
+2026-04-22 17:42:51,904 INFO     Early stopping at epoch 31
+2026-04-22 17:43:29,424 INFO     LOSO held-out subject: 92
+2026-04-22 17:44:44,373 INFO     Early stopping at epoch 33
+2026-04-22 17:45:48,514 INFO     LOSO held-out subject: 93
+2026-04-22 17:47:03,392 INFO     Early stopping at epoch 33
+2026-04-22 17:47:51,553 INFO     LOSO held-out subject: 94
+2026-04-22 17:49:01,840 INFO     Early stopping at epoch 31
+2026-04-22 17:49:32,496 INFO     LOSO held-out subject: 95
+2026-04-22 17:51:19,465 INFO     Early stopping at epoch 48
+2026-04-22 17:52:06,945 INFO     LOSO held-out subject: 96
+2026-04-22 17:55:18,586 INFO     Early stopping at epoch 86
+2026-04-22 17:55:48,014 INFO     LOSO held-out subject: 97
+2026-04-22 17:57:01,091 INFO     Early stopping at epoch 32
+2026-04-22 17:57:39,774 INFO     LOSO held-out subject: 98
+2026-04-22 17:59:35,190 INFO     Early stopping at epoch 48
+2026-04-22 18:00:05,028 INFO     LOSO held-out subject: 99
+2026-04-22 18:04:24,490 INFO     Early stopping at epoch 107
+2026-04-22 18:05:02,024 INFO   WS   S4=79.2%  EEGNet=59.0%  Shallow=57.7%  CSP=50.4%
+2026-04-22 18:05:02,024 INFO   LOSO S4=79.9%  EEGNet=79.1%  Shallow=78.7%  CSP=50.4%
+2026-04-22 18:05:02,025 INFO 
+== Cho2017 (10520 trials) ================
+2026-04-22 18:05:02,025 INFO   [Within-subject]
+2026-04-22 18:05:02,026 INFO     [Within-Subject] Chronological Split 75/25 with Full Baselines
+2026-04-22 18:07:07,969 INFO     Early stopping at epoch 31
+2026-04-22 18:09:26,242 INFO   [LOSO]
+2026-04-22 18:09:26,244 INFO     LOSO held-out subject: 1
+2026-04-22 18:11:57,094 INFO     Early stopping at epoch 30
+2026-04-22 18:13:15,442 INFO     LOSO held-out subject: 10
+2026-04-22 18:15:36,786 INFO     Early stopping at epoch 31
+2026-04-22 18:17:40,829 INFO     LOSO held-out subject: 11
+2026-04-22 18:19:45,761 INFO     Early stopping at epoch 28
+2026-04-22 18:20:42,607 INFO     LOSO held-out subject: 12
+2026-04-22 18:22:57,477 INFO     Early stopping at epoch 30
+2026-04-22 18:24:07,696 INFO     LOSO held-out subject: 13
+2026-04-22 18:27:09,713 INFO     Early stopping at epoch 41
+2026-04-22 18:28:03,886 INFO     LOSO held-out subject: 14
+2026-04-22 18:30:18,857 INFO     Early stopping at epoch 30
+2026-04-22 18:31:19,371 INFO     LOSO held-out subject: 15
+2026-04-22 18:33:14,650 INFO     Early stopping at epoch 26
+2026-04-22 18:34:34,737 INFO     LOSO held-out subject: 16
+2026-04-22 18:36:48,660 INFO     Early stopping at epoch 30
+2026-04-22 18:37:48,874 INFO     LOSO held-out subject: 17
+2026-04-22 18:40:31,085 INFO     Early stopping at epoch 37
+2026-04-22 18:42:12,525 INFO     LOSO held-out subject: 18
+2026-04-22 18:44:15,551 INFO     Early stopping at epoch 28
+2026-04-22 18:45:23,458 INFO     LOSO held-out subject: 19
+2026-04-22 18:47:33,108 INFO     Early stopping at epoch 32
+2026-04-22 18:48:49,876 INFO     LOSO held-out subject: 2
+2026-04-22 18:50:43,495 INFO     Early stopping at epoch 28
+2026-04-22 18:52:08,301 INFO     LOSO held-out subject: 20
+2026-04-22 18:54:01,944 INFO     Early stopping at epoch 28
+2026-04-22 18:55:35,794 INFO     LOSO held-out subject: 21
+2026-04-22 18:58:32,039 INFO     Early stopping at epoch 45
+2026-04-22 18:59:37,552 INFO     LOSO held-out subject: 22
+2026-04-22 19:02:17,173 INFO     Early stopping at epoch 31
+2026-04-22 19:04:17,184 INFO     LOSO held-out subject: 23
+2026-04-22 19:07:10,931 INFO     Early stopping at epoch 32
+2026-04-22 19:09:18,354 INFO     LOSO held-out subject: 24
+2026-04-22 19:11:56,204 INFO     Early stopping at epoch 29
+2026-04-22 19:13:28,627 INFO     LOSO held-out subject: 25
+2026-04-22 19:16:54,233 INFO     Early stopping at epoch 38
+2026-04-22 19:18:13,307 INFO     LOSO held-out subject: 26
+2026-04-22 19:21:49,337 INFO     Early stopping at epoch 40
+2026-04-22 19:23:02,510 INFO     LOSO held-out subject: 27
+2026-04-22 19:26:50,157 INFO     Early stopping at epoch 42
+2026-04-22 19:28:27,792 INFO     LOSO held-out subject: 28
+2026-04-22 19:31:09,719 INFO     Early stopping at epoch 30
+2026-04-22 19:32:58,649 INFO     LOSO held-out subject: 29
+2026-04-22 19:35:11,446 INFO     Early stopping at epoch 30
+2026-04-22 19:36:10,284 INFO     LOSO held-out subject: 3
+2026-04-22 19:38:04,385 INFO     Early stopping at epoch 28
+2026-04-22 19:38:56,700 INFO     LOSO held-out subject: 30
+2026-04-22 19:41:02,811 INFO     Early stopping at epoch 31
+2026-04-22 19:42:37,844 INFO     LOSO held-out subject: 31
+2026-04-22 19:44:35,899 INFO     Early stopping at epoch 29
+2026-04-22 19:45:34,419 INFO     LOSO held-out subject: 32
+2026-04-22 19:47:40,488 INFO     Early stopping at epoch 31
+2026-04-22 19:48:40,240 INFO     LOSO held-out subject: 33
+2026-04-22 19:50:46,341 INFO     Early stopping at epoch 31
+2026-04-22 19:51:40,282 INFO     LOSO held-out subject: 34
+2026-04-22 19:53:34,319 INFO     Early stopping at epoch 28
+2026-04-22 19:55:04,853 INFO     LOSO held-out subject: 35
+2026-04-22 19:57:02,880 INFO     Early stopping at epoch 29
+2026-04-22 19:57:53,670 INFO     LOSO held-out subject: 36
+2026-04-22 19:59:55,821 INFO     Early stopping at epoch 30
+2026-04-22 20:01:22,766 INFO     LOSO held-out subject: 37
+2026-04-22 20:03:36,897 INFO     Early stopping at epoch 33
+2026-04-22 20:05:02,107 INFO     LOSO held-out subject: 38
+2026-04-22 20:07:30,057 INFO     Early stopping at epoch 41
+2026-04-22 20:08:33,444 INFO     LOSO held-out subject: 39
+2026-04-22 20:10:06,911 INFO     Early stopping at epoch 29
+2026-04-22 20:10:48,692 INFO     LOSO held-out subject: 4
+2026-04-22 20:12:15,725 INFO     Early stopping at epoch 27
+2026-04-22 20:13:14,983 INFO     LOSO held-out subject: 40
+2026-04-22 20:15:13,811 INFO     Early stopping at epoch 37
+2026-04-22 20:16:07,460 INFO     LOSO held-out subject: 41
+2026-04-22 20:17:47,177 INFO     Early stopping at epoch 31
+2026-04-22 20:18:52,853 INFO     LOSO held-out subject: 42
+2026-04-22 20:20:26,249 INFO     Early stopping at epoch 29
+2026-04-22 20:21:16,864 INFO     LOSO held-out subject: 43
+2026-04-22 20:22:56,643 INFO     Early stopping at epoch 31
+2026-04-22 20:23:53,803 INFO     LOSO held-out subject: 44
+2026-04-22 20:26:24,264 INFO     Early stopping at epoch 47
+2026-04-22 20:27:21,682 INFO     LOSO held-out subject: 45
+2026-04-22 20:28:48,854 INFO     Early stopping at epoch 27
+2026-04-22 20:29:21,784 INFO     LOSO held-out subject: 46
+2026-04-22 20:31:26,230 INFO     Early stopping at epoch 39
+2026-04-22 20:32:41,528 INFO     LOSO held-out subject: 47
+2026-04-22 20:34:21,316 INFO     Early stopping at epoch 31
+2026-04-22 20:35:14,645 INFO     LOSO held-out subject: 48
+2026-04-22 20:36:57,505 INFO     Early stopping at epoch 32
+2026-04-22 20:37:51,260 INFO     LOSO held-out subject: 49
+2026-04-22 20:40:02,684 INFO     Early stopping at epoch 41
+2026-04-22 20:40:51,823 INFO     LOSO held-out subject: 5
+2026-04-22 20:42:28,373 INFO     Early stopping at epoch 30
+2026-04-22 20:43:28,073 INFO     LOSO held-out subject: 50
+2026-04-22 20:45:01,503 INFO     Early stopping at epoch 29
+2026-04-22 20:45:57,475 INFO     LOSO held-out subject: 51
+2026-04-22 20:47:37,187 INFO     Early stopping at epoch 31
+2026-04-22 20:48:56,402 INFO     LOSO held-out subject: 52
+2026-04-22 20:50:26,667 INFO     Early stopping at epoch 28
+2026-04-22 20:51:17,888 INFO     LOSO held-out subject: 6
+2026-04-22 20:52:48,063 INFO     Early stopping at epoch 28
+2026-04-22 20:53:26,224 INFO     LOSO held-out subject: 7
+2026-04-22 20:56:11,635 INFO     Early stopping at epoch 52
+2026-04-22 20:56:59,124 INFO     LOSO held-out subject: 8
+2026-04-22 20:58:26,184 INFO     Early stopping at epoch 27
+2026-04-22 20:59:11,738 INFO     LOSO held-out subject: 9
+2026-04-22 21:00:41,522 INFO     Early stopping at epoch 28
+2026-04-22 21:01:43,449 INFO   WS   S4=51.7%  EEGNet=48.4%  Shallow=12.7%  CSP=0.0%
+2026-04-22 21:01:43,449 INFO   LOSO S4=67.5%  EEGNet=70.3%  Shallow=66.7%  CSP=50.0%
+Traceback (most recent call last):
+  File "/home/redleadr/workspace/noosphere/demo_real_eeg.py", line 1849, in <module>
+    main()
+    ~~~~^^
+  File "/home/redleadr/workspace/noosphere/demo_real_eeg.py", line 1842, in main
+    payload = save_json(results, path=args.out_json)
+  File "/home/redleadr/workspace/noosphere/demo_real_eeg.py", line 1344, in save_json
+    ws_ps.append(ws["comparison"]["wilcoxon_p"])
+                 ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+KeyError: 'wilcoxon_p'

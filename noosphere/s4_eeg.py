@@ -44,6 +44,11 @@ class S4EEGEncoder(nn.Module):
         self.pool = nn.AdaptiveAvgPool1d(6)
         self.out = nn.Sequential(nn.Linear(d_model * 6, n_actions))
 
+    def get_flops(self, seq_len: int = 256) -> float:
+        C, T, H = 21, seq_len, 32
+        # Approx FLOPs for temporal conv + spatial conv + S4 FFT + pooling
+        return float(T * C * H * 2 + T * H * math.log2(T) * 10)
+
     def forward(self, x: torch.Tensor, mask=None) -> dict:
         x = (x - x.mean(-1, keepdim=True)) / (x.std(-1, keepdim=True).clamp(min=1e-6))
         x = self.f(x.unsqueeze(1)).squeeze(2).transpose(1, 2)

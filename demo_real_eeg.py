@@ -1,16 +1,15 @@
 """
 demo_real_eeg.py
 ================
-Noosphere — Production-Grade S4 EEG Encoder Benchmark
-Academic + Investor Edition
+Performance Evaluation of the S4-based EEG Encoder
 
 Evaluation protocol
 -------------------
 1. Within-subject  : chronological 75/25 split per subject, pretrained S4 trunk
-                     fine-tuned per subject. Answers: "after brief calibration".
+                     fine-tuned per subject. Simulates standard intra-subject calibration.
 2. Cross-subject   : leave-one-subject-out (LOSO). Train on N-1 subjects,
                      evaluate on the held-out subject zero-shot.
-                     Answers: "new user, no calibration".
+                     Simulates zero-shot cross-subject generalization
 3. Baseline        : CSP + LDA (the gold standard in BCI literature since 2008).
                      One-vs-rest multi-class CSP, log-variance features, LDA.
 4. Statistics      : Wilcoxon signed-rank test (S4 vs CSP+LDA) per dataset,

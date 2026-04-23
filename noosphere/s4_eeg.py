@@ -1,7 +1,7 @@
 """
 noosphere/s4_eeg.py
 ===================
-RS-S4 v24 — S4-Log-Var (Tiny Baseline Crusher)
+RS-S4 Architecture with Log-Variance Pooling
 
 Topology:
 1.  Lightweight Front-end: d_model=32.

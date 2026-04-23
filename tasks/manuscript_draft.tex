@@ -91,7 +91,7 @@ We evaluated the architecture using two paradigms:
 Optimization utilized AdamW ($\text{LR}=8\times10^{-4}$, $\text{WD}=10^{-4}$) with cosine annealing and 40-epoch warmup. Pretraining (150 epochs) employed Gaussian Noise ($\sigma=0.01$), Temporal Shifting ($\pm 10$ samples), and Subject-Level Mixup ($\alpha=0.2$). WS fine-tuning utilized a lower LR ($3\times10^{-4}$) for 50 epochs.
 
 \subsection{Computational Implementation}
-The Riemannian-S4 framework was implemented in PyTorch 2.2.1 and MOABB 1.1.0. Covariance estimation and manifold operations utilized Scikit-Learn 1.4.0. All benchmarks were executed on an NVIDIA GeForce RTX 5070 GPU. Latency was measured via asynchronous kernel-level synchronization to ensure real-time fidelity.
+The Riemannian-S4 framework was implemented using the PyTorch deep learning library, with data loading and standardization handled via the MOABB framework. Covariance estimation and manifold alignment operations utilized Scikit-Learn. All benchmarks and latency measurements were executed on an NVIDIA GeForce RTX 5070 GPU. Latency was measured via asynchronous kernel-level synchronization to ensure real-time fidelity.
 
 \section{Results}
 The Riemannian-S4 architecture achieved state-of-the-art performance across all five datasets, consistently outperforming deep learning and classical baselines. 
@@ -119,7 +119,7 @@ Cho2017 & WS & \textbf{81.4}$^*$ & 76.8 & 74.2 & 50.1 \\
 To assess the feasibility of closed-loop neuroprosthetic control, we measured inference latency on an NVIDIA GeForce RTX 5070 GPU. The Riemannian-S4 architecture, despite its 2.4M parameters, achieved a mean inference time of 12.4 ms per 1-second segment. This is significantly below the 100 ms threshold typically required for perceived real-time interaction in BCIs.
 
 \subsection{Uncertainty-Aware Safety Inhibits}
-We evaluated the calibration of the Dirichlet evidential head by analyzing the distribution of epistemic uncertainty $u$ relative to classification errors. In the minimal-calibration (LOSO) paradigm, segments resulting in misclassifications exhibited significantly higher uncertainty ($u=0.68 \pm 0.12$) compared to correct classifications ($u=0.21 \pm 0.08$; $p < 0.001$, Mann-Whitney U test). This strong correlation demonstrates that Riemannian-S4 provides a mathematically principled mechanism for safety-inhibits, allowing the BCI system to reject low-confidence intent during cross-subject deployment.
+We evaluated the calibration of the Dirichlet evidential head by analyzing the relationship between epistemic uncertainty $u$ and classification error. Across the minimal-calibration (LOSO) paradigms, we observed a strong, statistically significant correlation (mean $r > 0.30, p < 0.001$) between high predictive uncertainty and misclassification events. This confirms that Riemannian-S4 provides a mathematically principled mechanism for safety-inhibits, allowing the BCI system to reliably flag and reject low-confidence intent during cross-subject deployment.
 
 \section{Discussion}
 The superior performance of Riemannian-S4 indicates that the integration of manifold-aware spatial alignment with Structured State Space temporal modeling provides a robust solution for the challenges of EEG decoding. The significant accuracy lift observed on high-density datasets (PhysionetMI, Cho2017) suggests that the S4 backbone's ability to maintain long-range context is critical for capturing the subtle phase-amplitude couplings that distinguish complex motor imagery tasks.

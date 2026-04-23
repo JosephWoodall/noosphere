@@ -1139,11 +1139,19 @@ def evaluate_within_subject(name, segments, dev, temperature=1.5, base_model=Non
     scm  = _compute_metrics(np.array(sc_yt), np.array(sc_yp), np.array(sc_yprob), np.array(sc_yprob).max(1), np.zeros(len(sc_yt)), n_cls, test_segs, "within_subject_shallow")
     cspm = _compute_metrics(np.array(csp_yt), np.array(csp_yp), np.array(csp_yprob), np.array(csp_yprob).max(1), np.zeros(len(csp_yt)), n_cls, test_segs, "within_subject_csp_lda")
 
+    # Per-subject comparison for Wilcoxon
+    subjects = sorted(s4m["subject_accuracies"].keys())
+    s4_scores = np.array([s4m["subject_accuracies"][s] for s in subjects])
+    csp_scores = np.array([cspm["subject_accuracies"][s] for s in subjects])
+    p_val, r_eff = _wilcoxon(s4_scores, csp_scores)
+
     return {
         "s4": s4m, "eegnet": enm, "shallow": scm, "csp_lda": cspm,
         "comparison": {
             "s4_vs_eegnet": s4m["accuracy"] - enm["accuracy"],
             "s4_vs_shallow": s4m["accuracy"] - scm["accuracy"],
+            "wilcoxon_p": p_val,
+            "wilcoxon_r": r_eff,
         },
     }
 
@@ -1235,11 +1243,19 @@ def evaluate_loso(name, segments, dev, temperature=1.5, base_model=None):
     scm  = _compute_metrics(np.array(sc_yt), np.array(sc_yp), np.array(sc_yprob), np.array(sc_yprob).max(1), np.zeros(len(sc_yt)), n_cls, test_segs, "loso_shallow")
     cspm = _compute_metrics(np.array(csp_yt), np.array(csp_yp), np.array(csp_yprob), np.array(csp_yprob).max(1), np.zeros(len(csp_yt)), n_cls, test_segs, "loso_csp_lda")
 
+    # Per-subject comparison for Wilcoxon
+    subjects = sorted(s4m["subject_accuracies"].keys())
+    s4_scores = np.array([s4m["subject_accuracies"][s] for s in subjects])
+    csp_scores = np.array([cspm["subject_accuracies"][s] for s in subjects])
+    p_val, r_eff = _wilcoxon(s4_scores, csp_scores)
+
     return {
         "s4": s4m, "eegnet": enm, "shallow": scm, "csp_lda": cspm,
         "comparison": {
             "s4_vs_eegnet": s4m["accuracy"] - enm["accuracy"],
             "s4_vs_shallow": s4m["accuracy"] - scm["accuracy"],
+            "wilcoxon_p": p_val,
+            "wilcoxon_r": r_eff,
         },
     }
 
@@ -1341,7 +1357,8 @@ def save_json(results, path="real_eeg_results.json"):
             ws_csp.append(ws["csp_lda"]["accuracy"])
             ws_k.append(ws["s4"]["cohen_kappa"])
             ws_auc.append(ws["s4"]["auc_roc_macro"])
-            ws_ps.append(ws["comparison"]["wilcoxon_p"])
+            p = ws.get("comparison", {}).get("wilcoxon_p")
+            if p is not None: ws_ps.append(p)
         if lo and lo.get("s4"):
             lo_acc.append(lo["s4"]["accuracy"])
             lo_csp.append(lo["csp_lda"]["accuracy"])

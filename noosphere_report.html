@@ -834,4 +834,152 @@ CSP: Blankertz et al. IEEE TBME 2008 &nbsp;&middot;&nbsp;
 ITR: Wolpaw et al. 2000 &nbsp;&middot;&nbsp;
 Wilcoxon 1945
 </footer>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">23.4% &plusmn; 0.3%</td>
+<td class="warn">-0.021</td>
+<td class="bad">-1.6%</td>
+<td>1.2176</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">45.0% &plusmn; 2.0%</td>
+<td class="warn">-0.082</td>
+<td class="bad">-5.0%</td>
+<td>1.0003</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">27.8% &plusmn; 0.5%</td>
+<td class="warn">0.039</td>
+<td class="good">+2.8%</td>
+<td>1.0005</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.9% &plusmn; 1.1%</td>
+<td class="warn">-0.043</td>
+<td class="bad">-1.1%</td>
+<td>1.0029</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="good">100.0% &plusmn; 0.0%</td>
+<td class="warn">0.000</td>
+<td class="good">+50.0%</td>
+<td>1.0000</td>
+<td>2</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">28.6% &plusmn; 0.0%</td>
+<td class="warn">0.023</td>
+<td class="good">+3.6%</td>
+<td>0.2537</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">54.1% &plusmn; 11.2%</td>
+<td class="warn">0.161</td>
+<td class="good">+4.1%</td>
+<td>0.3780</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">18.4% &plusmn; 7.9%</td>
+<td class="warn">-0.075</td>
+<td class="bad">-6.6%</td>
+<td>0.4364</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.3% &plusmn; 0.0%</td>
+<td class="warn">-0.034</td>
+<td class="bad">-1.7%</td>
+<td>0.3942</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
 </body></html>

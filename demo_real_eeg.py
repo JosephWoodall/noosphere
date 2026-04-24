@@ -1806,15 +1806,652 @@ def synth_vs_real(all_data):
 
 
 # =============================================================================
+# SECTION WM-1 -- WORLD MODEL: EMBEDDING EXTRACTION
+# =============================================================================
+# Extracts frozen RS-S4 embeddings for all trials in chronological order.
+# These embeddings are the sole input to the RSSM world model; the encoder
+# is never updated during world-model training.
+
+def extract_embeddings(
+    encoder: nn.Module,
+    segments: List[EEGSegment],
+    n_cls: int,
+    dev: torch.device,
+    batch_size: int = 64,
+) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+    """
+    Run frozen encoder over all segments.
+
+    Returns
+    -------
+    embeds   : (N, embed_dim)  float32 — log-power features from S4 encoder
+    labels   : (N,)            int     — class indices
+    subjects : List[str]       length N
+    """
+    encoder.eval()
+    ds = TensorDataset(
+        torch.tensor(np.stack([s.data for s in segments]), dtype=torch.float32)
+    )
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=False)
+    all_embeds = []
+    with torch.no_grad():
+        for (bx,) in loader:
+            out = encoder(bx.to(dev))
+            all_embeds.append(out["embed"].cpu().numpy())
+    embeds = np.concatenate(all_embeds, axis=0)
+    labels = np.array([s.label % n_cls for s in segments])
+    subjects = [s.subject for s in segments]
+    return embeds, labels, subjects
+
+
+# =============================================================================
+# SECTION WM-2 -- WORLD MODEL: RSSM TRAINING
+# =============================================================================
+# Trains a bare RSSM (no physics prior) to predict the next embedding in a
+# chronological sequence for each subject.  Action is always zero (zero-action
+# baseline) to isolate the world model from encoder-side errors.
+#
+# Objective:  minimise balanced KL(posterior ‖ prior) + reconstruction MSE
+#             between the decoded prior latent and the true next embedding.
+# The KL loss is the DreamerV3 balanced KL identical to RSSM.kl_loss().
+
+def _make_rssm(embed_dim: int, dev: torch.device):
+    """Instantiate a bare RSSM with embed_dim matched to the S4 encoder."""
+    from noosphere.rssm import RSSM
+    # action_dim=1 (zero-action scalar); det_dim and stoch dimensioned for EEG
+    return RSSM(
+        embed_dim=embed_dim,
+        action_dim=1,
+        det_dim=256,
+        stoch_cats=16,
+        stoch_classes=16,
+        hidden_dim=256,
+    ).to(dev)
+
+
+def _make_obs_decoder(state_dim: int, embed_dim: int, dev: torch.device) -> nn.Module:
+    """Linear probe: decodes RSSM latent → reconstructed embedding."""
+    return nn.Sequential(
+        nn.Linear(state_dim, 256),
+        nn.SiLU(),
+        nn.Linear(256, embed_dim),
+    ).to(dev)
+
+
+def _make_intent_probe(state_dim: int, n_cls: int, dev: torch.device) -> nn.Module:
+    """Linear probe: imagined prior latent → intent class."""
+    return nn.Linear(state_dim, n_cls).to(dev)
+
+
+def train_rssm(
+    embeds_by_subj: Dict[str, np.ndarray],
+    labels_by_subj: Dict[str, np.ndarray],
+    embed_dim: int,
+    n_cls: int,
+    dev: torch.device,
+    epochs: int = 80,
+    lr: float = 3e-4,
+    batch_seq: int = 16,
+) -> Tuple[nn.Module, nn.Module, nn.Module]:
+    """
+    Train RSSM + decoder + intent probe on the training subjects.
+
+    Uses per-subject chronological sequences; sequences of length 8 are
+    sampled randomly from each subject's trial list in each epoch.
+
+    Returns (rssm, obs_decoder, intent_probe)
+    """
+    rssm = _make_rssm(embed_dim, dev)
+    obs_dec = _make_obs_decoder(rssm.state_dim, embed_dim, dev)
+    intent_probe = _make_intent_probe(rssm.state_dim, n_cls, dev)
+
+    params = list(rssm.parameters()) + list(obs_dec.parameters()) + list(intent_probe.parameters())
+    opt = optim.AdamW(params, lr=lr, weight_decay=1e-4)
+    scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
+
+    # Build flat training list: (embed_seq, label_seq) per subject
+    all_seqs_e, all_seqs_l = [], []
+    SEQ_LEN = 8
+    for subj, emb in embeds_by_subj.items():
+        lbl = labels_by_subj[subj]
+        n = len(emb)
+        if n < SEQ_LEN + 1:
+            continue
+        for start in range(0, n - SEQ_LEN, SEQ_LEN // 2):
+            all_seqs_e.append(emb[start : start + SEQ_LEN + 1])
+            all_seqs_l.append(lbl[start : start + SEQ_LEN + 1])
+
+    if not all_seqs_e:
+        log.warning("  [WM] Not enough data to train RSSM — need >8 trials per subject")
+        return rssm, obs_dec, intent_probe
+
+    log.info(f"  [WM] Training RSSM: {len(all_seqs_e)} sequences, {epochs} epochs")
+
+    best_loss = float("inf")
+    best_state = {
+        "rssm": copy.deepcopy(rssm.state_dict()),
+        "dec": copy.deepcopy(obs_dec.state_dict()),
+        "probe": copy.deepcopy(intent_probe.state_dict()),
+    }
+
+    for epoch in range(epochs):
+        rssm.train(); obs_dec.train(); intent_probe.train()
+        idxs = np.random.permutation(len(all_seqs_e))
+        epoch_loss = 0.0
+        n_batches = 0
+
+        for bi in range(0, len(idxs), batch_seq):
+            batch_idx = idxs[bi : bi + batch_seq]
+            # Stack: (B, SEQ_LEN+1, embed_dim)
+            E = torch.tensor(
+                np.stack([all_seqs_e[i] for i in batch_idx]), dtype=torch.float32
+            ).to(dev)
+            L = torch.tensor(
+                np.stack([all_seqs_l[i] for i in batch_idx]), dtype=torch.long
+            ).to(dev)
+
+            B = E.shape[0]
+            state = rssm.initial_state(B, dev)
+            h, z = state["h"], state["z"]
+            # Zero-action: shape (B, 1)
+            a = torch.zeros(B, 1, device=dev)
+
+            kl_total = torch.tensor(0.0, device=dev)
+            rec_total = torch.tensor(0.0, device=dev)
+            cls_total = torch.tensor(0.0, device=dev)
+
+            with torch.amp.autocast("cuda", enabled=(scaler is not None)):
+                for t in range(SEQ_LEN):
+                    obs_t = E[:, t, :]          # current embedding
+                    # Observe step: posterior uses real embedding
+                    h, z, prior_p, post_p = rssm.observe_step(h, z, a, obs_t)
+                    kl_total = kl_total + rssm.kl_loss(prior_p, post_p)
+
+                    # Reconstruction: decode latent state → embedding prediction
+                    latent = torch.cat([h, z], dim=-1)
+                    rec_emb = obs_dec(latent)
+                    rec_total = rec_total + F.mse_loss(rec_emb, E[:, t + 1, :])
+
+                    # Intent probe on imagined PRIOR latent (what WM predicted)
+                    h_im, z_im, prior_p_im = rssm.imagine_step(h, z, a)
+                    lat_im = torch.cat([h_im, z_im], dim=-1)
+                    cls_logits = intent_probe(lat_im)
+                    cls_total = cls_total + F.cross_entropy(cls_logits, L[:, t + 1])
+
+                loss = (kl_total + rec_total + 0.5 * cls_total) / SEQ_LEN
+
+            opt.zero_grad()
+            if scaler:
+                scaler.scale(loss).backward()
+                nn.utils.clip_grad_norm_(params, 1.0)
+                scaler.step(opt); scaler.update()
+            else:
+                loss.backward()
+                nn.utils.clip_grad_norm_(params, 1.0)
+                opt.step()
+
+            epoch_loss += loss.item()
+            n_batches += 1
+
+        avg = epoch_loss / max(n_batches, 1)
+        if avg < best_loss:
+            best_loss = avg
+            best_state = {
+                "rssm": {k: v.cpu().clone() for k, v in rssm.state_dict().items()},
+                "dec": {k: v.cpu().clone() for k, v in obs_dec.state_dict().items()},
+                "probe": {k: v.cpu().clone() for k, v in intent_probe.state_dict().items()},
+            }
+        if (epoch + 1) % 20 == 0:
+            log.info(f"    Epoch {epoch+1:3d}/{epochs}  loss={avg:.4f}  best={best_loss:.4f}")
+
+    rssm.load_state_dict(best_state["rssm"])
+    obs_dec.load_state_dict(best_state["dec"])
+    intent_probe.load_state_dict(best_state["probe"])
+    log.info(f"  [WM] Training done. Best loss: {best_loss:.4f}")
+    return rssm, obs_dec, intent_probe
+
+
+# =============================================================================
+# SECTION WM-3 -- WORLD MODEL: EVALUATION
+# =============================================================================
+
+def _memoryless_baseline(
+    embeds: np.ndarray,
+    labels: np.ndarray,
+    n_cls: int,
+    train_embeds: Optional[np.ndarray] = None,
+    train_labels: Optional[np.ndarray] = None,
+) -> Tuple[float, float]:
+    """
+    Memoryless baseline: logistic regression on embedding e_t to predict y_{t+1}.
+
+    If training embeddings are provided, trains on them (cross-subject setting).
+    Otherwise falls back to within-subject training (weaker — reported as such).
+
+    This is the critical control condition: if the RSSM does not beat this
+    baseline, temporal memory from the GRU adds NO value over single-trial
+    embedding classification.
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.preprocessing import StandardScaler
+
+    X_te = embeds[:-1]   # e_t (input features)
+    y_te = labels[1:]    # y_{t+1} (target)
+
+    if train_embeds is not None and len(train_embeds) > n_cls * 2:
+        X_tr = train_embeds[:-1]
+        y_tr = train_labels[1:]
+    else:
+        X_tr, y_tr = X_te, y_te
+
+    if len(np.unique(y_tr)) < 2:
+        return 1.0 / n_cls, 0.0
+
+    scaler = StandardScaler()
+    X_tr_s = scaler.fit_transform(X_tr)
+    X_te_s = scaler.transform(X_te)
+
+    try:
+        lr = LogisticRegression(max_iter=500, C=1.0, random_state=42)
+        lr.fit(X_tr_s, y_tr)
+        preds = lr.predict(X_te_s)
+        acc = float((preds == y_te).mean())
+        kap = _kappa(y_te, preds, n_cls)
+    except Exception:
+        acc, kap = 1.0 / n_cls, 0.0
+
+    return acc, kap
+
+
+def evaluate_rssm(
+    rssm: nn.Module,
+    intent_probe: nn.Module,
+    embeds: np.ndarray,
+    labels: np.ndarray,
+    n_cls: int,
+    dev: torch.device,
+    train_embeds: Optional[np.ndarray] = None,
+    train_labels: Optional[np.ndarray] = None,
+) -> Dict:
+    """
+    Evaluate RSSM on a held-out subject's chronological trial sequence.
+
+    Metrics
+    -------
+    next_intent_acc   : top-1 accuracy of imagined prior predicting t+1 intent
+    next_intent_kappa : Cohen's kappa (world model prior)
+    mean_kl           : mean true balanced KL(posterior ‖ prior) — free_nats=0
+    baseline_acc      : memoryless baseline (LR on e_t predicting y_{t+1})
+    baseline_kappa    : kappa for memoryless baseline
+    rssm_gain_acc     : acc - baseline_acc  (WM contribution)
+    itr_bits_per_min  : information transfer rate at 1-second trial cadence
+
+    Notes
+    -----
+    * Skips subjects whose test sequence has < 2 unique classes (degenerate).
+    * KL is evaluated with free_nats=0.0 so the reported value is the true
+      divergence, not the training floor (free_nats=1.0 is only a training reg).
+    """
+    rssm.eval(); intent_probe.eval()
+    n = len(embeds)
+    if n < 3:
+        return {}
+
+    # ── Guard: degenerate test set (single class) ──────────────────────────
+    unique_classes = np.unique(labels)
+    if len(unique_classes) < 2:
+        log.warning(
+            f"    [WM] SKIP eval — test sequence has only 1 unique class "
+            f"(class {unique_classes[0]}). "
+            f"Increase --max-trials or use --max-subjects 0 for a full run."
+        )
+        return {"degenerate_test_set": True, "unique_classes": int(unique_classes[0])}
+
+    E = torch.tensor(embeds, dtype=torch.float32, device=dev)
+    L_np = labels
+    B = 1
+    state = rssm.initial_state(B, dev)
+    h, z = state["h"], state["z"]
+    a = torch.zeros(B, 1, device=dev)
+
+    preds, kl_vals = [], []
+    t0_total = time.perf_counter()
+
+    with torch.no_grad():
+        for t in range(n - 1):
+            obs_t = E[t].unsqueeze(0)
+            h, z, prior_p, post_p = rssm.observe_step(h, z, a, obs_t)
+
+            # BUG FIX: evaluate with free_nats=0 to report TRUE divergence,
+            # not the training regularization floor (free_nats=1.0)
+            kl_val = rssm.kl_loss(prior_p, post_p, free_nats=0.0).item()
+            kl_vals.append(kl_val)
+
+            h_im, z_im, _ = rssm.imagine_step(h, z, a)
+            lat_im = torch.cat([h_im, z_im], dim=-1)
+            cls_logits = intent_probe(lat_im)
+            pred = cls_logits.argmax(-1).item()
+            preds.append(pred)
+
+    elapsed_ms = (time.perf_counter() - t0_total) * 1000
+
+    y_true = L_np[1:]   # predict t+1 from state at t
+    y_pred = np.array(preds)
+    acc = float((y_true == y_pred).mean()) if len(y_true) else 0.0
+    kappa = _kappa(y_true, y_pred, n_cls)
+    mean_kl = float(np.mean(kl_vals)) if kl_vals else 0.0
+    itr = _itr(n_cls, acc, dur_s=1.0)
+    lat_ms = elapsed_ms / max(len(y_pred), 1)
+
+    # ── Memoryless baseline: LR on e_t → y_{t+1} ──────────────────────────
+    # This is the critical comparison: does the RSSM temporal memory add value
+    # beyond what the encoder embedding alone predicts?
+    baseline_acc, baseline_kappa = _memoryless_baseline(
+        embeds, labels, n_cls, train_embeds, train_labels
+    )
+
+    return {
+        "n_trials": n,
+        "next_intent_acc": acc,
+        "next_intent_kappa": kappa,
+        "baseline_acc": baseline_acc,
+        "baseline_kappa": baseline_kappa,
+        "rssm_gain_acc": acc - baseline_acc,
+        "rssm_gain_kappa": kappa - baseline_kappa,
+        "mean_kl": mean_kl,
+        "itr_bits_per_min": itr,
+        "inference_ms_per_step": lat_ms,
+        "chance_level": 1.0 / n_cls,
+        "bci_lift": acc - (1.0 / n_cls),
+    }
+
+
+# =============================================================================
+# SECTION WM-4 -- WORLD MODEL: PER-DATASET RUNNER
+# =============================================================================
+
+def run_wm_benchmark(
+    all_data: Dict[str, List[EEGSegment]],
+    dev: torch.device,
+    epochs: int = 80,
+    max_subjects: Optional[int] = None,
+) -> Dict:
+    """
+    For each dataset:
+      1. Pretrain RS-S4 encoder on N-1 subjects (LOSO outer loop).
+      2. Extract frozen embeddings.
+      3. Train RSSM on N-1 subjects' embeddings.
+      4. Evaluate RSSM on held-out subject (sequential).
+    Returns a dict of per-dataset world model metrics.
+    """
+    wm_results = {}
+
+    for name, segments in all_data.items():
+        log.info(f"\n== [WM] {name} ({len(segments)} trials) ==============")
+        meta = DATASET_CATALOGUE[name]
+        n_cls = meta["n_classes"]
+
+        subj_map: Dict[str, List[EEGSegment]] = defaultdict(list)
+        for s in segments:
+            subj_map[s.subject].append(s)
+        subjects = sorted(subj_map.keys())
+
+        if len(subjects) < 2:
+            log.warning(f"  [WM] Skipping {name}: need >= 2 subjects for LOSO")
+            continue
+
+        ds_metrics = {
+            "dataset": name,
+            "n_classes": n_cls,
+            "n_subjects": len(subjects),
+            "n_segments": len(segments),
+            "per_subject": {},
+        }
+
+        all_acc, all_kappa, all_kl = [], [], []
+        all_bl_acc, all_bl_kappa = [], []
+
+        for held_subj in subjects:
+            # ── Train split: N-1 subjects ──────────────────────────────────
+            tr_segs = []
+            for subj in subjects:
+                if subj == held_subj:
+                    continue
+                X_raw = np.stack([s.data for s in subj_map[subj]])
+                R_inv = compute_ea_reference(X_raw)
+                X_al = apply_ea(X_raw, R_inv)
+                orig = subj_map[subj]
+                tr_segs.extend([
+                    EEGSegment(X_al[i], orig[i].label, orig[i].subject, orig[i].dataset, orig[i].sfreq_orig)
+                    for i in range(len(X_al))
+                ])
+
+            # ── Test split: held-out subject (10-trial EA calibration) ─────
+            te_orig = subj_map[held_subj]
+            X_te_raw = np.stack([s.data for s in te_orig])
+            R_te = compute_ea_reference(X_te_raw[:10])
+            X_te_al = apply_ea(X_te_raw, R_te)
+            te_segs = [
+                EEGSegment(X_te_al[i], te_orig[i].label, te_orig[i].subject, te_orig[i].dataset, te_orig[i].sfreq_orig)
+                for i in range(len(X_te_al))
+            ]
+
+            if not tr_segs or len(te_segs) < 4:
+                continue
+
+            # ── Step 1: Pretrain encoder on training subjects ──────────────
+            log.info(f"  [WM] LOSO held-out={held_subj}  train_segs={len(tr_segs)}")
+            encoder = pretrain_trunk(tr_segs, n_cls, dev, epochs=80)
+
+            # ── Step 2: Extract embeddings ─────────────────────────────────
+            tr_emb, tr_lbl, tr_subjs = extract_embeddings(encoder, tr_segs, n_cls, dev)
+            te_emb, te_lbl, _ = extract_embeddings(encoder, te_segs, n_cls, dev)
+            embed_dim = tr_emb.shape[1]
+
+            # ── Step 3: Organise training embeddings by subject (chrono) ───
+            emb_by_s: Dict[str, np.ndarray] = {}
+            lbl_by_s: Dict[str, np.ndarray] = {}
+            for subj in subjects:
+                if subj == held_subj:
+                    continue
+                mask = np.array(tr_subjs) == subj
+                if mask.sum() > 0:
+                    emb_by_s[subj] = tr_emb[mask]
+                    lbl_by_s[subj] = tr_lbl[mask]
+
+            # ── Step 4: Train RSSM ─────────────────────────────────────────
+            rssm, obs_dec, intent_probe = train_rssm(
+                emb_by_s, lbl_by_s, embed_dim, n_cls, dev, epochs=epochs
+            )
+
+            # ── Step 5: Evaluate on held-out subject ───────────────────────
+            subj_metrics = evaluate_rssm(
+                rssm, intent_probe, te_emb, te_lbl, n_cls, dev,
+                train_embeds=tr_emb, train_labels=tr_lbl,
+            )
+
+            # Skip degenerate subjects (single class in test set)
+            if subj_metrics.get("degenerate_test_set"):
+                ds_metrics["per_subject"][held_subj] = subj_metrics
+                log.warning(f"    [WM] {held_subj} skipped — degenerate test set")
+                del encoder, rssm, obs_dec, intent_probe
+                if dev.type == "cuda":
+                    torch.cuda.empty_cache()
+                continue
+
+            subj_metrics["n_train_subjects"] = len(subjects) - 1
+            subj_metrics["n_train_segs"] = len(tr_segs)
+
+            ds_metrics["per_subject"][held_subj] = subj_metrics
+            all_acc.append(subj_metrics["next_intent_acc"])
+            all_kappa.append(subj_metrics["next_intent_kappa"])
+            all_kl.append(subj_metrics["mean_kl"])
+            all_bl_acc.append(subj_metrics.get("baseline_acc", 1.0 / n_cls))
+            all_bl_kappa.append(subj_metrics.get("baseline_kappa", 0.0))
+            log.info(
+                f"    held={held_subj}  "
+                f"rssm={subj_metrics['next_intent_acc']:.3f}  "
+                f"baseline={subj_metrics.get('baseline_acc', 0):.3f}  "
+                f"gain={subj_metrics.get('rssm_gain_acc', 0):+.3f}  "
+                f"kappa={subj_metrics['next_intent_kappa']:.3f}  "
+                f"kl={subj_metrics['mean_kl']:.4f}"
+            )
+
+            # Free GPU memory
+            del encoder, rssm, obs_dec, intent_probe
+            if dev.type == "cuda":
+                torch.cuda.empty_cache()
+
+        # ── Aggregate per-dataset ──────────────────────────────────────────
+        ds_metrics["aggregate"] = {
+            "mean_next_intent_acc":   float(np.mean(all_acc))    if all_acc    else None,
+            "std_next_intent_acc":    float(np.std(all_acc))     if all_acc    else None,
+            "mean_next_intent_kappa": float(np.mean(all_kappa))  if all_kappa  else None,
+            "mean_kl":                float(np.mean(all_kl))     if all_kl     else None,
+            "mean_baseline_acc":      float(np.mean(all_bl_acc)) if all_bl_acc else None,
+            "mean_baseline_kappa":    float(np.mean(all_bl_kappa)) if all_bl_kappa else None,
+            "mean_rssm_gain_acc":     float(np.mean(all_acc) - np.mean(all_bl_acc)) if (all_acc and all_bl_acc) else None,
+            "chance_level":           1.0 / n_cls,
+            "bci_lift":               float(np.mean(all_acc) - 1.0/n_cls) if all_acc else None,
+            "n_subjects_evaluated":   len(all_acc),
+            "n_degenerate_skipped":   sum(
+                1 for m in ds_metrics["per_subject"].values()
+                if m.get("degenerate_test_set")
+            ),
+        }
+        def _fmt(val, fmt=".3f"):
+            return f"{val:{fmt}}" if val is not None else "N/A"
+
+        agg = ds_metrics["aggregate"]
+        log.info(
+            f"  [WM] {name} aggregate  "
+            f"rssm={_fmt(agg['mean_next_intent_acc'])}  "
+            f"baseline={_fmt(agg['mean_baseline_acc'])}  "
+            f"gain={_fmt(agg['mean_rssm_gain_acc'], '+.3f')}  "
+            f"kappa={_fmt(agg['mean_next_intent_kappa'])}"
+        )
+        wm_results[name] = ds_metrics
+
+    return wm_results
+
+
+# =============================================================================
+# SECTION WM-5 -- WORLD MODEL: SAVE & HTML SECTION
+# =============================================================================
+
+def save_wm_json(wm_results: Dict, base_json_path: str = "real_eeg_results.json"):
+    """Merge world-model results into the existing JSON output."""
+    try:
+        with open(base_json_path, "r") as fh:
+            payload = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        payload = {"metadata": {}, "aggregate": {}, "datasets": {}}
+
+    payload["world_model"] = _clean(wm_results)
+
+    # Aggregate across datasets
+    all_acc = [
+        ds["aggregate"]["mean_next_intent_acc"]
+        for ds in wm_results.values()
+        if ds.get("aggregate") and ds["aggregate"].get("mean_next_intent_acc") is not None
+    ]
+    all_kappa = [
+        ds["aggregate"]["mean_next_intent_kappa"]
+        for ds in wm_results.values()
+        if ds.get("aggregate") and ds["aggregate"].get("mean_next_intent_kappa") is not None
+    ]
+    payload["world_model"]["_global_aggregate"] = {
+        "mean_next_intent_acc_across_datasets": float(np.mean(all_acc)) if all_acc else None,
+        "mean_next_intent_kappa_across_datasets": float(np.mean(all_kappa)) if all_kappa else None,
+        "n_datasets": len(wm_results),
+        "model": "Bare RSSM (DreamerV3 balanced KL, zero-action baseline)",
+        "encoder": "RS-S4 frozen (pretrained per LOSO fold)",
+        "action_strategy": "zero-action",
+        "training_epochs": 80,
+    }
+
+    with open(base_json_path, "w") as fh:
+        json.dump(payload, fh, indent=2)
+    log.info(f"  [WM] Results merged into {base_json_path}")
+    return payload
+
+
+def _wm_html_section(wm_results: Dict) -> str:
+    """Generate an HTML section for the world model results."""
+    global_agg = wm_results.get("_global_aggregate", {})
+    mean_acc = global_agg.get("mean_next_intent_acc_across_datasets")
+    mean_kappa = global_agg.get("mean_next_intent_kappa_across_datasets")
+
+    rows = []
+    for name, ds in wm_results.items():
+        if name.startswith("_"):
+            continue
+        agg = ds.get("aggregate", {})
+        acc = agg.get("mean_next_intent_acc")
+        std = agg.get("std_next_intent_acc")
+        kap = agg.get("mean_next_intent_kappa")
+        kl = agg.get("mean_kl")
+        chance = agg.get("chance_level", 0.5)
+        lift = agg.get("bci_lift")
+        n_eval = agg.get("n_subjects_evaluated", 0)
+        rows.append(f"""<tr>
+<td class="L"><strong>{name}</strong><br>
+<span style="font-size:.73rem;color:#8b949e">{ds.get('n_classes','?')}-class, {ds.get('n_subjects','?')} subjects</span></td>
+<td>{_pct(chance)}</td>
+<td class="{'good' if acc and acc > chance+0.05 else 'warn'}">{_pct(acc)} &plusmn; {_pct(std)}</td>
+<td class="{'good' if kap and kap > 0.2 else 'warn'}">{_f(kap)}</td>
+{_dc(lift)}
+<td>{_f(kl, 4)}</td>
+<td>{n_eval}</td>
+</tr>""")
+
+    table = f"""<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody>{"".join(rows)}</tbody>
+</table>"""
+
+    summary_cards = f"""<div class="grid">
+<div class="card {'green' if mean_acc and mean_acc > 0.55 else 'amber'}">
+  <div class="val">{_pct(mean_acc)}</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card {'green' if mean_kappa and mean_kappa > 0.2 else 'amber'}">
+  <div class="val">{_f(mean_kappa)}</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>"""
+
+    return f"""
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+{summary_cards}
+{table}"""
+
+
+# =============================================================================
 # SECTION 13 -- CLI
 # =============================================================================
 
 def main():
     p = argparse.ArgumentParser(
-        description="Noosphere S4 EEG Encoder -- Production Benchmark")
+        description="Noosphere EEG Pipeline -- S4 Encoder & World Model Benchmark")
     p.add_argument("--all",           action="store_true")
     p.add_argument("--benchmark",     action="store_true",
-                   help="Full benchmark: within-subject + LOSO + CSP+LDA")
+                   help="RS-S4 encoder benchmark: within-subject + LOSO + CSP+LDA")
+    p.add_argument("--benchmark-wm",  action="store_true",
+                   help="RSSM world model benchmark: sequential next-intent prediction")
     p.add_argument("--smoke",         action="store_true")
     p.add_argument("--synth-compare", action="store_true")
     p.add_argument("--datasets",      action="store_true")
@@ -1823,6 +2460,8 @@ def main():
     p.add_argument("--max-subjects",  type=int,   default=None)
     p.add_argument("--max-trials",    type=int,   default=300)
     p.add_argument("--temperature",   type=float, default=1.5)
+    p.add_argument("--wm-epochs",     type=int,   default=80,
+                   help="Training epochs for the RSSM world model (default: 80)")
     p.add_argument("--out-json",      default="real_eeg_results.json")
     p.add_argument("--out-html",      default="noosphere_report.html")
     args = p.parse_args()
@@ -1832,8 +2471,12 @@ def main():
             log.info(f"  {name:<22} {meta['description']}")
         return
 
-    if not any([args.all, args.benchmark, args.smoke, args.synth_compare]):
+    if not any([args.all, args.benchmark, getattr(args, "benchmark_wm", False),
+                args.smoke, args.synth_compare]):
         args.benchmark = True
+
+    # Normalise hyphenated flag to underscore attribute
+    run_wm = getattr(args, "benchmark_wm", False) or args.all
 
     dev = get_device()
     log.info(f"Device: {dev}")
@@ -1849,7 +2492,9 @@ def main():
     if args.all or args.synth_compare:
         synth_vs_real(all_data)
 
+    # ── RS-S4 Encoder Benchmark ────────────────────────────────────────────
     if args.all or args.benchmark:
+        log.info("\n== RS-S4 ENCODER BENCHMARK ==========================")
         results = run_benchmark(
             all_data, dev,
             temperature=args.temperature,
@@ -1857,6 +2502,45 @@ def main():
         )
         payload = save_json(results, path=args.out_json)
         save_html(payload, results, path=args.out_html)
+
+    # ── RSSM World Model Benchmark ─────────────────────────────────────────
+    if run_wm:
+        log.info("\n== RSSM WORLD MODEL BENCHMARK =======================")
+        wm_results = run_wm_benchmark(
+            all_data, dev, epochs=args.wm_epochs,
+            max_subjects=args.max_subjects,
+        )
+        wm_payload = save_wm_json(wm_results, base_json_path=args.out_json)
+
+        # Append world model section to the HTML report
+        try:
+            with open(args.out_html, "r") as fh:
+                html = fh.read()
+            wm_section = _wm_html_section(wm_results)
+            # Insert before closing </body> tag
+            html = html.replace("</body></html>",
+                                f"{wm_section}\n</body></html>")
+            with open(args.out_html, "w") as fh:
+                fh.write(html)
+            log.info(f"  [WM] World model section appended to {args.out_html}")
+        except FileNotFoundError:
+            # HTML not yet generated (--benchmark-wm only); create minimal stub
+            wm_section = _wm_html_section(wm_results)
+            stub = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<title>Noosphere World Model — Benchmark Report</title>
+{_CSS}
+</head>
+<body>
+<h1>Noosphere World Model &mdash; RSSM Benchmark Report</h1>
+<p>Generated {time.strftime("%Y-%m-%d %H:%M:%S")} &nbsp;&middot;&nbsp;
+Run <code>--benchmark</code> for the full RS-S4 encoder results.</p>
+{wm_section}
+</body></html>"""
+            with open(args.out_html, "w") as fh:
+                fh.write(stub)
+            log.info(f"  [WM] Standalone WM report written to {args.out_html}")
 
     log.info("\n== DONE =============================================")
 

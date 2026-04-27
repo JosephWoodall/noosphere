@@ -13,6 +13,13 @@ Noosphere allows an operator to control complex systems (robotic arms, Linux ter
 
 Unlike traditional "Universal" AI that tries to understand everyone, Noosphere **forces the world to adapt to you.** It learns your specific brain patterns, your idiosyncratic way of thinking, and your personal goals to become an "Obedient Consequence Engine."
 
+### MOABB-Reference Synthetic Generation
+To ensure high-performance training even without live EEG hardware, Noosphere includes a **MOABB-Reference Synthetic Data Engine** (`synth.py`). 
+- **Multi-Band Oscillators:** Simulates coupled Alpha (8-13Hz) and Beta (15-30Hz) rhythms using Kuramoto networks.
+- **Subject Profiles:** Models inter-subject variability with personalized Individual Alpha Frequencies (IAF) and Leadfield volume conduction matrices.
+- **Physiological Realism:** Includes Beta Rebound (ERS) post-movement, electrode impedance drift, and 50/60Hz power line contamination.
+- **Cross-Subject Datasets:** Generate full `make_moabb_dataset` archives to test model generalization across virtual "Subjects."
+
 ### 2.1 The World Model: Algorithmic Innovation
 Noosphere supports two state-of-the-art World Model algorithms, allowing operators to choose between topological stability and piecewise continuous dynamics:
 
@@ -348,6 +355,8 @@ python demo_real_eeg.py --benchmark
 
 ### Demonstration Commands
 *   **`python demo.py --smoke`**: Verifies all modules (Drone, Robot, BCI, Fluids) in one pass.
+*   **`python demo.py --advanced-wm`**: Demonstrates initialization and state-dimensions for **SKAR** and **HNM** world models.
+*   **`python demo.py --monitor`**: Visualizes the **Health Monitor** and demonstrates the agent's **Self-Healing** (auto-LR reduction).
 *   **`python demo.py --train`**: Starts the autogenous learning loop (The "Dreaming" loop).
 *   **`python demo.py --partial`**: Tests "Modality Dropout" (e.g., operating with only EEG when cameras are blinded).
 

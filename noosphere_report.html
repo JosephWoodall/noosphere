@@ -982,4 +982,950 @@ the intent class at trial <em>t+1</em>.
 <td>0</td>
 </tr></tbody>
 </table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">25.7% &plusmn; 1.1%</td>
+<td class="warn">0.009</td>
+<td class="warn">+0.7%</td>
+<td>0.7824</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">52.8% &plusmn; 2.6%</td>
+<td class="warn">0.051</td>
+<td class="good">+2.8%</td>
+<td>1.0163</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">28.3% &plusmn; 1.0%</td>
+<td class="warn">0.040</td>
+<td class="good">+3.3%</td>
+<td>1.7772</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">50.0% &plusmn; 2.3%</td>
+<td class="warn">-0.023</td>
+<td class="warn">+0.0%</td>
+<td>1.7648</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">23.0% &plusmn; 1.3%</td>
+<td class="warn">-0.022</td>
+<td class="bad">-2.0%</td>
+<td>1.7813</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">53.5% &plusmn; 6.1%</td>
+<td class="warn">0.040</td>
+<td class="good">+3.5%</td>
+<td>1.8242</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">16.7% &plusmn; 1.3%</td>
+<td class="warn">-0.114</td>
+<td class="bad">-8.3%</td>
+<td>1.7796</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">46.6% &plusmn; 8.0%</td>
+<td class="warn">-0.073</td>
+<td class="bad">-3.4%</td>
+<td>1.7599</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">23.7% &plusmn; 0.1%</td>
+<td class="warn">-0.017</td>
+<td class="bad">-1.3%</td>
+<td>0.7610</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.4% &plusmn; 1.4%</td>
+<td class="warn">-0.040</td>
+<td class="bad">-1.6%</td>
+<td>0.7528</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">23.2% &plusmn; 1.0%</td>
+<td class="warn">-0.022</td>
+<td class="bad">-1.8%</td>
+<td>0.7539</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">45.5% &plusmn; 2.3%</td>
+<td class="warn">-0.093</td>
+<td class="bad">-4.5%</td>
+<td>0.8616</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">25.7% &plusmn; 0.7%</td>
+<td class="warn">0.010</td>
+<td class="warn">+0.7%</td>
+<td>0.7378</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">51.2% &plusmn; 1.8%</td>
+<td class="warn">0.019</td>
+<td class="good">+1.2%</td>
+<td>0.7617</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">19.2% &plusmn; 2.0%</td>
+<td class="warn">-0.075</td>
+<td class="bad">-5.8%</td>
+<td>0.8487</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">44.3% &plusmn; 5.7%</td>
+<td class="warn">-0.116</td>
+<td class="bad">-5.7%</td>
+<td>0.9054</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.1% &plusmn; 2.0%</td>
+<td class="warn">-0.012</td>
+<td class="warn">-0.9%</td>
+<td>0.8152</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">53.0% &plusmn; 0.0%</td>
+<td class="warn">0.053</td>
+<td class="good">+3.0%</td>
+<td>0.8094</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">27.8% &plusmn; 5.6%</td>
+<td class="warn">0.040</td>
+<td class="good">+2.8%</td>
+<td>0.7699</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">45.5% &plusmn; 0.0%</td>
+<td class="warn">-0.092</td>
+<td class="bad">-4.5%</td>
+<td>0.8845</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.0% &plusmn; 0.9%</td>
+<td class="warn">-0.013</td>
+<td class="bad">-1.0%</td>
+<td>1.4041</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">51.8% &plusmn; 1.2%</td>
+<td class="warn">0.030</td>
+<td class="good">+1.8%</td>
+<td>1.2035</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.7% &plusmn; 0.5%</td>
+<td class="warn">-0.002</td>
+<td class="warn">-0.3%</td>
+<td>0.9283</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.9% &plusmn; 12.5%</td>
+<td class="warn">-0.029</td>
+<td class="bad">-1.1%</td>
+<td>0.8282</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">26.3% &plusmn; 0.7%</td>
+<td class="warn">0.017</td>
+<td class="good">+1.3%</td>
+<td>1.0402</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">49.2% &plusmn; 1.4%</td>
+<td class="warn">-0.024</td>
+<td class="warn">-0.8%</td>
+<td>0.9099</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">27.3% &plusmn; 2.0%</td>
+<td class="warn">0.030</td>
+<td class="good">+2.3%</td>
+<td>0.7873</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">38.6% &plusmn; 4.5%</td>
+<td class="warn">-0.241</td>
+<td class="bad">-11.4%</td>
+<td>0.8003</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">25.1% &plusmn; 0.3%</td>
+<td class="warn">0.002</td>
+<td class="warn">+0.1%</td>
+<td>0.2232</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">49.4% &plusmn; 1.2%</td>
+<td class="warn">0.000</td>
+<td class="warn">-0.6%</td>
+<td>0.2409</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.7% &plusmn; 0.5%</td>
+<td class="warn">0.000</td>
+<td class="warn">-0.3%</td>
+<td>0.2217</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">51.1% &plusmn; 1.1%</td>
+<td class="warn">0.000</td>
+<td class="good">+1.1%</td>
+<td>0.2168</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.8% &plusmn; 0.1%</td>
+<td class="warn">-0.002</td>
+<td class="warn">-0.2%</td>
+<td>0.2136</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">52.0% &plusmn; 1.0%</td>
+<td class="warn">0.045</td>
+<td class="good">+2.0%</td>
+<td>0.2379</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">27.8% &plusmn; 3.5%</td>
+<td class="warn">0.043</td>
+<td class="good">+2.8%</td>
+<td>0.2350</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.9% &plusmn; 1.1%</td>
+<td class="warn">0.000</td>
+<td class="bad">-1.1%</td>
+<td>0.2240</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">25.1% &plusmn; 0.1%</td>
+<td class="warn">0.001</td>
+<td class="warn">+0.1%</td>
+<td>212.1030</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">50.6% &plusmn; 1.2%</td>
+<td class="warn">0.000</td>
+<td class="warn">+0.6%</td>
+<td>212.1037</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.7% &plusmn; 0.5%</td>
+<td class="warn">0.006</td>
+<td class="warn">-0.3%</td>
+<td>212.1031</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.9% &plusmn; 1.1%</td>
+<td class="warn">0.000</td>
+<td class="bad">-1.1%</td>
+<td>212.1035</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">25.0% &plusmn; 0.0%</td>
+<td class="warn">0.000</td>
+<td class="warn">+0.0%</td>
+<td>212.1030</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">50.6% &plusmn; 1.2%</td>
+<td class="warn">0.000</td>
+<td class="warn">+0.6%</td>
+<td>212.1031</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.2% &plusmn; 0.0%</td>
+<td class="warn">-0.000</td>
+<td class="warn">-0.8%</td>
+<td>212.1031</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">52.3% &plusmn; 0.0%</td>
+<td class="warn">0.023</td>
+<td class="good">+2.3%</td>
+<td>212.1031</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
+
+<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
+<div class="callout"><p>
+<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
+from N&minus;1 subjects (LOSO). At each time step the model observes embedding
+<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
+the prior (zero-action baseline). A linear probe on the imagined latent predicts
+the intent class at trial <em>t+1</em>.
+<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
+<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
+16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
+</p></div>
+<div class="grid">
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
+<div class="card amber">
+  <div class="val">N/A</div>
+  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
+</div>
+<table>
+<thead>
+<tr><th class="L">Dataset</th><th>Chance</th>
+    <th>Next-Intent Acc (mean &plusmn; std)</th>
+    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
+    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
+</thead>
+<tbody><tr>
+<td class="L"><strong>BNCI2014_001</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">25.3% &plusmn; 0.3%</td>
+<td class="warn">0.004</td>
+<td class="warn">+0.3%</td>
+<td>1.0954</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>BNCI2014_004</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">47.8% &plusmn; 0.4%</td>
+<td class="warn">-0.046</td>
+<td class="bad">-2.2%</td>
+<td>1.6682</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Schirrmeister2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
+<td>25.0%</td>
+<td class="warn">24.2% &plusmn; 3.0%</td>
+<td class="warn">-0.010</td>
+<td class="warn">-0.8%</td>
+<td>3.9687</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>PhysionetMI</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">48.9% &plusmn; 3.4%</td>
+<td class="warn">-0.023</td>
+<td class="bad">-1.1%</td>
+<td>4.9316</td>
+<td>2</td>
+</tr><tr>
+<td class="L"><strong>Cho2017</strong><br>
+<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
+<td>50.0%</td>
+<td class="warn">N/A &plusmn; N/A</td>
+<td class="warn">N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>0</td>
+</tr></tbody>
+</table>
 </body></html>

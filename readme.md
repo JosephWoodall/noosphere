@@ -13,6 +13,21 @@ Noosphere allows an operator to control complex systems (robotic arms, Linux ter
 
 Unlike traditional "Universal" AI that tries to understand everyone, Noosphere **forces the world to adapt to you.** It learns your specific brain patterns, your idiosyncratic way of thinking, and your personal goals to become an "Obedient Consequence Engine."
 
+### 2.1 The World Model: Algorithmic Innovation
+Noosphere supports two state-of-the-art World Model algorithms, allowing operators to choose between topological stability and piecewise continuous dynamics:
+
+#### A. Sinkhorn-Knopp Attractor Resonance (SKAR) — [NEW ALGORITHM]
+SKAR is a fundamentally new approach to world modeling that replaces standard variational inference with **Iterative Optimal Transport**.
+- **Attractor Codebook:** Maintains a learned topological manifold of "Cognitive Attractors."
+- **Sinkhorn Resonance:** Instead of sampling, the model runs the iterative **Sinkhorn-Knopp algorithm** to find the optimal transport plan between neural data and the attractor manifold.
+- **Differentiable Alignment:** The entire alignment process is differentiable, allowing the model to "settle" into cognitive states rather than just predicting them.
+
+#### B. Mode-Selective Mamba (Piecewise Topology)
+A high-capacity Selective State Space Model where transition dynamics are governed by discrete cognitive modes.
+- **Piecewise Dynamics:** Your mental state (e.g., "Relaxed" vs. "Focused") acts as a discrete switch ($z_t$) that modulates the continuous temporal transition laws ($\Delta, B, C$) of the Mamba core.
+- **Anticipatory Control:** By simulating forward in latent space, the World Model predicts your intent before the EEG encoder has even finalized its output, reducing effective latency to zero.
+- **Multi-Step Latent Overshooting:** During training, the prior core is forced to imagine multiple steps into the future without corrective observations for long-term stability.
+
 ---
 
 ## 2. The Three Pillars of Execution
@@ -91,9 +106,9 @@ flowchart TD
     FUSE --> GNN
 
     %% ─── STAGE 2: WORLD MODEL ────────────────────────────────────────────
-    subgraph WM["rssm.py — Recurrent State Space Model  [Paper 2]"]
+    subgraph WM["rssm.py — Mode-Selective Mamba RSSM  [Paper 2]"]
         direction TB
-        GRU["GRU Deterministic State\nh_t ∈ ℝ²⁵⁶\nlong-range temporal memory"]
+        MAMBA["Mamba Mode-Selective SSM\nh_t = (y_t, ssm_state)\nPiecewise-continuous dynamics modulated by intent mode z"]
         PRIOR["Prior MLP\np(z_t | h_t)\nno observation"]
         POST["Posterior MLP\nq(z_t | h_t, e_t)\nwith observation"]
         ST["Straight-Through\nOneHot Categorical\n16×16 stochastic latent"]
@@ -102,10 +117,10 @@ flowchart TD
         CONSQ["ConsequenceModel\nreward / value / termination heads"]
     end
 
-    GNN --> GRU
+    GNN --> MAMBA
     EMBED --> POST
-    GRU --> PRIOR
-    GRU --> POST
+    MAMBA --> PRIOR
+    MAMBA --> POST
     PRIOR --> ST
     POST --> ST
     ST --> KLLOSS
@@ -239,34 +254,55 @@ flowchart TD
     CFGS -.->|settings| PLAN
 ```
 
-### Module Cross-Reference
+### Module Cross-Reference (Categorized)
 
+#### I. Perception & Signal Processing (Front-End)
 | Module | Stage | Key Class / Function | Used By |
 |---|---|---|---|
 | `preprocessing.py` | Input | `StandardPreprocessor` | `agent.py`, `demo_real_eeg.py` |
 | `s4_eeg.py` | Encoder | `S4EEGEncoder`, `S4D` | `demo_real_eeg.py`, `agent.py` |
 | `perception.py` | Fusion | `HybridPerceptionModel` | `agent.py` |
 | `gnn.py` | Encoder | `KinematicGNN` | `perception.py`, `agent.py` |
+
+#### II. Cognitive World Model (The "Brain")
+| Module | Stage | Key Class / Function | Used By |
+|---|---|---|---|
 | `rssm.py` | World Model | `RSSM`, `ConsequenceModel`, `ObservationDecoder` | `agent.py`, `demo_real_eeg.py` |
 | `physics.py` | World Model | `PhysicsAugmentedRSSM`, `PhysicsTransitionPrior` | `agent.py` |
 | `intent.py` | Decision | `IntentArbiter` | `agent.py` |
+
+#### III. Planning & Control (The "Will")
+| Module | Stage | Key Class / Function | Used By |
+|---|---|---|---|
 | `planner.py` | Planning | `MCTSPlanner`, `Actor`, `Critic` | `agent.py` |
-| `actions.py` | Execution | `ActionVocabulary`, `ShellExecutor` | `agent.py` |
-| `hardware.py` | Execution | `ServoController`, `BluetoothDriver` | `agent.py` |
-| `apparatus_iot.py` | Execution | `IoTApparatus` | `agent.py` |
-| `apparatus.py` | Execution | `GenericApparatus` | `hardware.py` |
+| `agent.py` | Core | `NoosphereAgent` | Entry point |
+| `monitor.py` | Telemetry | `NoosphereMonitor` | `agent.py` |
+
+#### IV. Memory & Learning (The Subconscious)
+| Module | Stage | Key Class / Function | Used By |
+|---|---|---|---|
 | `memory.py` | Memory | `SequenceReplayBuffer`, `EpisodicMemory` | `trainer.py`, `agent.py` |
 | `trainer.py` | Training | `ContinuousLearner` | `agent.py` |
 | `learning.py` | Training | `SIGReg`, `SpatialTopologyLoss` | `trainer.py` |
 | `synth.py` | Training | `KuramotoSynth`, `LeadfieldMatrix` | `trainer.py`, `demo_real_eeg.py` |
-| `monitor.py` | Telemetry | `NoosphereMonitor` | `agent.py` |
+
+#### V. Execution Layer (The "Body")
+| Module | Stage | Key Class / Function | Used By |
+|---|---|---|---|
+| `actions.py` | Execution | `ActionVocabulary`, `ShellExecutor` | `agent.py` |
+| `hardware.py` | Execution | `ServoController`, `BluetoothDriver` | `agent.py` |
+| `apparatus_iot.py` | Execution | `IoTApparatus` | `agent.py` |
+| `apparatus.py` | Execution | `GenericApparatus` | `hardware.py` |
+
+#### VI. Network & Infrastructure (The Noosphere)
+| Module | Stage | Key Class / Function | Used By |
+|---|---|---|---|
 | `proto.py` | Network | `NCPProtocol`, `ActionToken` | `network.py` |
 | `tokenizer.py` | Network | `IntentTokenizer` | `proto.py` |
 | `bundle.py` | Network | `WorldModelBundle` | `network.py` |
 | `network.py` | Network | `P2PMeshTransport` | `agent.py` |
 | `discovery.py` | Network | `HardwareDiscovery`, `PeerDiscovery` | `agent.py` |
 | `configs.py` | Config | `NoosphereConfig` | All modules |
-| `agent.py` | Core | `NoosphereAgent` | Entry point |
 
 
 ## 4. Project Structure

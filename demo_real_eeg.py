@@ -1855,32 +1855,67 @@ def extract_embeddings(
 #             between the decoded prior latent and the true next embedding.
 # The KL loss is the DreamerV3 balanced KL identical to RSSM.kl_loss().
 
-def _make_rssm(embed_dim: int, dev: torch.device):
-    """Instantiate a bare RSSM with embed_dim matched to the S4 encoder."""
-    from noosphere.rssm import RSSM
-    # action_dim=1 (zero-action scalar); det_dim and stoch dimensioned for EEG
-    return RSSM(
-        embed_dim=embed_dim,
-        action_dim=1,
-        det_dim=256,
-        stoch_cats=16,
-        stoch_classes=16,
-        hidden_dim=256,
-    ).to(dev)
+def _make_rssm(embed_dim: int, dev: torch.device, algo: str = "hnm"):
+    """Instantiate a bare RSSM, SKAR, or HNM with embed_dim matched to the S4 encoder."""
+    from noosphere.rssm import RSSM, SKARWorldModel, HNMWorldModel
+    
+    if algo == "mamba":
+        # action_dim=1 (zero-action scalar); det_dim and stoch dimensioned for EEG
+        return RSSM(
+            embed_dim=embed_dim,
+            action_dim=1,
+            det_dim=512,
+            stoch_cats=32,
+            stoch_classes=16,
+            hidden_dim=512,
+            d_state=32,
+        ).to(dev)
+    elif algo == "skar":
+        return SKARWorldModel(
+            embed_dim=embed_dim,
+            action_dim=1,
+            det_dim=512,
+            stoch_cats=64,  # K=64 attractors
+            hidden_dim=512,
+            d_state=32,
+        ).to(dev)
+    elif algo == "hnm":
+        return HNMWorldModel(
+            embed_dim=embed_dim,
+            action_dim=1,
+            det_dim=512,
+            stoch_cats=8,  # n=8 for SO(8) fiber
+            hidden_dim=512,
+            d_state=32,
+        ).to(dev)
+    else:
+        raise ValueError(f"Unknown algo: {algo}")
 
 
 def _make_obs_decoder(state_dim: int, embed_dim: int, dev: torch.device) -> nn.Module:
-    """Linear probe: decodes RSSM latent → reconstructed embedding."""
+    """Non-linear probe: decodes RSSM latent → reconstructed embedding."""
     return nn.Sequential(
-        nn.Linear(state_dim, 256),
+        nn.Linear(state_dim, 1024, bias=False),
+        nn.LayerNorm(1024),
         nn.SiLU(),
-        nn.Linear(256, embed_dim),
+        nn.Linear(1024, 512, bias=False),
+        nn.LayerNorm(512),
+        nn.SiLU(),
+        nn.Linear(512, embed_dim),
     ).to(dev)
 
 
 def _make_intent_probe(state_dim: int, n_cls: int, dev: torch.device) -> nn.Module:
-    """Linear probe: imagined prior latent → intent class."""
-    return nn.Linear(state_dim, n_cls).to(dev)
+    """Non-linear probe: imagined prior latent → intent class."""
+    return nn.Sequential(
+        nn.Linear(state_dim, 1024, bias=False),
+        nn.LayerNorm(1024),
+        nn.SiLU(),
+        nn.Linear(1024, 512, bias=False),
+        nn.LayerNorm(512),
+        nn.SiLU(),
+        nn.Linear(512, n_cls),
+    ).to(dev)
 
 
 def train_rssm(
@@ -1892,38 +1927,51 @@ def train_rssm(
     epochs: int = 80,
     lr: float = 3e-4,
     batch_seq: int = 16,
-) -> Tuple[nn.Module, nn.Module, nn.Module]:
+    algo: str = "hnm",
+) -> Tuple[nn.Module, nn.Module, nn.Module, Optional[Any]]:
     """
-    Train RSSM + decoder + intent probe on the training subjects.
+    Train RSSM/SKAR + decoder + intent probe on the training subjects.
 
     Uses per-subject chronological sequences; sequences of length 8 are
     sampled randomly from each subject's trial list in each epoch.
 
-    Returns (rssm, obs_decoder, intent_probe)
+    Returns (rssm, obs_decoder, intent_probe, scaler)
     """
-    rssm = _make_rssm(embed_dim, dev)
+    from sklearn.preprocessing import StandardScaler
+
+    # Fit scaler on all training data
+    all_tr_flat = np.concatenate(list(embeds_by_subj.values()), axis=0)
+    scaler = StandardScaler()
+    scaler.fit(all_tr_flat)
+
+    # Scale the subject embeddings
+    scaled_emb_by_s = {s: scaler.transform(e) for s, e in embeds_by_subj.items()}
+
+    rssm = _make_rssm(embed_dim, dev, algo=algo)
     obs_dec = _make_obs_decoder(rssm.state_dim, embed_dim, dev)
     intent_probe = _make_intent_probe(rssm.state_dim, n_cls, dev)
 
     params = list(rssm.parameters()) + list(obs_dec.parameters()) + list(intent_probe.parameters())
     opt = optim.AdamW(params, lr=lr, weight_decay=1e-4)
-    scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs, eta_min=lr*0.01)
+    scaler_pt = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
 
     # Build flat training list: (embed_seq, label_seq) per subject
     all_seqs_e, all_seqs_l = [], []
-    SEQ_LEN = 8
-    for subj, emb in embeds_by_subj.items():
+    SEQ_LEN = 12
+    STRIDE = 2  # Maximized overlap for more training data
+    for subj, emb in scaled_emb_by_s.items():
         lbl = labels_by_subj[subj]
         n = len(emb)
         if n < SEQ_LEN + 1:
             continue
-        for start in range(0, n - SEQ_LEN, SEQ_LEN // 2):
+        for start in range(0, n - SEQ_LEN, STRIDE):
             all_seqs_e.append(emb[start : start + SEQ_LEN + 1])
             all_seqs_l.append(lbl[start : start + SEQ_LEN + 1])
 
     if not all_seqs_e:
-        log.warning("  [WM] Not enough data to train RSSM — need >8 trials per subject")
-        return rssm, obs_dec, intent_probe
+        log.warning("  [WM] Not enough data to train RSSM — need >12 trials per subject")
+        return rssm, obs_dec, intent_probe, scaler
 
     log.info(f"  [WM] Training RSSM: {len(all_seqs_e)} sequences, {epochs} epochs")
 
@@ -1946,6 +1994,11 @@ def train_rssm(
             E = torch.tensor(
                 np.stack([all_seqs_e[i] for i in batch_idx]), dtype=torch.float32
             ).to(dev)
+
+            # Embedding Augmentation: Add subtle Gaussian noise
+            if rssm.training:
+                E = E + torch.randn_like(E) * 0.02
+
             L = torch.tensor(
                 np.stack([all_seqs_l[i] for i in batch_idx]), dtype=torch.long
             ).to(dev)
@@ -1953,6 +2006,8 @@ def train_rssm(
             B = E.shape[0]
             state = rssm.initial_state(B, dev)
             h, z = state["h"], state["z"]
+            h_im, z_im = h, z  # Imagination state for overshooting
+            
             # Zero-action: shape (B, 1)
             a = torch.zeros(B, 1, device=dev)
 
@@ -1960,10 +2015,11 @@ def train_rssm(
             rec_total = torch.tensor(0.0, device=dev)
             cls_total = torch.tensor(0.0, device=dev)
 
-            with torch.amp.autocast("cuda", enabled=(scaler is not None)):
+            with torch.amp.autocast("cuda", enabled=(scaler_pt is not None)):
                 for t in range(SEQ_LEN):
                     obs_t = E[:, t, :]          # current embedding
-                    # Observe step: posterior uses real embedding
+                    
+                    # 1. Observe step: posterior uses real embedding (Closed-loop)
                     h, z, prior_p, post_p = rssm.observe_step(h, z, a, obs_t)
                     kl_total = kl_total + rssm.kl_loss(prior_p, post_p)
 
@@ -1972,19 +2028,29 @@ def train_rssm(
                     rec_emb = obs_dec(latent)
                     rec_total = rec_total + F.mse_loss(rec_emb, E[:, t + 1, :])
 
-                    # Intent probe on imagined PRIOR latent (what WM predicted)
-                    h_im, z_im, prior_p_im = rssm.imagine_step(h, z, a)
+                    # 2. Multi-step Latent Overshooting (Open-loop)
+                    h_im, z_im, _ = rssm.imagine_step(h_im, z_im, a)
                     lat_im = torch.cat([h_im, z_im], dim=-1)
+                    
+                    # Intent probe on imagined state with Label Smoothing
                     cls_logits = intent_probe(lat_im)
-                    cls_total = cls_total + F.cross_entropy(cls_logits, L[:, t + 1])
+                    cls_total = cls_total + F.cross_entropy(cls_logits, L[:, t + 1], label_smoothing=0.1)
+                    
+                    # Imagination reconstruction (forces long-term manifold coherence)
+                    rec_im_emb = obs_dec(lat_im)
+                    rec_total = rec_total + 0.5 * F.mse_loss(rec_im_emb, E[:, t + 1, :])
 
-                loss = (kl_total + rec_total + 0.5 * cls_total) / SEQ_LEN
+                    # Sync imagination to posterior every 2 steps to stabilize gradients
+                    if (t + 1) % 2 == 0:
+                        h_im, z_im = h, z
+
+                loss = (kl_total + rec_total + 3.0 * cls_total) / SEQ_LEN
 
             opt.zero_grad()
-            if scaler:
-                scaler.scale(loss).backward()
+            if scaler_pt:
+                scaler_pt.scale(loss).backward()
                 nn.utils.clip_grad_norm_(params, 1.0)
-                scaler.step(opt); scaler.update()
+                scaler_pt.step(opt); scaler_pt.update()
             else:
                 loss.backward()
                 nn.utils.clip_grad_norm_(params, 1.0)
@@ -1993,6 +2059,7 @@ def train_rssm(
             epoch_loss += loss.item()
             n_batches += 1
 
+        scheduler.step()
         avg = epoch_loss / max(n_batches, 1)
         if avg < best_loss:
             best_loss = avg
@@ -2008,7 +2075,7 @@ def train_rssm(
     obs_dec.load_state_dict(best_state["dec"])
     intent_probe.load_state_dict(best_state["probe"])
     log.info(f"  [WM] Training done. Best loss: {best_loss:.4f}")
-    return rssm, obs_dec, intent_probe
+    return rssm, obs_dec, intent_probe, scaler
 
 
 # =============================================================================
@@ -2072,6 +2139,7 @@ def evaluate_rssm(
     dev: torch.device,
     train_embeds: Optional[np.ndarray] = None,
     train_labels: Optional[np.ndarray] = None,
+    scaler: Optional[Any] = None,
 ) -> Dict:
     """
     Evaluate RSSM on a held-out subject's chronological trial sequence.
@@ -2107,7 +2175,12 @@ def evaluate_rssm(
         )
         return {"degenerate_test_set": True, "unique_classes": int(unique_classes[0])}
 
-    E = torch.tensor(embeds, dtype=torch.float32, device=dev)
+    # Scale embeddings if scaler provided
+    ev_embeds = embeds
+    if scaler is not None:
+        ev_embeds = scaler.transform(embeds)
+
+    E = torch.tensor(ev_embeds, dtype=torch.float32, device=dev)
     L_np = labels
     B = 1
     state = rssm.initial_state(B, dev)
@@ -2175,6 +2248,7 @@ def run_wm_benchmark(
     dev: torch.device,
     epochs: int = 80,
     max_subjects: Optional[int] = None,
+    algo: str = "hnm",
 ) -> Dict:
     """
     For each dataset:
@@ -2260,14 +2334,16 @@ def run_wm_benchmark(
                     lbl_by_s[subj] = tr_lbl[mask]
 
             # ── Step 4: Train RSSM ─────────────────────────────────────────
-            rssm, obs_dec, intent_probe = train_rssm(
-                emb_by_s, lbl_by_s, embed_dim, n_cls, dev, epochs=epochs
+            rssm, obs_dec, intent_probe, scaler = train_rssm(
+                emb_by_s, lbl_by_s, embed_dim, n_cls, dev, epochs=epochs,
+                algo=algo
             )
 
             # ── Step 5: Evaluate on held-out subject ───────────────────────
             subj_metrics = evaluate_rssm(
                 rssm, intent_probe, te_emb, te_lbl, n_cls, dev,
                 train_embeds=tr_emb, train_labels=tr_lbl,
+                scaler=scaler,
             )
 
             # Skip degenerate subjects (single class in test set)
@@ -2339,7 +2415,7 @@ def run_wm_benchmark(
 # SECTION WM-5 -- WORLD MODEL: SAVE & HTML SECTION
 # =============================================================================
 
-def save_wm_json(wm_results: Dict, base_json_path: str = "real_eeg_results.json"):
+def save_wm_json(wm_results: Dict, algo: str = "mamba", base_json_path: str = "real_eeg_results.json"):
     """Merge world-model results into the existing JSON output."""
     try:
         with open(base_json_path, "r") as fh:
@@ -2360,11 +2436,14 @@ def save_wm_json(wm_results: Dict, base_json_path: str = "real_eeg_results.json"
         for ds in wm_results.values()
         if ds.get("aggregate") and ds["aggregate"].get("mean_next_intent_kappa") is not None
     ]
+    
+    model_name = "Sinkhorn-Knopp Attractor Resonance (SKAR)" if algo == "skar" else "Bare RSSM (Mode-Selective Mamba)"
+
     payload["world_model"]["_global_aggregate"] = {
         "mean_next_intent_acc_across_datasets": float(np.mean(all_acc)) if all_acc else None,
         "mean_next_intent_kappa_across_datasets": float(np.mean(all_kappa)) if all_kappa else None,
         "n_datasets": len(wm_results),
-        "model": "Bare RSSM (DreamerV3 balanced KL, zero-action baseline)",
+        "model": model_name,
         "encoder": "RS-S4 frozen (pretrained per LOSO fold)",
         "action_strategy": "zero-action",
         "training_epochs": 80,
@@ -2462,6 +2541,8 @@ def main():
     p.add_argument("--temperature",   type=float, default=1.5)
     p.add_argument("--wm-epochs",     type=int,   default=80,
                    help="Training epochs for the RSSM world model (default: 80)")
+    p.add_argument("--algo",          choices=["mamba", "skar", "hnm"], default="hnm",
+                   help="World model algorithm: 'mamba' (standard), 'skar' (Sinkhorn), or 'hnm' (Holonomic Manifold)")
     p.add_argument("--out-json",      default="real_eeg_results.json")
     p.add_argument("--out-html",      default="noosphere_report.html")
     args = p.parse_args()
@@ -2505,12 +2586,13 @@ def main():
 
     # ── RSSM World Model Benchmark ─────────────────────────────────────────
     if run_wm:
-        log.info("\n== RSSM WORLD MODEL BENCHMARK =======================")
+        log.info(f"\n== {args.algo.upper()} WORLD MODEL BENCHMARK =======================")
         wm_results = run_wm_benchmark(
             all_data, dev, epochs=args.wm_epochs,
             max_subjects=args.max_subjects,
+            algo=args.algo,
         )
-        wm_payload = save_wm_json(wm_results, base_json_path=args.out_json)
+        wm_payload = save_wm_json(wm_results, algo=args.algo, base_json_path=args.out_json)
 
         # Append world model section to the HTML report
         try:

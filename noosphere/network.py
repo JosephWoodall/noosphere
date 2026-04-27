@@ -106,19 +106,34 @@ class NetworkSessionManager:
 
     def share_insights(self, weights: Dict[str, torch.Tensor]):
         """The 'Whisper' Protocol: Share Dynamics Insights."""
-        # Note: Centralized/Decentralized logic happens here
-        # We package abstract dynamics (residual corrector)
-        # and publish to the global channel or specific peers
         from noosphere.proto import NCPEncoder
         encoder = NCPEncoder()
         
-        # Convert tensors to list/numpy for JSON serialization (Insight prototype)
-        # In production, this would be a more efficient binary blob
-        summary = {k: v.mean().item() for k, v in weights.items() if "weight" in k}
+        # Share mean and std for a more complete distribution of the dynamics
+        summary = {
+            k: {"mean": v.mean().item(), "std": v.std().item()} 
+            for k, v in weights.items() if "weight" in k
+        }
         
         frame = encoder.context_insight_packet("dynamics_residual", {"summary": summary})
         self.transport.publish("ncp:insights", frame)
-        self.log.info("[Network] Shared Dynamics Insight 'Whisper' to network")
+        self.log.info(f"[Network] Shared Dynamics Insight 'Whisper' ({len(summary)} params)")
+
+    def listen_for_insights(self, callback: Callable[[str, Dict], None]):
+        """Starts listening for global dynamics insights."""
+        from noosphere.proto import NCPDecoder, MsgType
+        decoder = NCPDecoder()
+
+        def _cb(frame):
+            try:
+                msg = decoder.decode(frame)
+                if msg["type"] == MsgType.CONTEXT_INSIGHT:
+                    payload = msg["payload"]
+                    callback(payload["type"], payload["data"])
+            except Exception as e:
+                self.log.error(f"[Network] Insight Decode Error: {e}")
+
+        self.transport.subscribe("ncp:insights", _cb)
 
 class NetworkUI:
     """Terminal-based side window for Noosphere messaging."""

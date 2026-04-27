@@ -406,6 +406,27 @@ def make_batch(
     return batch
 
 
+# ── Monitor Stress Test ───────────────────────────────────────────────────────
+
+class MonitorStressTest:
+    """Generates synthetic failures to exercise the Monitor and Self-Healing."""
+    @staticmethod
+    def kl_explosion() -> Dict:
+        return {"wm/loss": 5.0, "wm/kl": 25.0} # Above cfg.kl_max (20.0)
+
+    @staticmethod
+    def reward_crash() -> List[float]:
+        # Avg falls by > 0.3
+        return [0.9] * 25 + [0.1] * 25
+
+    @staticmethod
+    def command_failure_streak() -> List[Dict]:
+        return [{"exit_code": 1, "outcome": "error"}] * 15
+
+    @staticmethod
+    def gpu_pressure() -> float:
+        return 98.5 # Above cfg.gpu_mem_pct_crit (97.0)
+
 # ── Quick sanity check ────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

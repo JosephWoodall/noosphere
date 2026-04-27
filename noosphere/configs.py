@@ -19,6 +19,7 @@ class PerceptionConfig:
 
 @dataclass
 class WorldModelConfig:
+    type: str = "mamba" # Options: "mamba", "skar", "hnm"
     action_dim: int = 64
     det_dim: int = 512
     stoch_cats: int = 32

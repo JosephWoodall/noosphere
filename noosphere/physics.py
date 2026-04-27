@@ -377,13 +377,25 @@ class PhysicsAugmentedRSSM(nn.Module):
         stoch_classes: int = 32,
         hidden_dim: int = 256,
         dt: float = 1 / 60,
+        model_type: str = "mamba",
     ):
         super().__init__()
         from noosphere.rssm import RSSM as _RSSM
+        from noosphere.rssm import SKARWorldModel, HNMWorldModel
 
-        self.rssm = _RSSM(
-            embed_dim, action_dim, det_dim, stoch_cats, stoch_classes, hidden_dim
-        )
+        if model_type == "skar":
+            self.rssm = SKARWorldModel(
+                embed_dim, action_dim, det_dim, stoch_cats, stoch_classes, hidden_dim
+            )
+        elif model_type == "hnm":
+            self.rssm = HNMWorldModel(
+                embed_dim, action_dim, det_dim, stoch_cats, stoch_classes, hidden_dim
+            )
+        else:
+            self.rssm = _RSSM(
+                embed_dim, action_dim, det_dim, stoch_cats, stoch_classes, hidden_dim
+            )
+        
         phys_dim = _phys_dim(n_bodies, G)
         self.state_est = PhysicsStateEstimator(embed_dim, n_bodies, hidden_dim, G)
         self.prior = PhysicsTransitionPrior(n_bodies, dt)

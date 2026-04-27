@@ -65,7 +65,7 @@ class NoosphereAgent(nn.Module):
         self.rssm = PhysicsAugmentedRSSM(
             embed_dim=P.d_model, action_dim=W.action_dim, n_bodies=W.n_bodies, G=W.fluid_grid,
             det_dim=W.det_dim, stoch_cats=W.stoch_cats, stoch_classes=W.stoch_cls, 
-            hidden_dim=W.hidden_dim, dt=W.dt
+            hidden_dim=W.hidden_dim, dt=W.dt, model_type=W.type
         )
         
         state_dim = self.rssm.state_dim
@@ -119,7 +119,20 @@ class NoosphereAgent(nn.Module):
         self.network_manager = NetworkSessionManager("local_operator", self.transport)
         self.network_ui = NetworkUI(self.network_manager)
         
+        self.network_manager.listen_for_insights(self._on_insight_received)
+        self.received_insights = []
+
+        from noosphere.monitor import Monitor, MonitorConfig
+        self.monitor = Monitor(MonitorConfig(), ncp_transport=self.transport)
+        self.monitor.start()
+        
         self._h = None; self._z = None
+
+    def _on_insight_received(self, insight_type: str, data: Dict):
+        """Callback for incoming 'Whisper' insights from other nodes."""
+        logger.info(f"[Agent] Received '{insight_type}' insight from network")
+        self.received_insights.append({"type": insight_type, "data": data, "ts": time.time()})
+        if len(self.received_insights) > 10: self.received_insights.pop(0)
 
     def _jit_compile(self):
         if hasattr(torch, "compile") and self.device.type == "cuda":
@@ -233,6 +246,10 @@ class NoosphereAgent(nn.Module):
         bci_active = info.get("bci_active", False) if info else False
         self.replay.add_step(obs, action, raw_cont, exec_cont, bci_active, reward, done, info=info)
         
+        # Monitor: Record step
+        if hasattr(self, "monitor"):
+            self.monitor.record_step(self._step, info or {}, {}, env_info=info)
+
         if self._h is not None and self._step % 10 == 0:
             state = torch.cat([self._h, self._z], -1)
             with torch.no_grad():
@@ -248,6 +265,18 @@ class NoosphereAgent(nn.Module):
         if self._step >= self.cfg.training.warmup_steps:
             for _ in range(self.cfg.ac.ac_updates): metrics.update(self._update_ac())
             
+        # Monitor: Pass metrics and drain alerts
+        if hasattr(self, "monitor"):
+            self.monitor.record_step(self._step, {}, metrics)
+            alerts = self.monitor.drain_alerts()
+            for a in alerts:
+                logger.warning(f"[AGENT MONITOR] {a}")
+                # Self-healing: Respond to critical failures
+                if a.source in ("kl_explosion", "wm_loss_spike"):
+                    logger.warning("[Agent] Stabilizing world model: reducing learning rate by 50%")
+                    for param_group in self.opt_wm.param_groups:
+                        param_group['lr'] *= 0.5
+
         # Collaborative Learning: The "Whisper" Protocol
         if self.cfg.bci.allow_collective_learning and self._step % 100 == 0:
             # We share abstract dynamics (RSSM parameters related to physics)

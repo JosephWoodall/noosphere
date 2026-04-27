@@ -200,12 +200,53 @@ def run_training_demo(dev: torch.device, steps: int = 10):
         if step % 2 == 0:
             log.info(f"    Step {step:02d} | WM Loss: {loss:.4f} | BCI Confidence: {info['bci_confidence']:.2f}")
 
+# ── Advanced World Models & Health ───────────────────────────────────────────
+
+def run_advanced_wm_demo(dev: torch.device):
+    log.info("\n── Advanced World Model Architectures ──────────────────────")
+    for wm_type in ["mamba", "skar", "hnm"]:
+        cfg = AgentConfig.from_legacy(d_model=64, n_actions=5)
+        cfg.world_model.type = wm_type
+        t0 = time.perf_counter()
+        agent = NoosphereAgent(cfg, dev)
+        ms = (time.perf_counter() - t0) * 1000
+        log.info(f"  {wm_type.upper():<10} | State Dim: {agent.rssm.state_dim:<4} | Init Latency: {ms:5.1f}ms | ✓")
+
+def run_health_demo(dev: torch.device):
+    log.info("\n── System Health & Self-Healing ───────────────────────────")
+    from noosphere.synth import MonitorStressTest
+    cfg = AgentConfig.from_legacy(d_model=64, n_actions=5)
+    agent = NoosphereAgent(cfg, dev)
+    
+    initial_lr = agent.opt_wm.param_groups[0]['lr']
+    log.info(f"  Initial World Model LR: {initial_lr:.6f}")
+    
+    log.info("  Simulating KL Explosion (KL > 20)...")
+    # Feed the monitor a bad metric
+    metrics = MonitorStressTest.kl_explosion()
+    
+    # Trigger update to process metrics and alerts
+    agent.update() # Normally requires replay buffer, but we'll mock the metrics pass
+    # Since agent.update() might return early if buffer is small, let's manually trigger the health check
+    agent.monitor.record_step(0, {}, metrics)
+    alerts = agent.monitor.drain_alerts()
+    for a in alerts:
+        log.warning(f"    [Monitor Alert] {a.source}: {a.message}")
+        if a.source == "kl_explosion":
+            log.info("    [Self-Healing] Detected KL explosion, reducing LR...")
+            for pg in agent.opt_wm.param_groups: pg['lr'] *= 0.5
+            
+    new_lr = agent.opt_wm.param_groups[0]['lr']
+    log.info(f"  Final World Model LR:   {new_lr:.6f} | ✓")
+
 # ── Main Orchestrator ────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Noosphere v1.7.0 Demo")
     parser.add_argument("--smoke", action="store_true", help="Run multi-modality smoke test")
     parser.add_argument("--partial", action="store_true", help="Run sensor dropout test")
+    parser.add_argument("--advanced-wm", action="store_true", help="Demo SKAR and HNM models")
+    parser.add_argument("--monitor", action="store_true", help="Demo Health Monitor & Self-Healing")
     parser.add_argument("--network", action="store_true", help="Show Network foundation")
     parser.add_argument("--iot", action="store_true", help="Show IoT foundation")
     parser.add_argument("--train", action="store_true", help="Run training loop demo")
@@ -221,6 +262,12 @@ def main():
     
     if args.all or args.partial:
         run_partial_test(dev)
+
+    if args.all or args.advanced_wm:
+        run_advanced_wm_demo(dev)
+
+    if args.all or args.monitor:
+        run_health_demo(dev)
         
     if args.all or args.network or args.iot:
         run_foundation_demo(dev)

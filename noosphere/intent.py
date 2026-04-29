@@ -28,8 +28,8 @@ class IdentitySpace:
                 
         return best_id, best_sim
 
-class IntentProcessor:
-    """Handles BCI Intent Momentum, Probabilistic Blending, and Identity Mapping."""
+class IntentArbiter:
+    """Handles BCI Intent Momentum, Probabilistic Blending, Identity Mapping, and Safety Gating."""
     def __init__(self, n_actions: int, min_confidence: float = 0.3, fast_path_threshold: float = 0.85, momentum_decay: float = 0.05):
         self.n_actions = n_actions
         self.min_confidence = min_confidence
@@ -89,3 +89,15 @@ class IntentProcessor:
         c_final = conf * bci_out["continuous"] + (1.0 - conf) * actor_cont
         
         return p_final, c_final
+
+    def check_safety_gate(self, intent_command: str) -> bool:
+        """
+        Digital Consequence Safety Gate.
+        Simulates the outcome of an intent. If the command matches critical destructive patterns,
+        intercept and block it before it reaches the OS or hardware.
+        """
+        critical_patterns = ["rm -rf", "mkfs", "dd if=", "format", ":(){ :|:& };:"]
+        for pattern in critical_patterns:
+            if pattern in intent_command:
+                return False # Blocked
+        return True # Safe

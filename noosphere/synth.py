@@ -60,12 +60,12 @@ class KuramotoNetwork:
         self.K = np.ones((n_nodes, n_nodes)) * 2.0
         np.fill_diagonal(self.K, 0)
         
-    def step(self, K_matrix_override: Optional[np.ndarray] = None) -> np.ndarray:
+    def step(self, K_matrix_override: Optional[np.ndarray] = None, omega_override: Optional[float] = None) -> np.ndarray:
         K = K_matrix_override if K_matrix_override is not None else self.K
-        # Kuramoto differential equation
-        diff = self.theta[None, :] - self.theta[:, None]
-        coupling = np.sum(K * np.sin(diff), axis=1) / self.n_nodes
-        self.theta += (self.omega + coupling) * self.dt
+        omega = omega_override * 2 * math.pi if omega_override is not None else self.omega
+        # Vectorized Kuramoto: faster than double summation
+        coupling = (K * np.sin(self.theta[None, :] - self.theta[:, None])).sum(axis=1) / self.n_nodes
+        self.theta += (omega + coupling) * self.dt
         self.theta = np.mod(self.theta, 2 * np.pi)
         return np.sin(self.theta)
 
@@ -133,21 +133,21 @@ class ScalpEEGGenerator:
             sources[i, :] = generate_pink_noise(n_samples, self.dt, self.rng) * 12.0
             
         # 2. Oscillatory Activity (Alpha + Beta)
-        K_alpha = self.K_sync if self._muscle_intent == self.INTENT_REST else self.K_desync
-        
-        # Beta is slightly different: Desync during move, ERS (rebound) after
-        if self._rebound_timer > 0:
-            K_beta = self.K_sync * 2.5 # Synchronized burst
-            self._rebound_timer -= n_samples
-        elif self._muscle_intent != self.INTENT_REST:
-            K_beta = self.K_desync
-        else:
-            K_beta = self.K_sync
+        # Use distinct frequency bands for different intents to ensure separability
+        if self._muscle_intent == self.INTENT_REST:
+            f_alpha, f_beta = 10.0, 20.0
+            K_alpha, K_beta = self.K_sync, self.K_sync
+        elif self._muscle_intent == self.INTENT_RIGHT_HAND:
+            f_alpha, f_beta = 8.0, 15.0 # Lower alpha, lower beta
+            K_alpha, K_beta = self.K_desync, self.K_desync
+        else: # LEFT_HAND
+            f_alpha, f_beta = 12.0, 25.0 # Higher alpha, higher beta
+            K_alpha, K_beta = self.K_desync, self.K_desync
             
         for i in range(n_samples):
             # Sum alpha and beta oscillations
-            sources[:, i] += self.alpha_net.step(K_alpha) * 18.0
-            sources[:, i] += self.beta_net.step(K_beta) * 8.0
+            sources[:, i] += self.alpha_net.step(K_alpha, omega_override=f_alpha) * 20.0
+            sources[:, i] += self.beta_net.step(K_beta, omega_override=f_beta) * 10.0
             
         # 3. Artifact Injection
         t_batch = self.t + np.arange(n_samples) * self.dt
@@ -295,34 +295,39 @@ def obs_fluid(seed: int = 0) -> Dict:
 
 # ── Full multimodal batch builder ─────────────────────────────────────────────
 
+import multiprocessing as mp
+
+def _generate_subject_data(args):
+    sub_id, n_trials_per_subject, seq_len, intents = args
+    # Unique seed for each process
+    gen = ScalpEEGGenerator(seed=sub_id * 100 + int(time.time() % 100), subject_id=sub_id)
+    subject_data = []
+    for trial_id in range(n_trials_per_subject):
+        intent = int(np.random.choice(intents))
+        segments = [gen.next_segment(intent=intent, n_samples=seq_len) for _ in range(3)]
+        combined_eeg = np.concatenate([s["eeg"] for s in segments], axis=1)
+        subject_data.append({
+            "trial_id": trial_id,
+            "intent": intent,
+            "eeg": combined_eeg,
+            "profile": gen.profile
+        })
+    return sub_id, subject_data
+
 def make_moabb_dataset(n_subjects: int = 5, n_trials_per_subject: int = 20, seq_len: int = 256) -> Dict[int, List[Dict]]:
-    """
-    Generates a structured multi-subject dataset similar to MOABB archives.
-    Each subject has a unique profile and multiple trials of different intents.
-    """
-    dataset = {}
     intents = [
         ScalpEEGGenerator.INTENT_REST, 
         ScalpEEGGenerator.INTENT_RIGHT_HAND, 
         ScalpEEGGenerator.INTENT_LEFT_HAND
     ]
     
-    for sub_id in range(1, n_subjects + 1):
-        gen = ScalpEEGGenerator(seed=sub_id * 100, subject_id=sub_id)
-        subject_data = []
-        for trial_id in range(n_trials_per_subject):
-            intent = int(np.random.choice(intents))
-            # Simulate a few segments of the same intent to form a 'trial'
-            segments = [gen.next_segment(intent=intent, n_samples=seq_len) for _ in range(3)]
-            combined_eeg = np.concatenate([s["eeg"] for s in segments], axis=1)
-            subject_data.append({
-                "trial_id": trial_id,
-                "intent": intent,
-                "eeg": combined_eeg,
-                "profile": gen.profile
-            })
-        dataset[sub_id] = subject_data
-    return dataset
+    args_list = [(sub_id, n_trials_per_subject, seq_len, intents) for sub_id in range(1, n_subjects + 1)]
+    
+    # Use pool for parallel generation
+    with mp.Pool(processes=min(n_subjects, mp.cpu_count())) as pool:
+        results = pool.map(_generate_subject_data, args_list)
+        
+    return {sub_id: data for sub_id, data in results}
 
 def make_batch(
     domain: str,

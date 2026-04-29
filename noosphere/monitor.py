@@ -213,13 +213,19 @@ class Monitor:
         self._prom_bci_confidence = None
         self._prom_reward = None
         if HAS_PROMETHEUS:
-            self._prom_wm_loss = Gauge("noosphere_wm_loss", "World Model Loss")
-            self._prom_wm_kl = Gauge("noosphere_wm_kl", "World Model KL Divergence")
-            self._prom_ac_bc_loss = Gauge("noosphere_ac_bc_loss", "Actor Behavioral Cloning Loss")
-            self._prom_bci_confidence = Gauge("noosphere_bci_confidence", "BCI Evidential Confidence")
-            self._prom_reward = Gauge("noosphere_reward", "Environment Reach Reward")
-            self._prom_e2e_latency = Gauge("noosphere_e2e_latency_ms", "End-to-End Latency in MS")
-            self._prom_ncp_latency = Gauge("noosphere_ncp_latency_us", "NCP Transport IPC Latency in Microseconds")
+            registry = prometheus_client.REGISTRY
+            def get_gauge(name, label):
+                if name in registry._names_to_collectors:
+                    return registry._names_to_collectors[name]
+                return Gauge(name, label)
+
+            self._prom_wm_loss = get_gauge("noosphere_wm_loss", "World Model Loss")
+            self._prom_wm_kl = get_gauge("noosphere_wm_kl", "World Model KL Divergence")
+            self._prom_ac_bc_loss = get_gauge("noosphere_ac_bc_loss", "Actor Behavioral Cloning Loss")
+            self._prom_bci_confidence = get_gauge("noosphere_bci_confidence", "BCI Evidential Confidence")
+            self._prom_reward = get_gauge("noosphere_reward", "Environment Reach Reward")
+            self._prom_e2e_latency = get_gauge("noosphere_e2e_latency_ms", "End-to-End Latency in MS")
+            self._prom_ncp_latency = get_gauge("noosphere_ncp_latency_us", "NCP Transport IPC Latency in Microseconds")
 
         if cfg.alert_file:
             try:

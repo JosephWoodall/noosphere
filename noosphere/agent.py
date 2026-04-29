@@ -10,6 +10,7 @@ Features:
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -21,7 +22,7 @@ import torch.optim as optim
 from noosphere.actions import ActBridge
 from noosphere.bundle import BundleMetadata, export_bundle, load_bundle
 from noosphere.configs import AgentConfig
-from noosphere.intent import IntentProcessor
+from noosphere.intent import IntentArbiter
 from noosphere.learning import LearningManager, SpatialTopologyLoss
 from noosphere.memory import EpisodicMemory, SequenceReplayBuffer, WorkingMemory
 from noosphere.perception import HybridPerceptionModel
@@ -100,7 +101,7 @@ class NoosphereAgent(nn.Module):
     def _init_bci(self):
         C = self.cfg
         self.prep = ObservationPreprocessor(self.device)
-        self.intent = IntentProcessor(
+        self.intent = IntentArbiter(
             n_actions=C.bci.n_actions, 
             min_confidence=C.bci.min_act_confidence,
             fast_path_threshold=C.bci.fast_path_threshold,
@@ -218,6 +219,14 @@ class NoosphereAgent(nn.Module):
             }
             
             if self.act_bridge is not None:
+                # Digital Consequence Safety Gate Check
+                if action < len(self.act_bridge.space):
+                    action_obj = self.act_bridge.space[action]
+                    if action_obj.payload and "shell_cmd" in action_obj.payload:
+                        if not self.intent.check_safety_gate(action_obj.payload["shell_cmd"]):
+                            info["sim_termination"] = 1.0 # Force block
+                            logger.warning(f"Safety Gate Blocked Destructive Command: {action_obj.payload['shell_cmd']}")
+
                 act_result = self.act_bridge.act(action, s4_confidence=bci_out["confidence"], info=info)
                 info["act_executed"] = act_result["executed"]
                 if "structured" in act_result: info["_exec_structured"] = act_result["structured"]

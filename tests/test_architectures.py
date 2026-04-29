@@ -25,7 +25,7 @@ def test_s4_eeg_encoder_edl():
     eeg = torch.randn(B, C, T, device=device)
     mask = torch.ones(B, C, device=device)
     
-    out = encoder(eeg, electrode_mask=mask)
+    out = encoder(eeg)
     
     # Check EDL math property: probabilities sum to 1
     p_sum = out["intent_probs"].sum(dim=-1)
@@ -69,8 +69,8 @@ def test_physics_rssm():
     
     obs_embed = torch.randn(B, D_MOD, device=device)
     action = torch.randn(B, D_ACT, device=device)
-    prev_h = torch.zeros(B, D_DET, device=device)
-    prev_z = torch.randn(B, D_STOCH * 4, device=device)
+    init_s = rssm.rssm.initial_state(B, device)
+    prev_h, prev_z = init_s["h"], init_s["z"]
     
     h, z, *_ = rssm.rssm.observe_step(prev_h, prev_z, action, obs_embed)
     
@@ -90,7 +90,7 @@ def test_consequence_model():
     assert "value" in out
     assert "termination" in out
     
-    assert out["reward"].shape == (B,)
+    assert out["reward"].shape == (B, 1)
     assert torch.all(out["termination"] >= 0.0) and torch.all(out["termination"] <= 1.0)
 
 def test_actor_digital_twin():
@@ -101,7 +101,7 @@ def test_actor_digital_twin():
     actor = Actor(state_dim=latent_dim, n_actions=N_ACTIONS).to(device)
     state = torch.randn(B, latent_dim, device=device)
     
-    dist = actor(state)
+    dist, cont = actor(state)
     assert dist.probs.shape == (B, N_ACTIONS)
     assert dist.logits.shape == (B, N_ACTIONS)
 

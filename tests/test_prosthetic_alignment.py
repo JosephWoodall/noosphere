@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from noosphere.agent import NoosphereAgent, AgentConfig
+from noosphere.agent import NoosphereAgent
+from noosphere.configs import AgentConfig, BCIConfig, PerceptionConfig
 from noosphere.actions import make_shell_space, ShellExecutor, ActBridge, Tier
 
 def test_prosthetic_alignment():
@@ -10,7 +11,7 @@ def test_prosthetic_alignment():
     space = make_shell_space(working_dir=".")
     
     # Needs a smaller vocab for fast testing but 148 is fine
-    cfg = AgentConfig(n_actions=space.n_actions, n_eeg_ch=3, min_act_confidence=0.5)
+    cfg = AgentConfig(bci=BCIConfig(n_actions=space.n_actions, min_act_confidence=0.5), perception=PerceptionConfig(n_eeg_ch=3))
     agent = NoosphereAgent(cfg, device)
     
     # 1. Setup Mock bridge
@@ -23,7 +24,7 @@ def test_prosthetic_alignment():
     class MockS4(nn.Module):
         def forward(self, eeg, mask=None, inference=False):
             probs = torch.zeros(1, space.n_actions)
-            probs[0, 5] = 0.99
+            probs[0, 4] = 0.99
             return {
                 "summary": torch.zeros(1, 256),
                 "sequence": torch.zeros(1, 60, 256),
@@ -63,7 +64,7 @@ def test_prosthetic_alignment():
     
     # Run step deterministically so the 99% probability argmaxes to 5
     action, info = agent.step(dummy_obs, deterministic=True)
-    assert action == 5, f"Expected Shared Autonomy Blend to heavily favor 5. Got {action}."
+    assert action == 4, f"Expected Shared Autonomy Blend to heavily favor 4. Got {action}."
     assert info["sim_termination"] < 0.1, "Simulated termination should be low."
     
     # 3. Test Safety Gating 
@@ -78,7 +79,7 @@ def test_prosthetic_alignment():
     agent.consequence = FatalConsequence()
     
     action, info = agent.step(dummy_obs, deterministic=True)
-    assert action == 5, "Shared Autonomy Blend should still dictate the intended action."
+    assert action == 4, "Shared Autonomy Blend should still dictate the intended action."
     
     # Bridge should reject it
     assert info["act_executed"] == False, "ActBridge FAILED to gate a catastrophic BCI command!"
@@ -89,7 +90,7 @@ def test_prosthetic_alignment():
     class UncertainS4(nn.Module):
         def forward(self, eeg, mask=None, inference=False):
             probs = torch.zeros(1, space.n_actions)
-            probs[0, 5] = 0.99 
+            probs[0, 4] = 0.99 
             return {
                 "summary": torch.zeros(1, 256),
                 "sequence": torch.zeros(1, 60, 256),

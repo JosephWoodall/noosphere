@@ -223,7 +223,7 @@ class NoosphereAgent(nn.Module):
                 if action < len(self.act_bridge.space):
                     action_obj = self.act_bridge.space[action]
                     if action_obj.payload and "shell_cmd" in action_obj.payload:
-                        if not self.intent.check_safety_gate(action_obj.payload["shell_cmd"]):
+                        if self.intent.predict_critical_failure(action_obj.payload["shell_cmd"]):
                             info["sim_termination"] = 1.0 # Force block
                             logger.warning(f"Safety Gate Blocked Destructive Command: {action_obj.payload['shell_cmd']}")
 

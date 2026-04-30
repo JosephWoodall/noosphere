@@ -90,14 +90,23 @@ class IntentArbiter:
         
         return p_final, c_final
 
-    def check_safety_gate(self, intent_command: str) -> bool:
+    def predict_critical_failure(self, intent_command: str) -> bool:
         """
-        Digital Consequence Safety Gate.
-        Simulates the outcome of an intent. If the command matches critical destructive patterns,
+        Digital Consequence Safety Gate (v1.7.0).
+        Simulates the outcome of an intent. If the command matches critical 
+        destructive patterns or is predicted to cause a system-wide crash,
         intercept and block it before it reaches the OS or hardware.
         """
+        # 1. Heuristic Pattern Matching (Fast Path)
         critical_patterns = ["rm -rf", "mkfs", "dd if=", "format", ":(){ :|:& };:"]
         for pattern in critical_patterns:
             if pattern in intent_command:
-                return False # Blocked
-        return True # Safe
+                return True # Failure Predicted (Blocked)
+        
+        # 2. Semantic Analysis (Mock - in full deployment this would use a tiny transformer)
+        destructive_keywords = ["overwrite", "wipe", "destroy", "reboot"]
+        if any(kw in intent_command.lower() for kw in destructive_keywords):
+            # Potential threat, requires secondary confirmation or RSSM simulation
+            return True 
+
+        return False # Safe

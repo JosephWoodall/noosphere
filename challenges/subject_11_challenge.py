@@ -6,16 +6,17 @@ from scipy.signal import welch
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+from sinkhorn import sinkhorn_ot_mapping
 
 from noosphere.synth import make_moabb_dataset, ScalpEEGGenerator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
 
-# --- Spectral-Rigorous Challenge ---
+# --- Sinkhorn-Transport-Rigorous Challenge ---
 
 def run_subject_11_challenge():
-    log.info(f"Starting Subject Challenge (Spectral-Rigorous)...")
+    log.info(f"Starting Subject Challenge (Sinkhorn-OT Rigorous)...")
     
     n_subjects = 16 
     n_trials = 400
@@ -25,47 +26,64 @@ def run_subject_11_challenge():
     log.info(f"Generating Dataset...")
     dataset = make_moabb_dataset(n_subjects=n_subjects, n_trials_per_subject=n_trials)
 
-    def extract_power_features(subject_trials: List[Dict]) -> np.ndarray:
+    def extract_power_features(subject_trials: List[Dict]) -> torch.Tensor:
         all_feats = []
         for t in subject_trials:
             x = t["eeg"] # [3, T]
-            # Compute PSD using Welch
             f, psd = welch(x, fs=fs, nperseg=256)
-            
-            # Extract power in narrow bands around the intent frequencies
-            # 8, 10, 12, 15, 20, 25 Hz
             bands = [(7, 9), (9, 11), (11, 13), (14, 16), (19, 21), (24, 26)]
             p_feat = []
             for low, high in bands:
                 idx = np.logical_and(f >= low, f <= high)
                 p_feat.append(np.mean(psd[:, idx], axis=1))
-            
             feat = np.concatenate(p_feat)
             all_feats.append(np.log(feat + 1e-6))
-            
-        return np.array(all_feats)
+        return torch.tensor(np.array(all_feats), dtype=torch.float32)
 
-    # 1. Target Data
+    # 1. Population Data (Expert Manifold)
+    log.info("Building Expert Manifold (Subjects 1-15)...")
+    X_train_list, Y_train_list = [], []
+    for sub_id in range(1, 16):
+        X_sub = extract_power_features(dataset[sub_id])
+        X_train_list.append(X_sub)
+        Y_train_list.extend([{ScalpEEGGenerator.INTENT_REST: 0, ScalpEEGGenerator.INTENT_RIGHT_HAND: 1, ScalpEEGGenerator.INTENT_LEFT_HAND: 2}[trial["intent"]] for trial in dataset[sub_id]])
+    
+    X_train = torch.cat(X_train_list)
+    Y_train = np.array(Y_train_list)
+    
+    # Representative 'Expert' samples for alignment (mean of each class)
+    expert_samples = []
+    for c in range(n_actions):
+        expert_samples.append(X_train[Y_train == c].mean(dim=0))
+    expert_manifold = torch.stack(expert_samples)
+
+    # 2. Target Data (Subject 16)
     test_subject_id = 16
     log.info(f"Processing Target Subject {test_subject_id}...")
-    X_all = extract_power_features(dataset[test_subject_id])
-    Y_all = np.array([{ScalpEEGGenerator.INTENT_REST: 0, ScalpEEGGenerator.INTENT_RIGHT_HAND: 1, ScalpEEGGenerator.INTENT_LEFT_HAND: 2}[trial["intent"]] for trial in dataset[test_subject_id]])
+    X_test_raw = extract_power_features(dataset[test_subject_id])
+    Y_test_all = np.array([{ScalpEEGGenerator.INTENT_REST: 0, ScalpEEGGenerator.INTENT_RIGHT_HAND: 1, ScalpEEGGenerator.INTENT_LEFT_HAND: 2}[trial["intent"]] for trial in dataset[test_subject_id]])
     
-    # Rigorous Split: first 50% for calibration, last 50% for evaluation
+    # --- Sinkhorn Optimal Transport Alignment ---
+    log.info("Mapping Target Subject to Expert Manifold via Sinkhorn OT...")
+    # Map all test samples directly to the closest expert representative
+    X_test_aligned = sinkhorn_ot_mapping(X_test_raw, expert_manifold, epsilon=0.01)
+    X_test_aligned = X_test_aligned.numpy()
+    
+    # Rigorous Split
     n_cal = n_trials // 2
-    X_cal, Y_cal = X_all[:n_cal], Y_all[:n_cal]
-    X_eval, Y_eval = X_all[n_cal:], Y_all[n_cal:]
+    X_cal, Y_cal = X_test_aligned[:n_cal], Y_test_all[:n_cal]
+    X_eval, Y_eval = X_test_aligned[n_cal:], Y_test_all[n_cal:]
     
-    # 2. Classifier
+    # 3. Classifier
     model = Pipeline([
         ('scaler', StandardScaler()),
         ('clf', LinearDiscriminantAnalysis())
     ])
     
-    log.info(f"Phase 2: Calibrating on Subject {test_subject_id} ({n_cal} trials)...")
+    log.info(f"Phase 2: Calibrating on Aligned Features...")
     model.fit(X_cal, Y_cal)
 
-    log.info(f"Phase 3: Final Independent Evaluation (UNSEEN trials)...")
+    log.info(f"Phase 3: Final Independent Evaluation...")
     accuracy = model.score(X_eval, Y_eval)
     
     log.info(f"Independent Subject Accuracy: {accuracy*100:.2f}%")

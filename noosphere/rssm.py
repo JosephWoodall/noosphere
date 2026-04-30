@@ -185,6 +185,13 @@ class HNMWorldModel(nn.Module):
         
         return h_next, z_next, A_prior_params, A_params
 
+    def blend_prior(self, internal_prior: torch.Tensor, external_whisper: torch.Tensor, alpha: float = 0.5) -> torch.Tensor:
+        """
+        The 'Whisper' Protocol Implementation.
+        Blends the internal prior prediction with an external expert whisper.
+        """
+        return (1.0 - alpha) * internal_prior + alpha * external_whisper
+
     def imagine_step(
         self,
         h: torch.Tensor,
@@ -328,6 +335,13 @@ class SKARWorldModel(nn.Module):
         probs_prior = F.softmax(-logits_prior, dim=-1)  # Softmin cost as prob
 
         return h_next, z_next, probs_prior, probs_post
+
+    def blend_prior(self, internal_prior: torch.Tensor, external_whisper: torch.Tensor, alpha: float = 0.5) -> torch.Tensor:
+        """
+        The 'Whisper' Protocol Implementation.
+        Blends the internal prior prediction with an external expert whisper.
+        """
+        return (1.0 - alpha) * internal_prior + alpha * external_whisper
 
     def imagine_step(
         self,
@@ -524,6 +538,13 @@ class RSSM(nn.Module):
 
     def reset_episode(self):
         self._ep_h.clear()
+
+    def blend_prior(self, internal_prior: torch.Tensor, external_whisper: torch.Tensor, alpha: float = 0.5) -> torch.Tensor:
+        """
+        The 'Whisper' Protocol Implementation.
+        Blends the internal prior prediction with an external expert whisper.
+        """
+        return (1.0 - alpha) * internal_prior + alpha * external_whisper
 
     def imagine_step(
         self,

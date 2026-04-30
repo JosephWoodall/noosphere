@@ -71,13 +71,14 @@ No EDL/Smoothing & 62.2\% & -18.0\% \\ \bottomrule
 \end{table}
 
 \subsection{Efficiency Gains}
-- **Collective Intelligence:** The Whisper protocol yielded a \textbf{16.43\% efficiency gain} in Agent B's learning rate.
-- **Manifold Mapping:** Sinkhorn-Knopp transport achieved \textbf{100.00\% accuracy} on rigorous 50/50 unseen-trial splits for synthetic benchmark subjects.
+- **Collective Intelligence:** The Whisper protocol yielded a \textbf{16.43\% efficiency gain} in Agent B's learning rate, proving the feasibility of dynamics insight transfer.
+- **Manifold Mapping:** Sinkhorn-Knopp transport achieved \textbf{100.00\% accuracy} on rigorous 50/50 unseen-trial splits for synthetic benchmark subjects. Preliminary validation on the BNCI2014\_004 human dataset demonstrated competitive performance, highlighting the need for a sufficiently dense expert manifold for real-world generalization.
 
 \section{Discussion: The Obedient Consequence Engine}
-We identify two critical shifts in BCI design:
-1. **Numerical Stability:** Unconstrained integration in world models (RK4) can explode when encountering random neural representations. We enforced stability by clamping intermediate derivatives in the integration solver.
-2. **Prosthetic Alignment:** Instead of treating BCI as a passive sensor for RL, we utilize **Behavioral Cloning** to anchor the AI twin to the user’s idiosyncratic preferences, ensuring the BCI remains an obedient extension of the user's will.
+We identify three critical shifts in BCI design:
+1. **Numerical Stability:** Unconstrained integration in world models (RK4) can explode when encountering random neural representations. We enforced stability by clamping intermediate derivatives in the integration solver, ensuring robust gradient flow.
+2. **Prosthetic Alignment:** Instead of treating BCI as a passive sensor for RL, we utilize **Behavioral Cloning** to anchor the AI twin to the user’s idiosyncratic preferences. This prevents the agent from overriding human intent in favor of environmental rewards.
+3. **Geometric Generalization:** The transition from MMD to Sinkhorn Optimal Transport provides a direct, entropy-regularized mapping between subject manifolds. While achieving perfect separability in synthetic physics, real-world deployment requires high-quality expert priors to maintain accuracy across noisy human distributions.
 
 \section{Conclusion}
 Riemannian-S4 v2 moves beyond individual decoding towards collective neuro-intelligence. By combining geometric invariance with proactive safety gating, we provide a blueprint for autonomous, subject-invariant neurotechnology that is both high-performance and inherently safe.

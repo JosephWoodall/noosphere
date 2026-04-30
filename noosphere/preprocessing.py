@@ -2,6 +2,27 @@ import torch
 import numpy as np
 from typing import Dict, Any, Optional
 
+from noosphere.riemann import sinkhorn_ot_mapping, compute_ea_reference, apply_ea
+
+class SinkhornOTAlignment:
+    """Aligns incoming EEG to an expert manifold using Sinkhorn OT."""
+    def __init__(self, expert_manifold: torch.Tensor, epsilon: float = 0.05):
+        self.expert_manifold = expert_manifold
+        self.epsilon = epsilon
+
+    def __call__(self, x_features: torch.Tensor) -> torch.Tensor:
+        """x_features: (B, D)"""
+        return sinkhorn_ot_mapping(x_features, self.expert_manifold, epsilon=self.epsilon)
+
+class EAAlignment:
+    """Aligns incoming EEG using Euclidean Alignment."""
+    def __init__(self, R_inv_sq: torch.Tensor):
+        self.R_inv_sq = R_inv_sq
+
+    def __call__(self, x_raw: torch.Tensor) -> torch.Tensor:
+        """x_raw: (..., C, T)"""
+        return apply_ea(x_raw, self.R_inv_sq)
+
 class ObservationPreprocessor:
     def __init__(self, device: torch.device):
         self.device = device

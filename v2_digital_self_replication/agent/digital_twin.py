@@ -106,6 +106,7 @@ class DigitalTwin(nn.Module):
         self._hidden_state: Optional[list] = None
         self._step_count: int = 0
         self._last_pred: Optional[np.ndarray] = None
+        self._last_latent: Optional[np.ndarray] = None  # encoder output, stored for adapt()
         self._session_errors: list[float] = []
 
         Path(self.cfg.log_dir).mkdir(parents=True, exist_ok=True)
@@ -115,7 +116,8 @@ class DigitalTwin(nn.Module):
 
     def reset_state(self):
         """Reset SSM hidden state and Kalman filter for a new session."""
-        self._hidden_state = self.encoder.zero_hidden(batch_size=1)
+        device = next(self.parameters()).device
+        self._hidden_state = self.encoder.zero_hidden(batch_size=1, device=str(device))
         self._kalman.reset()
         self._safety.reset()
         return self._hidden_state
@@ -158,7 +160,8 @@ class DigitalTwin(nn.Module):
         smooth_cmd = self._kalman.step(mu_np, sigma_np)
         safe_cmd, reason = self._safety.check(smooth_cmd, sigma_np, ern_p)
 
-        self._last_pred = mu_np
+        self._last_pred   = mu_np
+        self._last_latent = h_out.cpu().numpy()  # (1, d_model), for adapt()
         self._step_count += 1
 
         if reason:
@@ -181,6 +184,7 @@ class DigitalTwin(nn.Module):
             command_pred=self._last_pred.copy(),
             command_actual=actual_position.copy(),
             ern_prob=0.0,
+            latent=self._last_latent.copy() if self._last_latent is not None else None,
         ))
 
     # ── Online adaptation ─────────────────────────────────────────────────────
@@ -192,36 +196,41 @@ class DigitalTwin(nn.Module):
     def adapt(self):
         """Run adaptation micro-batch on recent experience."""
         experiences = self._memory.sample_for_training(self.cfg.online.adapt_batch_size)
-        if not experiences:
+        # Only adapt if we have experiences with stored latents
+        valid = [e for e in experiences if e.latent is not None]
+        if not valid:
             return
 
         device = next(self.parameters()).device
         self.train()
 
+        loss = torch.tensor(0.0)
         for _ in range(self.cfg.online.adapt_n_gradient_steps):
-            batch = experiences[: self.cfg.online.adapt_batch_size]
-            pred_batch = torch.tensor(
-                np.stack([e.command_pred for e in batch]), dtype=torch.float32, device=device
-            )
+            batch = valid[: self.cfg.online.adapt_batch_size]
+            # Re-run decoder on stored latents — gradient flows through decoder params
+            h_batch = torch.tensor(
+                np.stack([e.latent for e in batch]), dtype=torch.float32, device=device
+            )  # (B, 1, d_model) or (B, d_model)
+            if h_batch.dim() == 3:
+                h_batch = h_batch.squeeze(1)  # (B, d_model)
             actual_batch = torch.tensor(
                 np.stack([e.command_actual for e in batch]), dtype=torch.float32, device=device
             )
 
-            # Minimal forward: decoder only (encoder hidden states not available offline)
-            # We use the prediction residual as a simple supervised signal
-            loss = nn.functional.mse_loss(pred_batch, actual_batch)
+            intent = self.decoder(h_batch)
+            loss = nn.functional.mse_loss(intent.mu, actual_batch)
             self._optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(self.parameters(), 1.0)
             self._optimizer.step()
 
-        # EMA smoothing to prevent catastrophic forgetting
+        # EMA smoothing — move shadow params to model device lazily
         with torch.no_grad():
             for name, param in self.named_parameters():
-                self._ema_params[name].mul_(self._ema_decay).add_(
-                    param.data * (1 - self._ema_decay)
-                )
-                param.data.copy_(self._ema_params[name])
+                ema = self._ema_params[name].to(device)
+                ema.mul_(self._ema_decay).add_(param.data * (1 - self._ema_decay))
+                param.data.copy_(ema)
+                self._ema_params[name] = ema
 
         self.eval()
         logger.info("adapt(): %d steps, mean_err=%.4f", self.cfg.online.adapt_n_gradient_steps,

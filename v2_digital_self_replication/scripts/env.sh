@@ -24,7 +24,15 @@ export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 export DATA_DIR="${DATA_DIR:-$V2_DIR/data/generated}"
 export CHECKPOINT_DIR="${CHECKPOINT_DIR:-$V2_DIR/checkpoints}"
 export LOG_DIR="${LOG_DIR:-$V2_DIR/logs}"
-export DEVICE="${DEVICE:-cpu}"
+
+# Auto-detect GPU; fall back to CPU if unavailable or DEVICE already set
+if [[ -z "${DEVICE:-}" ]]; then
+    if "$VENV_PYTHON" -c "import torch; exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; then
+        export DEVICE="cuda"
+    else
+        export DEVICE="cpu"
+    fi
+fi
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 _log() { echo "[$(date +'%H:%M:%S')] $*"; }

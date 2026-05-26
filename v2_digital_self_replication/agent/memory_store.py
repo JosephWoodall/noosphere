@@ -34,10 +34,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Experience:
-    eeg: np.ndarray        # (T, 21) — raw EEG window
+    eeg: np.ndarray            # (T, 21) — raw EEG window
     command_pred: np.ndarray   # (6,) — what we predicted
     command_actual: np.ndarray # (6,) — what actually happened (proprioceptive feedback)
     ern_prob: float
+    latent: Optional[np.ndarray] = None   # (1, d_model) — encoder output at this step
     timestamp: float = field(default_factory=time.monotonic)
 
 

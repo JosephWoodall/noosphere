@@ -15,6 +15,11 @@
 **Rule:** Any test that checks gradient flow must exercise every parameter in the model — pass all modalities (eeg, hrv, gsr, prop) to MultiModalFusion.
 **How to apply:** In gradient tests, always construct minimal tensors for all inputs and verify `.grad is not None` for every parameter.
 
+## L005 — GPU auto-detection: env.sh now defaults to cuda if available
+**Pattern:** Original env.sh had `DEVICE=cpu` hardcoded. RTX 5070 was idle while training ran on CPU.
+**Rule:** env.sh probes torch.cuda.is_available() at startup. DEVICE=cuda if GPU present, cpu otherwise. Override by setting DEVICE explicitly before calling any script.
+**How to apply:** This is now the default in env.sh. No action needed — GPU is used automatically.
+
 ## L004 — Pipeline --quick flag is a positional arg, not an env var
 **Pattern:** `QUICK=true bash run_pipeline.sh` silently does nothing; the script resets `QUICK=false` at start. The flag is `--quick` passed as an argument.
 **Rule:** Pipeline flags are positional arguments, not env vars. To override individual settings, use the specific env vars (JEPA_EPOCHS, WINDOW_LEN, etc.).

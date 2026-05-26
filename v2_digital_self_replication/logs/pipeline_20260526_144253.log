@@ -19,3 +19,5 @@
 14:44:07  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
 14:44:09  INFO      pretrain_jepa — Starting JEPA pretraining: 50 epochs, window=256, stride=64, device=cpu
 14:44:09  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7997 windows, 50 epochs
+14:54:38  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   1/50  loss=0.140003  629.0s
+Done                       "$VENV_PYTHON" -m v2_digital_self_replication.cli.pretrain_jepa --data-dir "$DATA_DIR" --checkpoint-dir "$CHECKPOINT_DIR" --n-epochs "$JEPA_EPOCHS" --batch-size "$BATCH_SIZE" --lr "$LR" --window-len "$WINDOW_LEN" --stride "$STRIDE" --device "$DEVICE" --log-level INFO --log-file "$LOG_FILE" 2>&1 | tee -a "$LOG_FILE"

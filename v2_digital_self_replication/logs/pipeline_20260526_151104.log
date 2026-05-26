@@ -1,0 +1,10 @@
+[15:11:04] === Step 2: JEPA pretraining ===
+[15:11:04]   Data dir:       /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+[15:11:04]   Checkpoint dir: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints
+[15:11:04]   Epochs: 50   Batch: 64   LR: 3e-4   Device: cpu
+[15:11:04]   Log file: /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/02_pretrain_jepa.log
+15:11:04  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+15:11:04  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
+15:11:06  INFO      pretrain_jepa — Starting JEPA pretraining: 50 epochs, window=256, stride=64, device=cpu
+15:11:06  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7997 windows, 50 epochs
+15:19:55  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   1/50  loss=0.143153  529.2s

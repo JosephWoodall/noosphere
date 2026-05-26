@@ -11,3 +11,4 @@
 15:35:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   2/15  loss=0.077349  231.9s
 15:40:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   3/15  loss=0.045820  299.9s
 15:44:18  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/15  loss=0.038642  242.1s
+15:48:20  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/15  loss=0.034215  242.3s

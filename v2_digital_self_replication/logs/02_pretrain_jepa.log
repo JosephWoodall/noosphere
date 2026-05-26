@@ -34,3 +34,117 @@
 15:40:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   3/15  loss=0.045820  299.9s
 15:44:18  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/15  loss=0.038642  242.1s
 15:44:18  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/15  loss=0.038642  242.1s
+15:48:20  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/15  loss=0.034215  242.3s
+15:48:20  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/15  loss=0.034215  242.3s
+15:58:08  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+15:58:08  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+15:58:08  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
+15:58:08  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
+15:58:10  INFO      pretrain_jepa — Starting JEPA pretraining: 50 epochs, window=128, stride=64, device=cuda
+15:58:10  INFO      pretrain_jepa — Starting JEPA pretraining: 50 epochs, window=128, stride=64, device=cuda
+15:58:10  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7999 windows, 50 epochs
+15:58:10  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7999 windows, 50 epochs
+15:59:44  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   1/50  loss=0.160174  93.5s
+15:59:44  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   1/50  loss=0.160174  93.5s
+16:00:11  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   2/50  loss=0.079496  27.4s
+16:00:11  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   2/50  loss=0.079496  27.4s
+16:00:38  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   3/50  loss=0.046856  27.4s
+16:00:38  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   3/50  loss=0.046856  27.4s
+16:01:06  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/50  loss=0.039370  28.0s
+16:01:06  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/50  loss=0.039370  28.0s
+16:01:34  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/50  loss=0.034630  28.1s
+16:01:34  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/50  loss=0.034630  28.1s
+16:02:02  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   6/50  loss=0.031476  27.6s
+16:02:02  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   6/50  loss=0.031476  27.6s
+16:02:30  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   7/50  loss=0.029462  27.5s
+16:02:30  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   7/50  loss=0.029462  27.5s
+16:02:58  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   8/50  loss=0.028327  28.8s
+16:02:58  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   8/50  loss=0.028327  28.8s
+16:03:27  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   9/50  loss=0.027596  28.3s
+16:03:27  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   9/50  loss=0.027596  28.3s
+16:03:55  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  10/50  loss=0.027250  28.0s
+16:03:55  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  10/50  loss=0.027250  28.0s
+16:04:22  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  11/50  loss=0.027445  27.4s
+16:04:22  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  11/50  loss=0.027445  27.4s
+16:04:51  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  12/50  loss=0.027905  29.1s
+16:04:51  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  12/50  loss=0.027905  29.1s
+16:05:19  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  13/50  loss=0.028792  27.5s
+16:05:19  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  13/50  loss=0.028792  27.5s
+16:05:47  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  14/50  loss=0.030257  27.9s
+16:05:47  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  14/50  loss=0.030257  27.9s
+16:06:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  15/50  loss=0.032055  27.9s
+16:06:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  15/50  loss=0.032055  27.9s
+16:06:42  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  16/50  loss=0.034109  27.7s
+16:06:42  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  16/50  loss=0.034109  27.7s
+16:07:10  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  17/50  loss=0.036221  27.9s
+16:07:10  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  17/50  loss=0.036221  27.9s
+16:07:38  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  18/50  loss=0.038259  28.1s
+16:07:38  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  18/50  loss=0.038259  28.1s
+16:08:06  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  19/50  loss=0.039569  27.7s
+16:08:06  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  19/50  loss=0.039569  27.7s
+16:08:34  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  20/50  loss=0.040413  27.7s
+16:08:34  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  20/50  loss=0.040413  27.7s
+16:09:01  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  21/50  loss=0.040746  27.7s
+16:09:01  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  21/50  loss=0.040746  27.7s
+16:09:29  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  22/50  loss=0.040957  27.8s
+16:09:29  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  22/50  loss=0.040957  27.8s
+16:10:00  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  23/50  loss=0.040871  30.9s
+16:10:00  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  23/50  loss=0.040871  30.9s
+16:10:27  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  24/50  loss=0.040500  27.1s
+16:10:27  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  24/50  loss=0.040500  27.1s
+16:10:54  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  25/50  loss=0.040288  27.3s
+16:10:54  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  25/50  loss=0.040288  27.3s
+16:11:24  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  26/50  loss=0.040005  29.4s
+16:11:24  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  26/50  loss=0.040005  29.4s
+16:11:51  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  27/50  loss=0.039838  27.6s
+16:11:51  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  27/50  loss=0.039838  27.6s
+16:12:19  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  28/50  loss=0.039585  28.1s
+16:12:19  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  28/50  loss=0.039585  28.1s
+16:12:46  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  29/50  loss=0.039335  26.1s
+16:12:46  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  29/50  loss=0.039335  26.1s
+16:13:13  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  30/50  loss=0.038942  27.6s
+16:13:13  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  30/50  loss=0.038942  27.6s
+16:13:40  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  31/50  loss=0.038876  26.6s
+16:13:40  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  31/50  loss=0.038876  26.6s
+16:14:07  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  32/50  loss=0.038511  27.5s
+16:14:07  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  32/50  loss=0.038511  27.5s
+16:14:35  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  33/50  loss=0.038459  27.9s
+16:14:35  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  33/50  loss=0.038459  27.9s
+16:15:02  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  34/50  loss=0.038045  26.6s
+16:15:02  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  34/50  loss=0.038045  26.6s
+16:15:32  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  35/50  loss=0.037685  29.9s
+16:15:32  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  35/50  loss=0.037685  29.9s
+16:15:59  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  36/50  loss=0.037450  27.1s
+16:15:59  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  36/50  loss=0.037450  27.1s
+16:16:26  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  37/50  loss=0.036946  27.4s
+16:16:26  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  37/50  loss=0.036946  27.4s
+16:16:54  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  38/50  loss=0.036603  27.3s
+16:16:54  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  38/50  loss=0.036603  27.3s
+16:17:17  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  39/50  loss=0.036171  23.3s
+16:17:17  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  39/50  loss=0.036171  23.3s
+16:17:43  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  40/50  loss=0.035827  25.7s
+16:17:43  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  40/50  loss=0.035827  25.7s
+16:18:09  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  41/50  loss=0.035503  26.8s
+16:18:09  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  41/50  loss=0.035503  26.8s
+16:18:36  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  42/50  loss=0.035222  27.0s
+16:18:36  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  42/50  loss=0.035222  27.0s
+16:19:04  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  43/50  loss=0.034885  27.3s
+16:19:04  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  43/50  loss=0.034885  27.3s
+16:19:34  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  44/50  loss=0.034532  30.6s
+16:19:34  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  44/50  loss=0.034532  30.6s
+16:20:02  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  45/50  loss=0.034292  27.3s
+16:20:02  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  45/50  loss=0.034292  27.3s
+16:20:29  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  46/50  loss=0.034146  27.4s
+16:20:29  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  46/50  loss=0.034146  27.4s
+16:20:56  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  47/50  loss=0.033851  26.8s
+16:20:56  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  47/50  loss=0.033851  26.8s
+16:21:21  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  48/50  loss=0.033638  25.3s
+16:21:21  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  48/50  loss=0.033638  25.3s
+16:21:51  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  49/50  loss=0.033447  30.0s
+16:21:51  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  49/50  loss=0.033447  30.0s
+16:22:19  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  50/50  loss=0.033224  27.9s
+16:22:19  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  50/50  loss=0.033224  27.9s
+16:22:19  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining complete. Best loss: 0.027250
+16:22:19  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining complete. Best loss: 0.027250
+16:22:19  INFO      pretrain_jepa — Pretraining complete. Final encoder saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
+16:22:19  INFO      pretrain_jepa — Pretraining complete. Final encoder saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt

@@ -1,0 +1,147 @@
+16:24:30  INFO      v2_digital_self_replication.agent.memory_store — SemanticMemory: faiss not installed, semantic search disabled
+16:24:30  INFO      v2_digital_self_replication.agent.memory_store — SemanticMemory: faiss not installed, semantic search disabled
+16:24:31  INFO      v2_digital_self_replication.agent.digital_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt (step 0)
+16:24:31  INFO      v2_digital_self_replication.agent.digital_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt (step 0)
+16:24:31  INFO      run_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+16:24:31  INFO      run_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+16:24:31  INFO      v2_digital_self_replication.core.safety_gate — SafetyGate: reset
+16:24:31  INFO      v2_digital_self_replication.core.safety_gate — SafetyGate: reset
+16:24:31  INFO      run_twin — Starting inference loop:
+16:24:31  INFO      run_twin — Starting inference loop:
+16:24:31  INFO      run_twin —   Steps: 2560
+16:24:31  INFO      run_twin —   Steps: 2560
+16:24:31  INFO      run_twin —   Intent: [0.5, 0.30000001192092896, 0.0, 0.20000000298023224, 0.0, 0.4000000059604645]
+16:24:31  INFO      run_twin —   Intent: [0.5, 0.30000001192092896, 0.0, 0.20000000298023224, 0.0, 0.4000000059604645]
+16:24:31  INFO      run_twin —   Subject ID: 1  Seed: 42
+16:24:31  INFO      run_twin —   Subject ID: 1  Seed: 42
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/cli/run_twin.py", line 151, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/cli/run_twin.py", line 109, in main
+    twin.adapt()
+    ~~~~~~~~~~^^
+  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/agent/digital_twin.py", line 214, in adapt
+    loss.backward()
+    ~~~~~~~~~~~~~^^
+  File "/home/redleadr/workspace/noosphere/.venv/lib/python3.14/site-packages/torch/_tensor.py", line 630, in backward
+    torch.autograd.backward(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        self, gradient, retain_graph, create_graph, inputs=inputs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/redleadr/workspace/noosphere/.venv/lib/python3.14/site-packages/torch/autograd/__init__.py", line 364, in backward
+    _engine_run_backward(
+    ~~~~~~~~~~~~~~~~~~~~^
+        tensors,
+        ^^^^^^^^
+    ...<5 lines>...
+        accumulate_grad=True,
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/redleadr/workspace/noosphere/.venv/lib/python3.14/site-packages/torch/autograd/graph.py", line 865, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        t_outputs, *args, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )  # Calls into the C++ engine to run the backward pass
+    ^
+RuntimeError: element 0 of tensors does not require grad and does not have a grad_fn
+16:29:17  INFO      v2_digital_self_replication.agent.memory_store — SemanticMemory: faiss not installed, semantic search disabled
+16:29:17  INFO      v2_digital_self_replication.agent.memory_store — SemanticMemory: faiss not installed, semantic search disabled
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt (step 0)
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt (step 0)
+16:29:18  INFO      run_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+16:29:18  INFO      run_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+16:29:18  INFO      v2_digital_self_replication.core.safety_gate — SafetyGate: reset
+16:29:18  INFO      v2_digital_self_replication.core.safety_gate — SafetyGate: reset
+16:29:18  INFO      run_twin — Starting inference loop:
+16:29:18  INFO      run_twin — Starting inference loop:
+16:29:18  INFO      run_twin —   Steps: 2560
+16:29:18  INFO      run_twin —   Steps: 2560
+16:29:18  INFO      run_twin —   Intent: [0.5, 0.30000001192092896, 0.0, 0.20000000298023224, 0.0, 0.4000000059604645]
+16:29:18  INFO      run_twin —   Intent: [0.5, 0.30000001192092896, 0.0, 0.20000000298023224, 0.0, 0.4000000059604645]
+16:29:18  INFO      run_twin —   Subject ID: 1  Seed: 42
+16:29:18  INFO      run_twin —   Subject ID: 1  Seed: 42
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0056
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0056
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0142
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0142
+16:29:18  INFO      run_twin — step   256  cmds=256  halts=0  mean_err=0.0131  pos=[-0.16099999845027924, -0.017000000923871994, 0.125, -0.0560000017285347, 0.04500000178813934, 0.07400000095367432]  422 Hz
+16:29:18  INFO      run_twin — step   256  cmds=256  halts=0  mean_err=0.0131  pos=[-0.16099999845027924, -0.017000000923871994, 0.125, -0.0560000017285347, 0.04500000178813934, 0.07400000095367432]  422 Hz
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0100
+16:29:18  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0100
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0063
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0063
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0024
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0024
+16:29:19  INFO      run_twin — step   512  cmds=512  halts=0  mean_err=0.0087  pos=[-0.15700000524520874, -0.012000000104308128, 0.12099999934434891, -0.05299999937415123, 0.035999998450279236, 0.07599999755620956]  450 Hz
+16:29:19  INFO      run_twin — step   512  cmds=512  halts=0  mean_err=0.0087  pos=[-0.15700000524520874, -0.012000000104308128, 0.12099999934434891, -0.05299999937415123, 0.035999998450279236, 0.07599999755620956]  450 Hz
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0018
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0018
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:19  INFO      run_twin — step   768  cmds=768  halts=0  mean_err=0.0074  pos=[-0.1599999964237213, -0.014999999664723873, 0.12399999797344208, -0.054999999701976776, 0.041999999433755875, 0.07400000095367432]  466 Hz
+16:29:19  INFO      run_twin — step   768  cmds=768  halts=0  mean_err=0.0074  pos=[-0.1599999964237213, -0.014999999664723873, 0.12399999797344208, -0.054999999701976776, 0.041999999433755875, 0.07400000095367432]  466 Hz
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:19  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      run_twin — step  1024  cmds=1024  halts=0  mean_err=0.0080  pos=[-0.15800000727176666, -0.009999999776482582, 0.12099999934434891, -0.052000001072883606, 0.03799999877810478, 0.07599999755620956]  467 Hz
+16:29:20  INFO      run_twin — step  1024  cmds=1024  halts=0  mean_err=0.0080  pos=[-0.15800000727176666, -0.009999999776482582, 0.12099999934434891, -0.052000001072883606, 0.03799999877810478, 0.07599999755620956]  467 Hz
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      run_twin — step  1280  cmds=1280  halts=0  mean_err=0.0083  pos=[-0.1589999943971634, -0.012000000104308128, 0.12200000137090683, -0.052000001072883606, 0.03799999877810478, 0.07599999755620956]  482 Hz
+16:29:20  INFO      run_twin — step  1280  cmds=1280  halts=0  mean_err=0.0083  pos=[-0.1589999943971634, -0.012000000104308128, 0.12200000137090683, -0.052000001072883606, 0.03799999877810478, 0.07599999755620956]  482 Hz
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:20  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:21  INFO      run_twin — step  1536  cmds=1536  halts=0  mean_err=0.0098  pos=[-0.1550000011920929, -0.009999999776482582, 0.11900000274181366, -0.050999999046325684, 0.03200000151991844, 0.07699999958276749]  472 Hz
+16:29:21  INFO      run_twin — step  1536  cmds=1536  halts=0  mean_err=0.0098  pos=[-0.1550000011920929, -0.009999999776482582, 0.11900000274181366, -0.050999999046325684, 0.03200000151991844, 0.07699999958276749]  472 Hz
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:21  INFO      run_twin — step  1792  cmds=1792  halts=0  mean_err=0.0091  pos=[-0.1589999943971634, -0.013000000268220901, 0.12300000339746475, -0.05400000140070915, 0.03999999910593033, 0.07500000298023224]  483 Hz
+16:29:21  INFO      run_twin — step  1792  cmds=1792  halts=0  mean_err=0.0091  pos=[-0.1589999943971634, -0.013000000268220901, 0.12300000339746475, -0.05400000140070915, 0.03999999910593033, 0.07500000298023224]  483 Hz
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:21  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      run_twin — step  2048  cmds=2048  halts=0  mean_err=0.0074  pos=[-0.1599999964237213, -0.013000000268220901, 0.12300000339746475, -0.05400000140070915, 0.041999999433755875, 0.07500000298023224]  490 Hz
+16:29:22  INFO      run_twin — step  2048  cmds=2048  halts=0  mean_err=0.0074  pos=[-0.1599999964237213, -0.013000000268220901, 0.12300000339746475, -0.05400000140070915, 0.041999999433755875, 0.07500000298023224]  490 Hz
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0002
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:22  INFO      run_twin — step  2304  cmds=2304  halts=0  mean_err=0.0078  pos=[-0.1589999943971634, -0.013000000268220901, 0.12399999797344208, -0.05400000140070915, 0.041999999433755875, 0.07500000298023224]  492 Hz
+16:29:22  INFO      run_twin — step  2304  cmds=2304  halts=0  mean_err=0.0078  pos=[-0.1589999943971634, -0.013000000268220901, 0.12399999797344208, -0.05400000140070915, 0.041999999433755875, 0.07500000298023224]  492 Hz
+16:29:23  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:23  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:23  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:23  INFO      v2_digital_self_replication.agent.digital_twin — adapt(): 5 steps, mean_err=0.0001
+16:29:23  INFO      run_twin — step  2560  cmds=2560  halts=0  mean_err=0.0085  pos=[-0.1589999943971634, -0.014999999664723873, 0.12300000339746475, -0.05400000140070915, 0.039000000804662704, 0.07599999755620956]  493 Hz
+16:29:23  INFO      run_twin — step  2560  cmds=2560  halts=0  mean_err=0.0085  pos=[-0.1589999943971634, -0.014999999664723873, 0.12300000339746475, -0.05400000140070915, 0.039000000804662704, 0.07599999755620956]  493 Hz
+16:29:23  INFO      run_twin — Session complete: 2560 steps in 5.2s (493 Hz)
+16:29:23  INFO      run_twin — Session complete: 2560 steps in 5.2s (493 Hz)
+16:29:23  INFO      run_twin —   Commands: 2560  Halts: 0  Mean error: 0.0085
+16:29:23  INFO      run_twin —   Commands: 2560  Halts: 0  Mean error: 0.0085
+16:29:23  INFO      run_twin — Session log written to /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/session_latest.json
+16:29:23  INFO      run_twin — Session log written to /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/session_latest.json
+16:29:23  INFO      v2_digital_self_replication.agent.digital_twin — Session summary — steps: 2560, mean_error: 0.0085, halts: 0
+16:29:23  INFO      v2_digital_self_replication.agent.digital_twin — Session summary — steps: 2560, mean_error: 0.0085, halts: 0

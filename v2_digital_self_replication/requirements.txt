@@ -1,0 +1,18 @@
+# Core ML
+torch>=2.1.0
+numpy>=1.24.0
+
+# Scientific computing
+scipy>=1.11.0
+
+# Database / indexing
+# faiss-cpu>=1.7.4   # optional: enables SemanticMemory nearest-neighbour search
+
+# Hardware comms
+# pyzmq>=25.0.0      # optional: enables ZMQBridge hardware interface
+
+# Testing
+pytest>=7.4.0
+
+# Logging / utilities
+tqdm>=4.65.0

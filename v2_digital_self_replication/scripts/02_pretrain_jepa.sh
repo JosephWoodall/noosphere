@@ -8,20 +8,20 @@
 # Overridable env vars:
 #   DATA_DIR        input data directory           (default: v2/.../data/generated)
 #   CHECKPOINT_DIR  where to save checkpoints      (default: v2/.../checkpoints)
-#   JEPA_EPOCHS     number of training epochs      (default: 50)
+#   JEPA_EPOCHS     number of training epochs      (default: 15)
 #   BATCH_SIZE      batch size                     (default: 64)
 #   LR              learning rate                  (default: 3e-4)
-#   WINDOW_LEN      EEG samples per JEPA window    (default: 256)
+#   WINDOW_LEN      EEG samples per JEPA window    (default: 128 = 500ms @ 256Hz)
 #   STRIDE          window stride                  (default: 64)
 #   DEVICE          cpu or cuda                    (default: cpu)
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/env.sh"
 
-JEPA_EPOCHS="${JEPA_EPOCHS:-50}"
+JEPA_EPOCHS="${JEPA_EPOCHS:-15}"
 BATCH_SIZE="${BATCH_SIZE:-64}"
 LR="${LR:-3e-4}"
-WINDOW_LEN="${WINDOW_LEN:-256}"
+WINDOW_LEN="${WINDOW_LEN:-128}"
 STRIDE="${STRIDE:-64}"
 LOG_FILE="$LOG_DIR/02_pretrain_jepa.log"
 

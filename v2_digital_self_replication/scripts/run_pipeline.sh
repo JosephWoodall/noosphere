@@ -53,6 +53,8 @@ if [[ "$QUICK" == true ]]; then
     export N_TRIALS="${N_TRIALS:-5}"
     export DURATION="${DURATION:-2.0}"
     export JEPA_EPOCHS="${JEPA_EPOCHS:-3}"
+    export WINDOW_LEN="${WINDOW_LEN:-64}"
+    export STRIDE="${STRIDE:-32}"
     export FT_EPOCHS="${FT_EPOCHS:-2}"
     export N_STEPS="${N_STEPS:-512}"
 fi

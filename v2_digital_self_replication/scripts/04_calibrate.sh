@@ -24,7 +24,7 @@ CAPTURE_S="${CAPTURE_S:-2.0}"
 FT_EPOCHS="${FT_EPOCHS:-5}"
 INPUT_CKPT="${TWIN_CKPT:-$CHECKPOINT_DIR/supervised_best.pt}"
 OUTPUT_CKPT="$CHECKPOINT_DIR/calibrated.pt"
-LOG_FILE="$LOG_DIR/05_calibrate.log"
+LOG_FILE="$LOG_DIR/04_calibrate.log"
 
 _log "=== Step 5: Subject calibration ==="
 _log "  Input checkpoint:  $INPUT_CKPT"

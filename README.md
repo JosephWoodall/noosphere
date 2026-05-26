@@ -212,8 +212,14 @@ v2_digital_self_replication/
 │   ├── pretrain_jepa.py         # JEPATrainer — EMA teacher, context/target split
 │   └── online_train.py          # SupervisedTrainer — frozen backbone + last-block fine-tuning
 ├── comms/
-│   └── zmq_bridge.py            # ZMQBridge (PUB/SUB) + SimulatedHardware mock
-└── tests/                       # 28 passing tests
+│   ├── zmq_bridge.py            # ZMQBridge (PUB/SUB) + SimulatedHardware mock
+│   └── arduino_bridge.py        # ZMQ SUB → pyserial → Arduino motor controller
+├── arduino/
+│   └── motor_control.ino        # Arduino sketch: receives "M<idx> <pwm>\n", drives PWM pins
+├── cli/
+│   ├── calibrate.py             # Step 4 CLI — countdown capture + fine-tune on subject data
+│   └── run_twin.py              # Step 5 CLI — inference loop with ZMQ + rich live dashboard
+└── tests/                       # 32 passing tests
 ```
 
 ### Quick Start
@@ -276,14 +282,17 @@ python3 -m venv .venv
 ### Full pipeline — cold start to inference
 
 ```bash
-# Run all four steps with default settings (10 subjects, 50 epochs JEPA, 20 epochs FT)
+# Run all five steps with default settings
 bash v2_digital_self_replication/scripts/run_pipeline.sh
 
-# Quick smoke test (2 subjects, 3 epochs JEPA, 2 epochs FT, 512 inference steps)
+# Quick smoke test (2 subjects, 3 JEPA epochs, 2 FT epochs, 1 calibration rep, 512 inference steps)
 bash v2_digital_self_replication/scripts/run_pipeline.sh --quick
 
 # Resume from an existing checkpoint — skip data generation and retraining
 bash v2_digital_self_replication/scripts/run_pipeline.sh --skip-data --skip-pretrain --skip-finetune
+
+# Skip only calibration (reuse previous calibrated.pt or fall back to supervised_best.pt)
+bash v2_digital_self_replication/scripts/run_pipeline.sh --skip-calibrate
 ```
 
 ### Individual steps
@@ -312,7 +321,7 @@ JEPA_EPOCHS=10 LR=1e-3 \
     bash v2_digital_self_replication/scripts/02_pretrain_jepa.sh
 ```
 
-Saves `v2_digital_self_replication/checkpoints/jepa_encoder_final.pt`.  
+Saves `checkpoints/jepa_encoder_final.pt`.  
 No class labels needed — learns to predict future EEG latents from past context.
 
 #### Step 3 — Supervised fine-tuning
@@ -320,36 +329,63 @@ No class labels needed — learns to predict future EEG latents from past contex
 ```bash
 bash v2_digital_self_replication/scripts/03_finetune.sh
 
-# Override: unfreeze the full encoder (more adaptation, risk of forgetting)
+# Override: unfreeze the full encoder (more adaptation, higher risk of forgetting)
 FREEZE_ENCODER=false FT_EPOCHS=30 \
     bash v2_digital_self_replication/scripts/03_finetune.sh
 ```
 
-Saves `v2_digital_self_replication/checkpoints/supervised_best.pt`.  
-By default the pretrained encoder backbone is frozen; only the decoder and last encoder block adapt.
+Saves `checkpoints/supervised_best.pt`.  
+The pretrained encoder backbone is frozen by default; only the decoder and last encoder block adapt.
 
-#### Step 4 — Inference loop
+#### Step 4 — Subject calibration
 
 ```bash
-bash v2_digital_self_replication/scripts/04_run_twin.sh
+bash v2_digital_self_replication/scripts/04_calibrate.sh
 
-# Override: different subject profile, longer run
-SUBJECT_ID=3 N_STEPS=5120 INTENT="0.8 0.6 0.0 0.4 0.0 0.7" \
-    bash v2_digital_self_replication/scripts/04_run_twin.sh
+# Override: more reps, longer capture, more fine-tune epochs
+N_REPS=5 CAPTURE_S=3.0 FT_EPOCHS=10 \
+    bash v2_digital_self_replication/scripts/04_calibrate.sh
 ```
 
-Streams synthetic EEG through the trained twin, drives a simulated arm, and adapts online from proprioceptive feedback every 100 steps.  
-Prints a live status line every 256 steps (configurable via `LOG_INTERVAL`).  
-Writes `v2_digital_self_replication/logs/session_latest.json` on exit.
+Runs a countdown-based capture loop across 7 movement targets (reach, elbow flex, grip close/open, wrist rotate CW/CCW, rest). Captures synthetic EEG per target, fine-tunes the decoder on the captured data, and saves `checkpoints/calibrated.pt`.
+
+This step personalizes the generic `supervised_best.pt` model to the specific subject's neural signatures. It runs every time the pipeline runs by default.
+
+#### Step 5 — Inference loop
+
+```bash
+bash v2_digital_self_replication/scripts/05_run_twin.sh
+
+# Override: different subject profile, longer run, enable ZMQ
+SUBJECT_ID=3 N_STEPS=5120 INTENT="0.8 0.6 0.0 0.4 0.0 0.7" \
+    bash v2_digital_self_replication/scripts/05_run_twin.sh
+```
+
+Streams synthetic EEG through the calibrated twin, drives a simulated arm, and adapts online from proprioceptive feedback every 100 steps. Displays a rich live dashboard showing 6-DOF arm state, throughput (Hz), safety status, and ZMQ state. Pass `--no-dashboard` for plain log output.
+
+Writes `logs/session_latest.json` on exit.
+
+#### Arduino bridge (optional hardware)
+
+```bash
+# Terminal 1: run inference with ZMQ enabled
+bash v2_digital_self_replication/scripts/05_run_twin.sh  # add --zmq flag
+
+# Terminal 2: forward commands to Arduino
+python -m v2_digital_self_replication.comms.arduino_bridge --port /dev/ttyACM0
+```
+
+Flash `arduino/motor_control.ino` to the Arduino first. It receives `M<index> <pwm>\n` commands and drives PWM on pins 9 (shoulder_yaw) and 10 (grip_aperture). A 500 ms watchdog zeros all motors if the serial stream goes silent.
 
 ### Pipeline flags summary
 
 | Flag | Effect |
 |---|---|
-| `--quick` | Smoke-test mode: 2 subjects, 3 JEPA epochs, 2 FT epochs, 512 inference steps |
+| `--quick` | Smoke-test: 2 subjects, 3 JEPA epochs, 2 FT epochs, 1 calibration rep, 512 inference steps |
 | `--skip-data` | Reuse existing `data/generated/` (requires `metadata.json`) |
 | `--skip-pretrain` | Skip JEPA training (requires `checkpoints/jepa_encoder_final.pt`) |
 | `--skip-finetune` | Skip supervised FT (requires `checkpoints/supervised_best.pt`) |
+| `--skip-calibrate` | Skip subject calibration (uses existing `calibrated.pt` or falls back to `supervised_best.pt`) |
 
 ### Key environment variables
 
@@ -358,11 +394,14 @@ Writes `v2_digital_self_replication/logs/session_latest.json` on exit.
 | `DATA_DIR` | `v2_digital_self_replication/data/generated` | Where data is read/written |
 | `CHECKPOINT_DIR` | `v2_digital_self_replication/checkpoints` | Where checkpoints are saved |
 | `LOG_DIR` | `v2_digital_self_replication/logs` | Where log files are written |
-| `DEVICE` | `cpu` | Set to `cuda` if a GPU is available |
+| `DEVICE` | auto | `cuda` if a GPU is detected, otherwise `cpu` |
 | `N_SUBJECTS` | `10` | Synthetic subjects to generate |
 | `N_TRIALS` | `50` | Trials per subject |
-| `JEPA_EPOCHS` | `50` | JEPA pretraining epochs |
-| `FT_EPOCHS` | `20` | Supervised fine-tuning epochs |
+| `JEPA_EPOCHS` | `15` | JEPA pretraining epochs (GPU users: export to 50) |
+| `FT_EPOCHS` | `5` | Supervised fine-tuning epochs |
+| `N_REPS` | `3` | Calibration repetitions per movement target |
+| `CAPTURE_S` | `2.0` | Calibration capture duration per rep (seconds) |
+| `CAL_FT_EPOCHS` | `5` | Fine-tune epochs during calibration (independent of `FT_EPOCHS`) |
 | `N_STEPS` | `2560` | Inference loop steps (0 = run until Ctrl-C) |
 
 ### Output files
@@ -375,16 +414,19 @@ v2_digital_self_replication/
 │   ├── sub00_commands.npy          # (n_trials, T, 6) per subject
 │   └── sub00_ern.npy               # (n_trials, T) per subject
 ├── checkpoints/
-│   ├── jepa_encoder_best.pt        # best JEPA encoder
-│   ├── jepa_encoder_final.pt       # final JEPA encoder (used by step 3)
-│   └── supervised_best.pt          # full twin checkpoint (used by step 4)
+│   ├── jepa_encoder_best.pt        # best JEPA encoder (by validation loss)
+│   ├── jepa_encoder_final.pt       # final JEPA encoder → input to step 3
+│   ├── supervised_best.pt          # generic fine-tuned twin → input to step 4
+│   └── calibrated.pt               # subject-calibrated twin → used by step 5
 └── logs/
     ├── 01_generate_data.log
     ├── 02_pretrain_jepa.log
     ├── 03_finetune.log
-    ├── 04_run_twin.log
+    ├── 04_calibrate.log
+    ├── 05_run_twin.log
     ├── pipeline_YYYYMMDD_HHMMSS.log  # full pipeline transcript
-    └── session_latest.json           # inference session summary
+    ├── session_latest.json           # inference session summary (JSON)
+    └── episodes.db                   # episodic memory (SQLite)
 ```
 
 ---
@@ -394,13 +436,17 @@ v2_digital_self_replication/
 | Phase | Description | Status |
 |---|---|---|
 | v1 — Academic baseline | RS-S4 discriminative encoder, MOABB benchmarks, JBHI paper | Complete |
-| v2 — Architecture | ZOH SSM encoder, continuous decoder, Kalman filter, safety gate | Complete (28/28 tests) |
-| v2 — Shell scripts | Single-command pipeline entry points with skip flags and env overrides | Complete |
-| v2 — Pretraining | JEPA on synthetic 21-channel EEG | Implemented |
-| v2 — Supervised FT | Fine-tune on labeled synthetic data | Implemented |
-| v2 — Hardware | ZMQ bridge to physical prosthetic controller | Implemented (sim only) |
-| v2 — Live EEG | Integrate real EEG headset (Bluetooth/LSL) | Planned |
-| v2 — Article | Write methodology paper for v2 architecture | Planned |
+| v2 — Architecture | ZOH SSM encoder, continuous decoder, Kalman filter, safety gate | Complete (32/32 tests) |
+| v2 — Pipeline | 5-step shell pipeline: generate → pretrain → finetune → calibrate → infer | Complete |
+| v2 — Pretraining | JEPA self-supervised on synthetic 21-channel EEG | Complete |
+| v2 — Supervised FT | Labeled synthetic data → continuous 6-DOF decoder | Complete |
+| v2 — Subject calibration | Countdown capture loop → per-subject fine-tune → `calibrated.pt` | Complete |
+| v2 — Live dashboard | `rich.live` panel: 6-DOF bars, Hz, safety status, ZMQ state | Complete |
+| v2 — Hardware (ZMQ) | ZMQ PUB/SUB bridge + SimulatedHardware first-order lag mock | Complete |
+| v2 — Hardware (Arduino) | ZMQ → pyserial → Arduino PWM bridge + `.ino` motor sketch | Complete |
+| v2 — Semantic memory | FAISS episode index; populated from mean latent at session end | Complete |
+| v2 — Live EEG | Integrate real EEG headset via LSL or USB | Planned |
+| v2 — Article | Methodology paper for v2 architecture | Planned |
 
 ---
 

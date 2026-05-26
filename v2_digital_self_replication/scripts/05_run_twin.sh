@@ -27,7 +27,7 @@ N_STEPS="${N_STEPS:-2560}"
 INTENT="${INTENT:-0.5 0.3 0.0 0.2 0.0 0.4}"
 LOG_INTERVAL="${LOG_INTERVAL:-256}"
 SESSION_LOG="$LOG_DIR/session_latest.json"
-LOG_FILE="$LOG_DIR/04_run_twin.log"
+LOG_FILE="$LOG_DIR/05_run_twin.log"
 
 _log "=== Step 4: Run digital twin ==="
 _log "  Checkpoint:   $TWIN_CKPT"

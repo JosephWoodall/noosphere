@@ -542,7 +542,8 @@ def pretrain_trunk(segments: List[EEGSegment], n_classes: int,
     Xval, yval = X[val_idx], y[val_idx]
 
     opt    = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05)
-    scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
+    # Symplectic scan state accumulates to ~10^7 under float16; run in fp32.
+    scaler = None
     loader = _make_loader(Xtr, ytr, batch, shuffle=True)
     wt     = _class_weights(ytr, n_classes, dev)
 
@@ -642,7 +643,7 @@ def finetune_subject(pretrained: nn.Module,
         trainable = list(model.parameters())
 
     opt = optim.AdamW(trainable, lr=lr, weight_decay=1e-4)
-    scaler = torch.amp.GradScaler("cuda") if dev.type == "cuda" else None
+    scaler = None  # Symplectic scan overflows fp16; run in fp32.
     wt  = _class_weights(y_train, n_classes, dev)
 
     # Stratified val split
@@ -1580,13 +1581,13 @@ Mean Cohen's &kappa; = {_f(kappa)} and AUC-ROC = {_f(auc)}.
         lo  = ds.get("loso", {})
         wsa = ws["s4"]["accuracy"]        if ws and ws.get("s4") else None
         wsc = ws["csp_lda"]["accuracy"]   if ws and ws.get("csp_lda") else None
-        wsd = ws["comparison"]["s4_vs_csp_delta"] if ws and ws.get("comparison") else None
+        wsd = (wsa - wsc) if (wsa is not None and wsc is not None) else None
         wsp = ws["comparison"]["wilcoxon_p"]       if ws and ws.get("comparison") else None
         wsk = ws["s4"]["cohen_kappa"]     if ws and ws.get("s4") else None
         wsa2= ws["s4"]["auc_roc_macro"]  if ws and ws.get("s4") else None
         lsa = lo["s4"]["accuracy"]        if lo and lo.get("s4") else None
         lsc = lo["csp_lda"]["accuracy"]   if lo and lo.get("csp_lda") else None
-        lsd = lo["comparison"]["s4_vs_csp_delta"] if lo and lo.get("comparison") else None
+        lsd = (lsa - lsc) if (lsa is not None and lsc is not None) else None
         lsp = lo["comparison"]["wilcoxon_p"]       if lo and lo.get("comparison") else None
         rows.append(f"""<tr>
 <td class="L"><strong>{name}</strong><br>
@@ -1622,14 +1623,21 @@ Mean Cohen's &kappa; = {_f(kappa)} and AUC-ROC = {_f(auc)}.
         clo = lo.get("comparison", {}) if lo else {}
 
         stat_rows = []
-        for label, c in [("Within-subject", cws), ("LOSO", clo)]:
+        ws_s4_acc  = ws["s4"]["accuracy"]     if ws and ws.get("s4")     else None
+        ws_csp_acc = ws["csp_lda"]["accuracy"] if ws and ws.get("csp_lda") else None
+        lo_s4_acc  = lo["s4"]["accuracy"]     if lo and lo.get("s4")     else None
+        lo_csp_acc = lo["csp_lda"]["accuracy"] if lo and lo.get("csp_lda") else None
+        cws_delta  = (ws_s4_acc - ws_csp_acc) if (ws_s4_acc is not None and ws_csp_acc is not None) else None
+        clo_delta  = (lo_s4_acc - lo_csp_acc) if (lo_s4_acc is not None and lo_csp_acc is not None) else None
+
+        for label, c, delta in [("Within-subject", cws, cws_delta), ("LOSO", clo, clo_delta)]:
             if not c: continue
             p = c.get("wilcoxon_p", 1.0)
             stat_rows.append(f"""<h3>Statistics vs CSP+LDA &mdash; {label}</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr>{_dc(c.get('s4_vs_csp_delta'))}
+<tr>{_dc(delta)}
 <td>{_f(p,4)}</td><td>{_f(c.get('effect_r'),3)}</td>
 <td class="{'good' if p<0.05 else 'warn'}">{'Yes &#x2713;' if p<0.05 else 'No'}</td>
 <td>{c.get('n_subjects','?')}</td></tr>

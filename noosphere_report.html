@@ -42,7 +42,7 @@ footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #30363d;
 </head>
 <body>
 <h1>Noosphere S4 EEG Encoder &mdash; Benchmark Report</h1>
-<p>Generated 2026-04-21 02:55:56 &nbsp;&middot;&nbsp;
+<p>Generated 2026-05-26 12:14:59 &nbsp;&middot;&nbsp;
 Noosphere v1.6.0 &nbsp;&middot;&nbsp; 5 datasets &nbsp;&middot;&nbsp;
 <a href="https://github.com/JosephWoodall/noosphere">github.com/JosephWoodall/noosphere</a></p>
 
@@ -55,38 +55,38 @@ Noosphere v1.6.0 &nbsp;&middot;&nbsp; 5 datasets &nbsp;&middot;&nbsp;
 
 <h2>Executive Summary</h2>
 <div class="grid">
-<div class="card amber">
-  <div class="val">62.8%</div>
+<div class="card red">
+  <div class="val">39.2%</div>
   <div class="sub">Within-subject accuracy<br>(S4, post-calibration)</div></div>
-<div class="card amber">
-  <div class="val">57.8%</div>
+<div class="card red">
+  <div class="val">40.2%</div>
   <div class="sub">Cross-subject accuracy<br>(LOSO, zero-shot)</div></div>
 <div class="card green">
-  <div class="val">+20.6%</div>
+  <div class="val">+9.2%</div>
   <div class="sub">S4 lift vs CSP+LDA<br>(within-subject)</div></div>
 <div class="card">
-  <div class="val">29.2M</div>
+  <div class="val">31.3M</div>
   <div class="sub">Model Complexity<br>(FLOPs per segment)</div></div>
 <div class="card">
-  <div class="val">1136.9K</div>
+  <div class="val">889.5K</div>
   <div class="sub">Model Parameters<br>(Total count)</div></div>
-<div class="card amber">
-  <div class="val">0.379</div>
+<div class="card red">
+  <div class="val">0.009</div>
   <div class="sub">Cohen's &kappa; (S4)<br>within-subject mean</div></div>
 <div class="card amber">
-  <div class="val">4/5</div>
+  <div class="val">1/5</div>
   <div class="sub">Datasets significant<br>Wilcoxon p&lt;0.05</div></div>
 </div>
 <div class="callout"><p>
 <strong>Key finding:</strong>
 The Noosphere S4 EEG Encoder achieves
-<strong>62.8% within-subject accuracy</strong> (after brief calibration)
-and <strong>57.8% zero-shot accuracy</strong> on unseen users
+<strong>39.2% within-subject accuracy</strong> (after brief calibration)
+and <strong>40.2% zero-shot accuracy</strong> on unseen users
 across 5 public motor-imagery datasets.
-S4 outperforms the standard CSP+LDA baseline by <strong>+20.6pp</strong>
-within-subject and <strong>+15.5pp</strong> cross-subject.
-4 of 5 datasets reach Wilcoxon significance (p&lt;0.05, paired per-subject).
-Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
+S4 outperforms the standard CSP+LDA baseline by <strong>+9.2pp</strong>
+within-subject and <strong>+0.1pp</strong> cross-subject.
+1 of 5 datasets reach Wilcoxon significance (p&lt;0.05, paired per-subject).
+Mean Cohen's &kappa; = 0.009 and AUC-ROC = 0.504.
 </p></div>
 
 <h2>Cross-Dataset Comparison</h2>
@@ -104,52 +104,52 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <td class="L"><strong>BNCI2014_001</strong><br>
 <span style="font-size:.73rem;color:#8b949e">BCI Comp IV 2a -- 9 subjects, 4-class MI, 22-ch, 250 Hz</span></td>
 <td>4</td><td>9</td>
-<td class="warn">55.3%</td>
-<td>25.0%</td><td class="good">+30.3%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
-<td class="good">0.404</td>
-<td class="good">0.782</td>
-<td class="warn">43.8%</td>
-<td>25.0%</td><td class="good">+18.8%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
+<td class="warn">24.2%</td>
+<td>25.0%</td><td class="warn">-0.8%</td><td><span class="nsig">p=0.492</span></td>
+<td class="warn">-0.010</td>
+<td class="warn">0.483</td>
+<td class="warn">25.1%</td>
+<td>25.0%</td><td class="warn">+0.1%</td><td><span class="nsig">p=0.812</span></td>
 </tr><tr>
 <td class="L"><strong>BNCI2014_004</strong><br>
 <span style="font-size:.73rem;color:#8b949e">BCI Comp IV 2b -- 9 subjects, 2-class MI, 3-ch, 250 Hz</span></td>
 <td>2</td><td>9</td>
-<td class="good">70.5%</td>
-<td>50.0%</td><td class="good">+20.5%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
-<td class="good">0.410</td>
-<td class="good">0.772</td>
-<td class="good">65.9%</td>
-<td>50.0%</td><td class="good">+15.9%</td><td><span class="sig">p=0.004 &#x2713;</span></td>
+<td class="warn">50.1%</td>
+<td>49.8%</td><td class="warn">+0.2%</td><td><span class="nsig">p=0.875</span></td>
+<td class="warn">0.002</td>
+<td class="warn">0.503</td>
+<td class="warn">50.8%</td>
+<td>50.0%</td><td class="warn">+0.8%</td><td><span class="nsig">p=0.109</span></td>
 </tr><tr>
 <td class="L"><strong>Schirrmeister2017</strong><br>
 <span style="font-size:.73rem;color:#8b949e">HGD -- 14 subjects, 4-class MI, 128-ch, 500 Hz</span></td>
 <td>4</td><td>14</td>
-<td class="warn">62.3%</td>
-<td>25.0%</td><td class="good">+37.3%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
-<td class="good">0.497</td>
-<td class="good">0.840</td>
-<td class="warn">53.9%</td>
-<td>25.0%</td><td class="good">+28.9%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
+<td class="warn">26.8%</td>
+<td>24.8%</td><td class="good">+2.0%</td><td><span class="nsig">p=0.151</span></td>
+<td class="warn">0.025</td>
+<td class="warn">0.516</td>
+<td class="warn">25.1%</td>
+<td>25.0%</td><td class="warn">+0.1%</td><td><span class="nsig">p=0.917</span></td>
 </tr><tr>
 <td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">Physionet -- 109 subjects, 4-class MI, 64-ch, 160 Hz</span></td>
-<td>4</td><td>109</td>
-<td class="warn">62.0%</td>
-<td>61.2%</td><td class="warn">+0.8%</td><td><span class="nsig">p=0.252</span></td>
-<td class="warn">0.303</td>
-<td class="good">0.725</td>
-<td class="good">61.3%</td>
-<td>61.2%</td><td class="warn">+0.1%</td><td><span class="nsig">p=0.902</span></td>
+<span style="font-size:.73rem;color:#8b949e">Physionet -- 109 subjects, 2-class MI (L/R hand), 64-ch, 160 Hz</span></td>
+<td>2</td><td>109</td>
+<td class="warn">51.5%</td>
+<td>50.4%</td><td class="good">+1.1%</td><td><span class="nsig">p=0.941</span></td>
+<td class="warn">0.028</td>
+<td class="warn">0.516</td>
+<td class="warn">49.3%</td>
+<td>50.4%</td><td class="bad">-1.1%</td><td><span class="nsig">p=0.239</span></td>
 </tr><tr>
 <td class="L"><strong>Cho2017</strong><br>
 <span style="font-size:.73rem;color:#8b949e">Cho -- 52 subjects, 2-class MI, 64-ch, 512 Hz</span></td>
 <td>2</td><td>52</td>
-<td class="warn">64.2%</td>
-<td>50.0%</td><td class="good">+14.2%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
-<td class="warn">0.284</td>
-<td class="warn">0.682</td>
-<td class="good">64.1%</td>
-<td>50.0%</td><td class="good">+14.1%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
+<td class="warn">43.5%</td>
+<td>0.0%</td><td class="good">+43.5%</td><td><span class="sig">p=0.000 &#x2713;</span></td>
+<td class="warn">0.000</td>
+<td class="warn">0.500</td>
+<td class="warn">50.8%</td>
+<td>50.0%</td><td class="warn">+0.8%</td><td><span class="nsig">p=0.097</span></td>
 </tr></tbody>
 </table>
 
@@ -174,22 +174,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">55.3%</td>
-<td>55.3%</td>
-<td class="good">0.404</td>
-<td class="good">0.782</td>
-<td class="warn">0.181</td>
-<td class="good">18.0</td>
-<td class="warn">0.265</td>
-<td>-1.0%</td>
-<td>55.3% &pm; 8.2%</td>
-<td class="warn">6/9</td>
+<td class="warn">24.2%</td>
+<td>24.2%</td>
+<td class="warn">-0.010</td>
+<td class="warn">0.483</td>
+<td class="good">0.011</td>
+<td class="warn">0.0</td>
+<td class="warn">-0.033</td>
+<td>3.1%</td>
+<td>24.2% &pm; 3.1%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.56</td><td>0.61</td><td>0.58</td><td>0.80</td><td>1296</td></tr><tr><td>1</td><td>0.62</td><td>0.50</td><td>0.55</td><td>0.79</td><td>1296</td></tr><tr><td>2</td><td>0.49</td><td>0.54</td><td>0.51</td><td>0.74</td><td>1296</td></tr><tr><td>3</td><td>0.57</td><td>0.57</td><td>0.57</td><td>0.80</td><td>1296</td></tr>
+<tr><td>0</td><td>0.26</td><td>0.10</td><td>0.14</td><td>0.48</td><td>324</td></tr><tr><td>1</td><td>0.23</td><td>0.05</td><td>0.08</td><td>0.50</td><td>324</td></tr><tr><td>2</td><td>0.23</td><td>0.64</td><td>0.34</td><td>0.45</td><td>324</td></tr><tr><td>3</td><td>0.30</td><td>0.19</td><td>0.23</td><td>0.50</td><td>324</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -205,7 +205,7 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <td class="good">0.000</td>
 <td class="warn">0.0</td>
 <td class="warn">0.000</td>
-<td>0.5%</td>
+<td>-0.3%</td>
 <td>25.0% &pm; 0.0%</td>
 <td class="warn">3/9</td>
 </tr>
@@ -213,7 +213,7 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.50</td><td>1296</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>1296</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1296</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1296</td></tr>
+<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.50</td><td>324</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>324</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>324</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>324</td></tr>
 </table>
 
 <h3>S4 &mdash; LOSO</h3>
@@ -222,22 +222,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">43.8%</td>
-<td>43.8%</td>
-<td class="warn">0.250</td>
-<td class="warn">0.689</td>
-<td class="good">0.069</td>
-<td class="warn">7.2</td>
-<td class="warn">0.155</td>
-<td>-6.7%</td>
-<td>43.8% &pm; 5.2%</td>
-<td class="warn">4/9</td>
+<td class="warn">25.1%</td>
+<td>25.1%</td>
+<td class="warn">0.002</td>
+<td class="warn">0.500</td>
+<td class="good">0.004</td>
+<td class="warn">0.0</td>
+<td class="warn">0.018</td>
+<td>0.9%</td>
+<td>25.1% &pm; 1.5%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.46</td><td>0.38</td><td>0.41</td><td>0.69</td><td>1296</td></tr><tr><td>1</td><td>0.48</td><td>0.45</td><td>0.46</td><td>0.72</td><td>1296</td></tr><tr><td>2</td><td>0.37</td><td>0.52</td><td>0.43</td><td>0.65</td><td>1296</td></tr><tr><td>3</td><td>0.49</td><td>0.41</td><td>0.45</td><td>0.70</td><td>1296</td></tr>
+<tr><td>0</td><td>0.25</td><td>0.28</td><td>0.26</td><td>0.50</td><td>1296</td></tr><tr><td>1</td><td>0.24</td><td>0.16</td><td>0.19</td><td>0.49</td><td>1296</td></tr><tr><td>2</td><td>0.26</td><td>0.30</td><td>0.28</td><td>0.50</td><td>1296</td></tr><tr><td>3</td><td>0.26</td><td>0.26</td><td>0.26</td><td>0.51</td><td>1296</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; LOSO</h3>
@@ -267,18 +267,18 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+30.3%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
+<tr><td class="warn">-0.8%</td>
+<td>0.4922</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+18.8%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
+<tr><td class="warn">+0.1%</td>
+<td>0.8125</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">BNCI2014_004</div>
@@ -290,7 +290,7 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
 <table>
 <tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
-<tr><td>Threshold &ge; 0.5</td><td>70.5%</td><td>100.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>0.0%</td><td>0.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+<tr><td>Threshold &ge; 0.5</td><td>0.0%</td><td>0.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>0.0%</td><td>0.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
 </table>
 
 
@@ -300,22 +300,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="good">70.5%</td>
-<td>70.5%</td>
-<td class="good">0.410</td>
-<td class="good">0.772</td>
-<td class="good">0.101</td>
-<td class="warn">7.5</td>
-<td class="warn">0.253</td>
-<td>-0.6%</td>
-<td>70.3% &pm; 7.4%</td>
-<td class="good">7/9</td>
+<td class="warn">50.1%</td>
+<td>50.1%</td>
+<td class="warn">0.002</td>
+<td class="warn">0.503</td>
+<td class="good">0.001</td>
+<td class="warn">0.0</td>
+<td class="warn">0.003</td>
+<td>4.2%</td>
+<td>50.0% &pm; 3.8%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.69</td><td>0.75</td><td>0.72</td><td>0.77</td><td>3260</td></tr><tr><td>1</td><td>0.73</td><td>0.66</td><td>0.69</td><td>0.77</td><td>3260</td></tr>
+<tr><td>0</td><td>0.50</td><td>0.55</td><td>0.52</td><td>0.50</td><td>812</td></tr><tr><td>1</td><td>0.50</td><td>0.45</td><td>0.48</td><td>0.50</td><td>818</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -324,22 +324,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">50.0%</td>
+<td class="warn">49.8%</td>
 <td>50.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
-<td class="good">0.000</td>
+<td class="good">0.002</td>
 <td class="warn">0.0</td>
 <td class="warn">0.000</td>
-<td>0.0%</td>
-<td>50.0% &pm; 0.0%</td>
+<td>0.2%</td>
+<td>49.8% &pm; 1.1%</td>
 <td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.50</td><td>3260</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>3260</td></tr>
+<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.50</td><td>812</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>818</td></tr>
 </table>
 
 <h3>S4 &mdash; LOSO</h3>
@@ -348,22 +348,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">65.9%</td>
-<td>65.9%</td>
-<td class="warn">0.319</td>
-<td class="good">0.706</td>
-<td class="good">0.053</td>
-<td class="warn">4.5</td>
-<td class="warn">0.160</td>
-<td>-2.7%</td>
-<td>65.9% &pm; 5.4%</td>
-<td class="warn">5/9</td>
+<td class="warn">50.8%</td>
+<td>50.8%</td>
+<td class="warn">0.017</td>
+<td class="warn">0.514</td>
+<td class="good">0.004</td>
+<td class="warn">0.0</td>
+<td class="warn">0.049</td>
+<td>-1.7%</td>
+<td>50.8% &pm; 1.3%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.65</td><td>0.69</td><td>0.67</td><td>0.71</td><td>3260</td></tr><tr><td>1</td><td>0.67</td><td>0.63</td><td>0.65</td><td>0.71</td><td>3260</td></tr>
+<tr><td>0</td><td>0.51</td><td>0.52</td><td>0.52</td><td>0.51</td><td>3260</td></tr><tr><td>1</td><td>0.51</td><td>0.49</td><td>0.50</td><td>0.51</td><td>3260</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; LOSO</h3>
@@ -393,18 +393,18 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+20.5%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
+<tr><td class="warn">+0.2%</td>
+<td>0.8750</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+15.9%</td>
-<td>0.0039</td><td>0.889</td>
-<td class="good">Yes &#x2713;</td>
-<td>9</td></tr>
+<tr><td class="warn">+0.8%</td>
+<td>0.1094</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">Schirrmeister2017</div>
@@ -426,22 +426,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">62.3%</td>
-<td>62.3%</td>
-<td class="good">0.497</td>
-<td class="good">0.840</td>
-<td class="warn">0.250</td>
-<td class="good">26.7</td>
-<td class="good">0.349</td>
-<td>0.5%</td>
-<td>62.3% &pm; 5.6%</td>
-<td class="good">7/9</td>
+<td class="warn">26.8%</td>
+<td>26.8%</td>
+<td class="warn">0.025</td>
+<td class="warn">0.516</td>
+<td class="good">0.015</td>
+<td class="warn">0.1</td>
+<td class="warn">-0.017</td>
+<td>0.2%</td>
+<td>26.8% &pm; 4.5%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.62</td><td>0.62</td><td>0.62</td><td>0.84</td><td>1611</td></tr><tr><td>1</td><td>0.61</td><td>0.62</td><td>0.62</td><td>0.84</td><td>1609</td></tr><tr><td>2</td><td>0.57</td><td>0.52</td><td>0.54</td><td>0.78</td><td>1609</td></tr><tr><td>3</td><td>0.68</td><td>0.73</td><td>0.70</td><td>0.89</td><td>1611</td></tr>
+<tr><td>0</td><td>0.25</td><td>0.21</td><td>0.23</td><td>0.49</td><td>400</td></tr><tr><td>1</td><td>0.26</td><td>0.28</td><td>0.27</td><td>0.53</td><td>402</td></tr><tr><td>2</td><td>0.24</td><td>0.20</td><td>0.22</td><td>0.51</td><td>406</td></tr><tr><td>3</td><td>0.30</td><td>0.38</td><td>0.34</td><td>0.53</td><td>402</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -450,22 +450,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">25.0%</td>
+<td class="warn">24.8%</td>
 <td>25.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
-<td class="good">0.000</td>
+<td class="good">0.002</td>
 <td class="warn">0.0</td>
 <td class="warn">0.000</td>
-<td>0.3%</td>
-<td>25.0% &pm; 0.1%</td>
+<td>0.2%</td>
+<td>24.8% &pm; 0.4%</td>
 <td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.50</td><td>1611</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.49</td><td>1609</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.51</td><td>1609</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>1611</td></tr>
+<tr><td>0</td><td>0.25</td><td>1.00</td><td>0.40</td><td>0.50</td><td>400</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>402</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>406</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>402</td></tr>
 </table>
 
 <h3>S4 &mdash; LOSO</h3>
@@ -474,22 +474,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">53.9%</td>
-<td>53.9%</td>
-<td class="warn">0.385</td>
-<td class="good">0.773</td>
-<td class="warn">0.183</td>
-<td class="good">16.4</td>
-<td class="warn">0.263</td>
-<td>-0.5%</td>
-<td>53.9% &pm; 4.8%</td>
-<td class="warn">5/9</td>
+<td class="warn">25.1%</td>
+<td>25.1%</td>
+<td class="warn">0.002</td>
+<td class="warn">0.502</td>
+<td class="good">0.003</td>
+<td class="warn">0.0</td>
+<td class="warn">-0.014</td>
+<td>1.5%</td>
+<td>25.1% &pm; 3.2%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.53</td><td>0.55</td><td>0.54</td><td>0.78</td><td>1611</td></tr><tr><td>1</td><td>0.54</td><td>0.53</td><td>0.54</td><td>0.78</td><td>1609</td></tr><tr><td>2</td><td>0.47</td><td>0.42</td><td>0.44</td><td>0.70</td><td>1609</td></tr><tr><td>3</td><td>0.60</td><td>0.65</td><td>0.62</td><td>0.83</td><td>1611</td></tr>
+<tr><td>0</td><td>0.25</td><td>0.23</td><td>0.24</td><td>0.51</td><td>1611</td></tr><tr><td>1</td><td>0.24</td><td>0.29</td><td>0.26</td><td>0.49</td><td>1609</td></tr><tr><td>2</td><td>0.26</td><td>0.26</td><td>0.26</td><td>0.52</td><td>1609</td></tr><tr><td>3</td><td>0.25</td><td>0.23</td><td>0.24</td><td>0.49</td><td>1611</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; LOSO</h3>
@@ -519,25 +519,25 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+37.3%</td>
-<td>0.0001</td><td>0.881</td>
-<td class="good">Yes &#x2713;</td>
-<td>14</td></tr>
+<tr><td class="good">+2.0%</td>
+<td>0.1515</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+28.9%</td>
-<td>0.0001</td><td>0.881</td>
-<td class="good">Yes &#x2713;</td>
-<td>14</td></tr>
+<tr><td class="warn">+0.1%</td>
+<td>0.9165</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">PhysionetMI</div>
-<div class="ds-desc">Physionet -- 109 subjects, 4-class MI, 64-ch, 160 Hz &nbsp;&middot;&nbsp;
-4 classes &nbsp;&middot;&nbsp;
+<div class="ds-desc">Physionet -- 109 subjects, 2-class MI (L/R hand), 64-ch, 160 Hz &nbsp;&middot;&nbsp;
+2 classes &nbsp;&middot;&nbsp;
 109 subjects &nbsp;&middot;&nbsp;
-19022 trials</div>
+4918 trials</div>
 
 <h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
 <table>
@@ -552,22 +552,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">62.0%</td>
-<td>46.1%</td>
-<td class="warn">0.303</td>
-<td class="good">0.725</td>
-<td class="warn">0.334</td>
-<td class="good">26.3</td>
-<td class="warn">0.251</td>
-<td>-1.1%</td>
-<td>62.0% &pm; 6.7%</td>
-<td class="warn">5/9</td>
+<td class="warn">51.5%</td>
+<td>51.4%</td>
+<td class="warn">0.028</td>
+<td class="warn">0.516</td>
+<td class="good">0.010</td>
+<td class="warn">0.0</td>
+<td class="warn">0.004</td>
+<td>-2.4%</td>
+<td>51.4% &pm; 13.5%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.72</td><td>0.79</td><td>0.75</td><td>0.72</td><td>11639</td></tr><tr><td>1</td><td>0.48</td><td>0.43</td><td>0.45</td><td>0.77</td><td>2480</td></tr><tr><td>2</td><td>0.48</td><td>0.40</td><td>0.44</td><td>0.76</td><td>2438</td></tr><tr><td>3</td><td>0.28</td><td>0.22</td><td>0.25</td><td>0.65</td><td>2465</td></tr>
+<tr><td>0</td><td>0.52</td><td>0.58</td><td>0.55</td><td>0.52</td><td>660</td></tr><tr><td>1</td><td>0.51</td><td>0.44</td><td>0.48</td><td>0.52</td><td>650</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -576,22 +576,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">61.2%</td>
-<td>25.0%</td>
+<td class="warn">50.4%</td>
+<td>50.0%</td>
 <td class="warn">0.000</td>
-<td class="warn">0.508</td>
-<td class="warn">0.362</td>
-<td class="good">25.3</td>
+<td class="warn">0.500</td>
+<td class="good">0.004</td>
+<td class="warn">0.0</td>
 <td class="warn">0.000</td>
-<td>-4.3%</td>
-<td>61.2% &pm; 0.5%</td>
-<td class="warn">4/9</td>
+<td>0.9%</td>
+<td>50.4% &pm; 6.0%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.61</td><td>1.00</td><td>0.76</td><td>0.47</td><td>11639</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.52</td><td>2480</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.51</td><td>2438</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.52</td><td>2465</td></tr>
+<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.50</td><td>660</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>650</td></tr>
 </table>
 
 <h3>S4 &mdash; LOSO</h3>
@@ -600,22 +600,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">61.3%</td>
-<td>44.1%</td>
-<td class="warn">0.280</td>
-<td class="good">0.713</td>
-<td class="warn">0.333</td>
-<td class="good">25.4</td>
-<td class="warn">0.262</td>
-<td>0.5%</td>
-<td>61.3% &pm; 6.4%</td>
-<td class="warn">5/9</td>
+<td class="warn">49.3%</td>
+<td>49.3%</td>
+<td class="warn">-0.014</td>
+<td class="warn">0.489</td>
+<td class="good">0.011</td>
+<td class="warn">0.0</td>
+<td class="warn">0.020</td>
+<td>1.7%</td>
+<td>49.3% &pm; 6.9%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.71</td><td>0.80</td><td>0.75</td><td>0.71</td><td>11639</td></tr><tr><td>1</td><td>0.47</td><td>0.39</td><td>0.43</td><td>0.75</td><td>2480</td></tr><tr><td>2</td><td>0.47</td><td>0.38</td><td>0.42</td><td>0.75</td><td>2438</td></tr><tr><td>3</td><td>0.26</td><td>0.20</td><td>0.22</td><td>0.64</td><td>2465</td></tr>
+<tr><td>0</td><td>0.50</td><td>0.49</td><td>0.50</td><td>0.49</td><td>2480</td></tr><tr><td>1</td><td>0.49</td><td>0.49</td><td>0.49</td><td>0.49</td><td>2438</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; LOSO</h3>
@@ -624,39 +624,39 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">61.2%</td>
-<td>25.0%</td>
+<td class="warn">50.4%</td>
+<td>50.0%</td>
 <td class="warn">0.000</td>
-<td class="warn">0.501</td>
-<td class="warn">0.362</td>
-<td class="good">25.3</td>
+<td class="warn">0.500</td>
+<td class="good">0.004</td>
+<td class="warn">0.0</td>
 <td class="warn">0.000</td>
 <td>-0.2%</td>
-<td>61.2% &pm; 0.5%</td>
-<td class="warn">4/9</td>
+<td>50.4% &pm; 1.8%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.61</td><td>1.00</td><td>0.76</td><td>0.50</td><td>11639</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2480</td></tr><tr><td>2</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2438</td></tr><tr><td>3</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2465</td></tr>
+<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.50</td><td>2480</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2438</td></tr>
 </table>
 <h3>Statistics vs CSP+LDA &mdash; Within-subject</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="warn">+0.8%</td>
-<td>0.2523</td><td>0.110</td>
+<tr><td class="good">+1.1%</td>
+<td>0.9405</td><td>N/A</td>
 <td class="warn">No</td>
-<td>109</td></tr>
+<td>?</td></tr>
 </table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="warn">+0.1%</td>
-<td>0.9019</td><td>0.012</td>
+<tr><td class="bad">-1.1%</td>
+<td>0.2386</td><td>N/A</td>
 <td class="warn">No</td>
-<td>109</td></tr>
+<td>?</td></tr>
 </table>
 </div><div class="ds">
 <div class="ds-title">Cho2017</div>
@@ -668,7 +668,7 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <h3>Uncertainty-Weighted Performance (Within-Subject)</h3>
 <table>
 <tr><th>Confidence Threshold</th><th>Accuracy @ Threshold</th><th>Data Coverage</th></tr>
-<tr><td>Threshold &ge; 0.5</td><td>64.2%</td><td>100.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>0.0%</td><td>0.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
+<tr><td>Threshold &ge; 0.5</td><td>0.0%</td><td>0.0%</td></tr><tr><td>Threshold &ge; 0.7</td><td>0.0%</td><td>0.0%</td></tr><tr><td>Threshold &ge; 0.9</td><td>0.0%</td><td>0.0%</td></tr>
 </table>
 
 
@@ -678,22 +678,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">64.2%</td>
-<td>64.2%</td>
-<td class="warn">0.284</td>
-<td class="warn">0.682</td>
-<td class="good">0.041</td>
-<td class="warn">3.5</td>
-<td class="warn">0.130</td>
-<td>0.8%</td>
-<td>64.3% &pm; 13.7%</td>
-<td class="warn">4/9</td>
+<td class="warn">43.5%</td>
+<td>43.5%</td>
+<td class="warn">0.000</td>
+<td class="warn">0.500</td>
+<td class="good">0.070</td>
+<td class="warn">0.0</td>
+<td class="warn">-0.151</td>
+<td>0.5%</td>
+<td>43.5% &pm; 6.8%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.64</td><td>0.64</td><td>0.64</td><td>0.68</td><td>5260</td></tr><tr><td>1</td><td>0.64</td><td>0.64</td><td>0.64</td><td>0.68</td><td>5260</td></tr>
+<tr><td>0</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>0</td></tr><tr><td>1</td><td>1.00</td><td>0.43</td><td>0.61</td><td>0.50</td><td>2630</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; Within-Subject</h3>
@@ -702,22 +702,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">50.0%</td>
-<td>50.0%</td>
+<td class="warn">0.0%</td>
+<td>0.0%</td>
 <td class="warn">0.000</td>
 <td class="warn">0.500</td>
-<td class="good">0.000</td>
+<td class="warn">0.500</td>
 <td class="warn">0.0</td>
 <td class="warn">0.000</td>
 <td>0.0%</td>
-<td>50.0% &pm; 0.0%</td>
-<td class="warn">3/9</td>
+<td>0.0% &pm; 0.0%</td>
+<td class="warn">2/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.50</td><td>1.00</td><td>0.67</td><td>0.50</td><td>5260</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>5260</td></tr>
+<tr><td>0</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>0</td></tr><tr><td>1</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.50</td><td>2630</td></tr>
 </table>
 
 <h3>S4 &mdash; LOSO</h3>
@@ -726,22 +726,22 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <th>ECE &darr;</th><th>ITR b/min</th><th>Conf-r</th>
     <th>Stab.Drop</th><th>Subj.Acc</th><th>F5</th></tr>
 <tr>
-<td class="warn">64.1%</td>
-<td>64.1%</td>
-<td class="warn">0.282</td>
-<td class="warn">0.678</td>
-<td class="good">0.044</td>
-<td class="warn">3.5</td>
-<td class="warn">0.126</td>
-<td>-4.5%</td>
-<td>64.2% &pm; 13.0%</td>
-<td class="warn">4/9</td>
+<td class="warn">50.8%</td>
+<td>50.8%</td>
+<td class="warn">0.016</td>
+<td class="warn">0.508</td>
+<td class="good">0.004</td>
+<td class="warn">0.0</td>
+<td class="warn">-0.007</td>
+<td>0.4%</td>
+<td>50.8% &pm; 3.7%</td>
+<td class="warn">3/9</td>
 </tr>
 </table>
 <table>
 <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th>
     <th>AUC-ROC</th><th>Support</th></tr>
-<tr><td>0</td><td>0.64</td><td>0.64</td><td>0.64</td><td>0.68</td><td>5260</td></tr><tr><td>1</td><td>0.64</td><td>0.64</td><td>0.64</td><td>0.68</td><td>5260</td></tr>
+<tr><td>0</td><td>0.51</td><td>0.51</td><td>0.51</td><td>0.51</td><td>5260</td></tr><tr><td>1</td><td>0.51</td><td>0.51</td><td>0.51</td><td>0.51</td><td>5260</td></tr>
 </table>
 
 <h3>CSP+LDA &mdash; LOSO</h3>
@@ -771,18 +771,18 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+14.2%</td>
-<td>0.0000</td><td>0.869</td>
+<tr><td class="good">+43.5%</td>
+<td>0.0000</td><td>N/A</td>
 <td class="good">Yes &#x2713;</td>
-<td>52</td></tr>
+<td>?</td></tr>
 </table><h3>Statistics vs CSP+LDA &mdash; LOSO</h3>
 <table>
 <tr><th>&Delta; Accuracy</th><th>Wilcoxon p</th><th>Effect size r</th>
     <th>Significant p&lt;0.05</th><th>N subjects</th></tr>
-<tr><td class="good">+14.1%</td>
-<td>0.0000</td><td>0.858</td>
-<td class="good">Yes &#x2713;</td>
-<td>52</td></tr>
+<tr><td class="warn">+0.8%</td>
+<td>0.0974</td><td>N/A</td>
+<td class="warn">No</td>
+<td>?</td></tr>
 </table>
 </div>
 
@@ -803,7 +803,7 @@ Mean Cohen's &kappa; = 0.379 and AUC-ROC = 0.760.
     <td class="L"><b>torch.compile (reduce-overhead)</b>, <b>Automatic Mixed Precision (AMP)</b>,
     and vectorized Spectral GCN.</td></tr>
 <tr><td class="L">Hardware Stats</td>
-    <td class="L">OS: Linux 6.19.11-1-cachyos &nbsp;&middot;&nbsp; 
+    <td class="L">OS: Linux 7.0.9-1-cachyos &nbsp;&middot;&nbsp; 
     GPU: NVIDIA GeForce RTX 5070 &nbsp;&middot;&nbsp; CPU: </td></tr>
 <tr><td class="L">Timing</td>
     <td class="L">Inference latency measured via <b>torch.cuda.Event</b> for precise 
@@ -834,1098 +834,4 @@ CSP: Blankertz et al. IEEE TBME 2008 &nbsp;&middot;&nbsp;
 ITR: Wolpaw et al. 2000 &nbsp;&middot;&nbsp;
 Wilcoxon 1945
 </footer>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">23.4% &plusmn; 0.3%</td>
-<td class="warn">-0.021</td>
-<td class="bad">-1.6%</td>
-<td>1.2176</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">45.0% &plusmn; 2.0%</td>
-<td class="warn">-0.082</td>
-<td class="bad">-5.0%</td>
-<td>1.0003</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">27.8% &plusmn; 0.5%</td>
-<td class="warn">0.039</td>
-<td class="good">+2.8%</td>
-<td>1.0005</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.9% &plusmn; 1.1%</td>
-<td class="warn">-0.043</td>
-<td class="bad">-1.1%</td>
-<td>1.0029</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="good">100.0% &plusmn; 0.0%</td>
-<td class="warn">0.000</td>
-<td class="good">+50.0%</td>
-<td>1.0000</td>
-<td>2</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">28.6% &plusmn; 0.0%</td>
-<td class="warn">0.023</td>
-<td class="good">+3.6%</td>
-<td>0.2537</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">54.1% &plusmn; 11.2%</td>
-<td class="warn">0.161</td>
-<td class="good">+4.1%</td>
-<td>0.3780</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">18.4% &plusmn; 7.9%</td>
-<td class="warn">-0.075</td>
-<td class="bad">-6.6%</td>
-<td>0.4364</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.3% &plusmn; 0.0%</td>
-<td class="warn">-0.034</td>
-<td class="bad">-1.7%</td>
-<td>0.3942</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">25.7% &plusmn; 1.1%</td>
-<td class="warn">0.009</td>
-<td class="warn">+0.7%</td>
-<td>0.7824</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">52.8% &plusmn; 2.6%</td>
-<td class="warn">0.051</td>
-<td class="good">+2.8%</td>
-<td>1.0163</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">28.3% &plusmn; 1.0%</td>
-<td class="warn">0.040</td>
-<td class="good">+3.3%</td>
-<td>1.7772</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">50.0% &plusmn; 2.3%</td>
-<td class="warn">-0.023</td>
-<td class="warn">+0.0%</td>
-<td>1.7648</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">23.0% &plusmn; 1.3%</td>
-<td class="warn">-0.022</td>
-<td class="bad">-2.0%</td>
-<td>1.7813</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">53.5% &plusmn; 6.1%</td>
-<td class="warn">0.040</td>
-<td class="good">+3.5%</td>
-<td>1.8242</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">16.7% &plusmn; 1.3%</td>
-<td class="warn">-0.114</td>
-<td class="bad">-8.3%</td>
-<td>1.7796</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">46.6% &plusmn; 8.0%</td>
-<td class="warn">-0.073</td>
-<td class="bad">-3.4%</td>
-<td>1.7599</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">23.7% &plusmn; 0.1%</td>
-<td class="warn">-0.017</td>
-<td class="bad">-1.3%</td>
-<td>0.7610</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.4% &plusmn; 1.4%</td>
-<td class="warn">-0.040</td>
-<td class="bad">-1.6%</td>
-<td>0.7528</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">23.2% &plusmn; 1.0%</td>
-<td class="warn">-0.022</td>
-<td class="bad">-1.8%</td>
-<td>0.7539</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">45.5% &plusmn; 2.3%</td>
-<td class="warn">-0.093</td>
-<td class="bad">-4.5%</td>
-<td>0.8616</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">25.7% &plusmn; 0.7%</td>
-<td class="warn">0.010</td>
-<td class="warn">+0.7%</td>
-<td>0.7378</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">51.2% &plusmn; 1.8%</td>
-<td class="warn">0.019</td>
-<td class="good">+1.2%</td>
-<td>0.7617</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">19.2% &plusmn; 2.0%</td>
-<td class="warn">-0.075</td>
-<td class="bad">-5.8%</td>
-<td>0.8487</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">44.3% &plusmn; 5.7%</td>
-<td class="warn">-0.116</td>
-<td class="bad">-5.7%</td>
-<td>0.9054</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.1% &plusmn; 2.0%</td>
-<td class="warn">-0.012</td>
-<td class="warn">-0.9%</td>
-<td>0.8152</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">53.0% &plusmn; 0.0%</td>
-<td class="warn">0.053</td>
-<td class="good">+3.0%</td>
-<td>0.8094</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">27.8% &plusmn; 5.6%</td>
-<td class="warn">0.040</td>
-<td class="good">+2.8%</td>
-<td>0.7699</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">45.5% &plusmn; 0.0%</td>
-<td class="warn">-0.092</td>
-<td class="bad">-4.5%</td>
-<td>0.8845</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.0% &plusmn; 0.9%</td>
-<td class="warn">-0.013</td>
-<td class="bad">-1.0%</td>
-<td>1.4041</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">51.8% &plusmn; 1.2%</td>
-<td class="warn">0.030</td>
-<td class="good">+1.8%</td>
-<td>1.2035</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.7% &plusmn; 0.5%</td>
-<td class="warn">-0.002</td>
-<td class="warn">-0.3%</td>
-<td>0.9283</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.9% &plusmn; 12.5%</td>
-<td class="warn">-0.029</td>
-<td class="bad">-1.1%</td>
-<td>0.8282</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">26.3% &plusmn; 0.7%</td>
-<td class="warn">0.017</td>
-<td class="good">+1.3%</td>
-<td>1.0402</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">49.2% &plusmn; 1.4%</td>
-<td class="warn">-0.024</td>
-<td class="warn">-0.8%</td>
-<td>0.9099</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">27.3% &plusmn; 2.0%</td>
-<td class="warn">0.030</td>
-<td class="good">+2.3%</td>
-<td>0.7873</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">38.6% &plusmn; 4.5%</td>
-<td class="warn">-0.241</td>
-<td class="bad">-11.4%</td>
-<td>0.8003</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">25.1% &plusmn; 0.3%</td>
-<td class="warn">0.002</td>
-<td class="warn">+0.1%</td>
-<td>0.2232</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">49.4% &plusmn; 1.2%</td>
-<td class="warn">0.000</td>
-<td class="warn">-0.6%</td>
-<td>0.2409</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.7% &plusmn; 0.5%</td>
-<td class="warn">0.000</td>
-<td class="warn">-0.3%</td>
-<td>0.2217</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">51.1% &plusmn; 1.1%</td>
-<td class="warn">0.000</td>
-<td class="good">+1.1%</td>
-<td>0.2168</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.8% &plusmn; 0.1%</td>
-<td class="warn">-0.002</td>
-<td class="warn">-0.2%</td>
-<td>0.2136</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">52.0% &plusmn; 1.0%</td>
-<td class="warn">0.045</td>
-<td class="good">+2.0%</td>
-<td>0.2379</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">27.8% &plusmn; 3.5%</td>
-<td class="warn">0.043</td>
-<td class="good">+2.8%</td>
-<td>0.2350</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.9% &plusmn; 1.1%</td>
-<td class="warn">0.000</td>
-<td class="bad">-1.1%</td>
-<td>0.2240</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">25.1% &plusmn; 0.1%</td>
-<td class="warn">0.001</td>
-<td class="warn">+0.1%</td>
-<td>212.1030</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">50.6% &plusmn; 1.2%</td>
-<td class="warn">0.000</td>
-<td class="warn">+0.6%</td>
-<td>212.1037</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.7% &plusmn; 0.5%</td>
-<td class="warn">0.006</td>
-<td class="warn">-0.3%</td>
-<td>212.1031</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.9% &plusmn; 1.1%</td>
-<td class="warn">0.000</td>
-<td class="bad">-1.1%</td>
-<td>212.1035</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">25.0% &plusmn; 0.0%</td>
-<td class="warn">0.000</td>
-<td class="warn">+0.0%</td>
-<td>212.1030</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">50.6% &plusmn; 1.2%</td>
-<td class="warn">0.000</td>
-<td class="warn">+0.6%</td>
-<td>212.1031</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.2% &plusmn; 0.0%</td>
-<td class="warn">-0.000</td>
-<td class="warn">-0.8%</td>
-<td>212.1031</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">52.3% &plusmn; 0.0%</td>
-<td class="warn">0.023</td>
-<td class="good">+2.3%</td>
-<td>212.1031</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
-
-<h2>World Model Benchmark &mdash; RSSM Sequential Prediction</h2>
-<div class="callout"><p>
-<strong>Protocol:</strong> The RSSM world model is trained on frozen RS-S4 embeddings
-from N&minus;1 subjects (LOSO). At each time step the model observes embedding
-<em>e<sub>t</sub></em>, advances its latent state, and imagines the next state via
-the prior (zero-action baseline). A linear probe on the imagined latent predicts
-the intent class at trial <em>t+1</em>.
-<strong>Action strategy:</strong> zero (no robot/IoT feedback &mdash; isolates world model contribution).
-<strong>Architecture:</strong> Bare RSSM &mdash; GRU deterministic state (256-d) +
-16&times;16 straight-through categorical stochastic latent (DreamerV3 balanced KL).
-</p></div>
-<div class="grid">
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Next-intent accuracy<br>(RSSM prior, zero-shot)</div></div>
-<div class="card amber">
-  <div class="val">N/A</div>
-  <div class="sub">Cohen's &kappa;<br>(world model, mean)</div></div>
-</div>
-<table>
-<thead>
-<tr><th class="L">Dataset</th><th>Chance</th>
-    <th>Next-Intent Acc (mean &plusmn; std)</th>
-    <th>Cohen's &kappa;</th><th>&Delta; vs Chance</th>
-    <th>Mean KL &darr;</th><th>N Subjects</th></tr>
-</thead>
-<tbody><tr>
-<td class="L"><strong>BNCI2014_001</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">25.3% &plusmn; 0.3%</td>
-<td class="warn">0.004</td>
-<td class="warn">+0.3%</td>
-<td>1.0954</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>BNCI2014_004</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">47.8% &plusmn; 0.4%</td>
-<td class="warn">-0.046</td>
-<td class="bad">-2.2%</td>
-<td>1.6682</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Schirrmeister2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">4-class, 2 subjects</span></td>
-<td>25.0%</td>
-<td class="warn">24.2% &plusmn; 3.0%</td>
-<td class="warn">-0.010</td>
-<td class="warn">-0.8%</td>
-<td>3.9687</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>PhysionetMI</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">48.9% &plusmn; 3.4%</td>
-<td class="warn">-0.023</td>
-<td class="bad">-1.1%</td>
-<td>4.9316</td>
-<td>2</td>
-</tr><tr>
-<td class="L"><strong>Cho2017</strong><br>
-<span style="font-size:.73rem;color:#8b949e">2-class, 2 subjects</span></td>
-<td>50.0%</td>
-<td class="warn">N/A &plusmn; N/A</td>
-<td class="warn">N/A</td>
-<td>N/A</td>
-<td>N/A</td>
-<td>0</td>
-</tr></tbody>
-</table>
 </body></html>

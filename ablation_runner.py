@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score
-from noosphere.s4_eeg import S4EEGEncoder, S4DLayer, RiemannianStem
+from noosphere.s4_eeg import S4EEGEncoder, RiemannianStem
 from fast_eval import fast_pretrain, fast_finetune, load_dataset, DATASET_CATALOGUE, N_EEG_CH, euclidean_alignment, _class_weights, _make_loader, _nllloss_smooth, augment_eeg, _cosine_lr, mixup_eeg, infer_s4
 from sklearn.model_selection import StratifiedKFold
 import torch.optim as optim
@@ -142,8 +142,25 @@ def do_ablation(variant_name, dataset_name="Schirrmeister2017"):
             yp.extend(pred)
             del ft_model
             
-    print(f"Variant: {variant_name} -> Accuracy: {accuracy_score(yt, yp):.3f}")
+    acc = accuracy_score(yt, yp)
+    print(f"Variant: {variant_name} -> Accuracy: {acc:.4f}")
+    return acc
 
 if __name__ == "__main__":
-    print("Running Fast Ablation (5 subj, 3 folds)...")
-    do_ablation("no_edl")
+    print("Running Full Ablation Study (5 subj, 3 folds, Schirrmeister2017)...")
+    print("=" * 60)
+    variants = ["full", "no_s4", "no_riemann", "no_edl"]
+    results = {}
+    for v in variants:
+        results[v] = do_ablation(v)
+
+    print("\n" + "=" * 60)
+    print("Ablation Summary")
+    print("=" * 60)
+    baseline = results["full"]
+    print(f"{'Variant':<20} {'Accuracy':>10} {'Delta':>10}")
+    print("-" * 42)
+    for v in variants:
+        delta = results[v] - baseline
+        delta_str = f"{delta:+.4f}" if v != "full" else "-"
+        print(f"{v:<20} {results[v]:>10.4f} {delta_str:>10}")

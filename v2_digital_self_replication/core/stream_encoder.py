@@ -18,7 +18,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-@torch.jit.script  # deprecated in Py3.14+ but 118x faster than eager; torch.compile gives only ~20x
 def _bilinear_scan(
     x: torch.Tensor,
     bar_A: torch.Tensor,
@@ -28,7 +27,7 @@ def _bilinear_scan(
     D: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Bilinear SSM scan compiled via TorchScript.
+    Bilinear SSM scan over sequence dimension T.
 
     x:     (B, T, d_model)
     bar_A: (d_model, d_state)  — ZOH transition
@@ -53,6 +52,9 @@ def _bilinear_scan(
         out[:, t, :] = (C * h).sum(-1) + D * x[:, t, :]
 
     return out, h
+
+
+_bilinear_scan = torch.compile(_bilinear_scan, dynamic=True)
 
 
 class BiosignalSSMCell(nn.Module):

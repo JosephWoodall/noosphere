@@ -41,7 +41,6 @@ _log "  Log file: $LOG_FILE"
     --stride         "$STRIDE"         \
     --device         "$DEVICE"         \
     --log-level      INFO              \
-    --log-file       "$LOG_FILE"       \
     2>&1 | tee -a "$LOG_FILE"
 
 _ok "JEPA pretraining complete → $CHECKPOINT_DIR/jepa_encoder_final.pt"

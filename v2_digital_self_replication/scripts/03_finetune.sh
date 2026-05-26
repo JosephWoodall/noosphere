@@ -49,7 +49,6 @@ _log "  Log file: $LOG_FILE"
     $FREEZE_FLAG                       \
     --device         "$DEVICE"         \
     --log-level      INFO              \
-    --log-file       "$LOG_FILE"       \
     2>&1 | tee -a "$LOG_FILE"
 
 _ok "Fine-tuning complete → $CHECKPOINT_DIR/supervised_best.pt"

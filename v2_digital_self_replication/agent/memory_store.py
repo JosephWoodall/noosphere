@@ -213,6 +213,13 @@ class MemoryStore:
 
     def log_episode(self, **kwargs):
         self.episodic.log_episode(**kwargs)
+        # Build episode embedding from mean of recent latents → semantic index
+        latents = [e.latent for e in self.short_term.recent(64) if e.latent is not None]
+        if latents:
+            stacked = np.stack([l.squeeze() for l in latents])
+            embedding = stacked.mean(0).astype(np.float32)
+            payload = {k: v for k, v in kwargs.items()}
+            self.semantic.add(embedding, payload)
 
     def close(self):
         self.episodic.close()

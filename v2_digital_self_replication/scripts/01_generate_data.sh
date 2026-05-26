@@ -35,7 +35,6 @@ _log "  Log file:   $LOG_FILE"
     --seed        "$SEED"        \
     --output-dir  "$DATA_DIR"    \
     --log-level   INFO           \
-    --log-file    "$LOG_FILE"    \
     2>&1 | tee -a "$LOG_FILE"
 
 _ok "Data generation complete → $DATA_DIR"

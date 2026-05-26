@@ -106,6 +106,7 @@ class DigitalTwin(nn.Module):
         self._hidden_state: Optional[list] = None
         self._step_count: int = 0
         self._last_pred: Optional[np.ndarray] = None
+        self._last_sigma: Optional[np.ndarray] = None   # decoder uncertainty, for ZMQ
         self._last_latent: Optional[np.ndarray] = None  # encoder output, stored for adapt()
         self._session_errors: list[float] = []
 
@@ -161,6 +162,7 @@ class DigitalTwin(nn.Module):
         safe_cmd, reason = self._safety.check(smooth_cmd, sigma_np, ern_p)
 
         self._last_pred   = mu_np
+        self._last_sigma  = sigma_np
         self._last_latent = h_out.cpu().numpy()  # (1, d_model), for adapt()
         self._step_count += 1
 

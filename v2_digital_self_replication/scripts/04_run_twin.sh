@@ -49,7 +49,6 @@ _log "  Log file:     $LOG_FILE"
     --device       "$DEVICE"      \
     --session-log  "$SESSION_LOG" \
     --log-level    INFO           \
-    --log-file     "$LOG_FILE"    \
     2>&1 | tee -a "$LOG_FILE"
 
 _ok "Inference loop complete.  Session summary → $SESSION_LOG"

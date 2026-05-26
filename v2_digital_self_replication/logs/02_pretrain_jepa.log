@@ -1,0 +1,8 @@
+14:44:07  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+14:44:07  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+14:44:07  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
+14:44:07  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
+14:44:09  INFO      pretrain_jepa — Starting JEPA pretraining: 50 epochs, window=256, stride=64, device=cpu
+14:44:09  INFO      pretrain_jepa — Starting JEPA pretraining: 50 epochs, window=256, stride=64, device=cpu
+14:44:09  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7997 windows, 50 epochs
+14:44:09  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7997 windows, 50 epochs

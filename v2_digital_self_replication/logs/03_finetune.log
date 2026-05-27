@@ -79,3 +79,26 @@ ModuleNotFoundError("No module named 'faiss.swigfaiss_avx2'")
 19:46:09  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
 19:46:09  INFO      v2_digital_self_replication.training.online_train — Supervised training complete. Best loss: -0.111267
 19:46:09  INFO      finetune — Fine-tuning complete. Twin checkpoint saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+07:02:59  INFO      finetune — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+07:02:59  INFO      finetune —   10 subjects, 50 trials, T=1024
+07:03:01  INFO      faiss.loader — Loading faiss with AVX2 support.
+07:03:01  INFO      faiss.loader — Could not load library with AVX2 support due to:
+ModuleNotFoundError("No module named 'faiss.swigfaiss_avx2'")
+07:03:01  INFO      faiss.loader — Loading faiss.
+07:03:01  INFO      faiss.loader — Successfully loaded faiss.
+07:03:01  INFO      v2_digital_self_replication.training.pretrain_jepa — Loaded JEPA encoder weights from /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
+07:03:01  INFO      finetune — Loaded JEPA encoder from /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
+07:03:01  INFO      finetune — Fine-tuning: 5 epochs, freeze_encoder=True, device=cuda
+07:03:01  INFO      v2_digital_self_replication.training.online_train — Supervised training: 4000 windows, 5 epochs
+07:03:11  INFO      v2_digital_self_replication.training.online_train — Epoch   1/5  loss=0.095826  10.0s
+07:03:11  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+07:03:12  INFO      v2_digital_self_replication.training.online_train — Epoch   2/5  loss=-0.080084  1.0s
+07:03:12  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+07:03:14  INFO      v2_digital_self_replication.training.online_train — Epoch   3/5  loss=-0.088179  1.1s
+07:03:14  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+07:03:15  INFO      v2_digital_self_replication.training.online_train — Epoch   4/5  loss=-0.097581  1.0s
+07:03:15  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+07:03:16  INFO      v2_digital_self_replication.training.online_train — Epoch   5/5  loss=-0.112223  1.0s
+07:03:16  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
+07:03:16  INFO      v2_digital_self_replication.training.online_train — Supervised training complete. Best loss: -0.112223
+07:03:16  INFO      finetune — Fine-tuning complete. Twin checkpoint saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt

@@ -1,0 +1,51 @@
+{
+  "subjects": [
+    1,
+    2,
+    3
+  ],
+  "classes": [
+    "left_hand",
+    "right_hand",
+    "feet"
+  ],
+  "n_trials": 201,
+  "n_classes": 3,
+  "chance_accuracy": 0.3333,
+  "zero_shot": {
+    "accuracy": 0.0,
+    "balanced_accuracy": 0.0,
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "classes": [
+      "feet",
+      "left_hand",
+      "right_hand"
+    ]
+  },
+  "linear_probe": {
+    "accuracy": 0.4878048780487805,
+    "n_train": 160,
+    "n_test": 41,
+    "classes": [
+      "feet",
+      "left_hand",
+      "right_hand"
+    ]
+  }
+}

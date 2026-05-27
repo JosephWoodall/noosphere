@@ -133,24 +133,25 @@ def main():
     print(f"  Fine-tuning for {args.ft_epochs} epoch(s) on {len(eeg_data)} samples...")
     print(f"{'='*50}\n")
 
-    # Build windowed dataset from captured raw samples
-    W = twin.cfg.encoder.d_state  # use d_state as window length for speed
-    dataset = {}
-    n_wins = len(eeg_data) // W
+    # Pass raw captured samples as a single trial — _build_supervised_dataset
+    # expects (n_trials, T, C) and handles windowing internally.
+    W = twin.cfg.encoder.d_state   # window length for fine-tuning
+    N = len(eeg_data)
+    n_wins = N // W
     if n_wins > 0:
-        eeg_wins  = eeg_data[:n_wins*W].reshape(n_wins, W, 21)
-        cmd_wins  = cmd_data[W-1:n_wins*W:W]          # label = last frame of each window
-        cmd_wins  = cmd_wins[:n_wins]
-        ern_wins  = np.zeros(n_wins, dtype=np.float32)
-        dataset[0] = {"eeg": eeg_wins, "commands": cmd_wins, "ern_labels": ern_wins}
+        dataset = {
+            0: {
+                "eeg":        eeg_data.reshape(1, N, 21),
+                "commands":   cmd_data.reshape(1, N, 6),
+                "ern_labels": np.zeros((1, N), dtype=np.float32),
+            }
+        }
+        trainer = SupervisedTrainer(twin, device=args.device)
+        trainer.train(dataset, n_epochs=args.ft_epochs, window_len=W,
+                      batch_size=min(32, n_wins))
+        log.info("Fine-tuning complete")
     else:
         log.warning("Not enough samples to build windows — skipping fine-tune")
-        dataset = None
-
-    if dataset:
-        trainer = SupervisedTrainer(twin, device=args.device)
-        trainer.train(dataset, n_epochs=args.ft_epochs, window_len=W, batch_size=min(32, n_wins))
-        log.info("Fine-tuning complete")
 
     # ── Save calibrated checkpoint ────────────────────────────────────────────
     out = Path(args.output)

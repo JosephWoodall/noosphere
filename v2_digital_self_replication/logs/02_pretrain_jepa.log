@@ -169,3 +169,24 @@
 19:38:58  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  15/15  loss=0.033326  12.1s
 19:38:58  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining complete. Best loss: 0.027363
 19:38:58  INFO      pretrain_jepa — Pretraining complete. Final encoder saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
+07:01:56  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+07:01:56  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
+07:01:58  INFO      pretrain_jepa — Starting JEPA pretraining: 15 epochs, window=128, stride=64, device=cuda
+07:01:58  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7999 windows, 15 epochs
+07:02:07  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   1/15  loss=0.152526  9.1s
+07:02:11  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   2/15  loss=0.076595  3.5s
+07:02:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   3/15  loss=0.046085  3.5s
+07:02:18  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/15  loss=0.039273  3.5s
+07:02:22  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/15  loss=0.035194  3.5s
+07:02:25  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   6/15  loss=0.031946  3.5s
+07:02:29  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   7/15  loss=0.030086  3.5s
+07:02:32  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   8/15  loss=0.028966  3.5s
+07:02:36  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   9/15  loss=0.028239  3.5s
+07:02:39  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  10/15  loss=0.028059  3.6s
+07:02:43  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  11/15  loss=0.028022  3.6s
+07:02:46  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  12/15  loss=0.028470  3.6s
+07:02:50  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  13/15  loss=0.029337  3.6s
+07:02:54  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  14/15  loss=0.030737  3.5s
+07:02:57  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  15/15  loss=0.032448  3.5s
+07:02:57  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining complete. Best loss: 0.028022
+07:02:57  INFO      pretrain_jepa — Pretraining complete. Final encoder saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt

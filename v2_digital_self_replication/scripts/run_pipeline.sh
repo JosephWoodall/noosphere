@@ -152,7 +152,7 @@ if [[ "$SKIP_CALIBRATE" == true ]]; then
     # Fall back to supervised checkpoint if no calibrated one exists
     [[ -f "$CAL_CKPT" ]] || CAL_CKPT="$TWIN_CKPT"
 else
-    _start_step "Step 4/5 — Subject calibration (personalize to subject $SUBJECT_ID)"
+    _start_step "Step 4/5 — Subject calibration (personalize to subject ${SUBJECT_ID:-1})"
     T0=$(date +%s)
     export TWIN_CKPT="$TWIN_CKPT"
     export FT_EPOCHS="${CAL_FT_EPOCHS:-${FT_EPOCHS:-5}}"

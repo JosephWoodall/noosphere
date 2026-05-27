@@ -12,3 +12,12 @@
 14:44:06  INFO      generate_data —   ERN labels shape:           (50, 1024)  (trials × timesteps)
 14:44:07  INFO      generate_data — Saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
 14:44:07  INFO      generate_data — Saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+19:30:53  INFO      generate_data — Generating data: 10 subjects × 50 trials × 4.0s @ 256 Hz  (T=1024 samples/trial)
+19:30:53  INFO      generate_data — Output: /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+19:31:56  INFO      generate_data — Generated in 62.3s
+19:31:56  INFO      generate_data —   EEG shape per subject:      (50, 1024, 21)  (trials × timesteps × channels)
+19:31:56  INFO      generate_data —   Commands shape per subject: (50, 1024, 6)  (trials × timesteps × dof)
+19:31:56  INFO      generate_data —   ERN labels shape:           (50, 1024)  (trials × timesteps)
+19:31:56  INFO      generate_data — Saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+07:01:01  INFO      generate_data — Generating data: 10 subjects × 50 trials × 4.0s @ 256 Hz  (T=1024 samples/trial)
+07:01:01  INFO      generate_data — Output: /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated

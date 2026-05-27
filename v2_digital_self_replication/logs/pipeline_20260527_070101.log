@@ -1,0 +1,6 @@
+[07:01:01] === Step 1: Generate synthetic data ===
+[07:01:01]   Subjects: 10   Trials: 50   Duration: 4.0s   FS: 256Hz   Seed: 42
+[07:01:01]   Output dir: /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
+[07:01:01]   Log file:   /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/01_generate_data.log
+07:01:01  INFO      generate_data — Generating data: 10 subjects × 50 trials × 4.0s @ 256 Hz  (T=1024 samples/trial)
+07:01:01  INFO      generate_data — Output: /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated

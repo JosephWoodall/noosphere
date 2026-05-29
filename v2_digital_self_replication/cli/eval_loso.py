@@ -59,6 +59,15 @@ def parse_args():
     p.add_argument("--output",     type=str,
                    default="v2_digital_self_replication/logs/loso_results.json")
     p.add_argument("--log-level",  type=str,   default="INFO")
+    p.add_argument("--cns-checkpoint", type=str, default=None,
+                   help="Path to cross-modal CNS-pretrained encoder checkpoint. "
+                        "When provided, adds encoder_ft_cls_cns condition for Phase 2 comparison.")
+    p.add_argument("--fast", action="store_true",
+                   help="Skip jepa_ft / ablation_ft / zero_shot_probe (known-chance conditions). "
+                        "Runs encoder_ft_cls, ablation_encoder_cls, csp_lda, mdm only.")
+    p.add_argument("--ft-epochs-cls", type=int, default=None,
+                   help="Fine-tune epochs for encoder_ft_cls / ablation_encoder_cls conditions. "
+                        "Defaults to --ft-epochs if not specified.")
     return p.parse_args()
 
 
@@ -253,6 +262,207 @@ def _zero_shot_probe(latents_tr, y_tr, latents_te, y_te):
     return float(balanced_accuracy_score(y_te, clf.predict(X_te_s)))
 
 
+def _load_encoder_from_ckpt(path: str | None, random_init: bool = False):
+    """Load a StreamEncoder from checkpoint (JEPA or supervised), or return random init."""
+    import torch
+    from v2_digital_self_replication.core.stream_encoder import StreamEncoder
+    from v2_digital_self_replication.config import V2Config
+
+    enc_cfg = V2Config().encoder
+    encoder = StreamEncoder(
+        d_model=enc_cfg.d_model, d_state=enc_cfg.d_state,
+        n_layers=enc_cfg.n_layers, n_eeg=enc_cfg.n_eeg_channels,
+        n_prop=enc_cfg.n_prop_channels, dropout=enc_cfg.dropout,
+    )
+    if random_init or not path or not Path(path).exists():
+        return encoder
+
+    ckpt = torch.load(path, map_location="cpu", weights_only=True)
+    # JEPA checkpoint: {"encoder": sd, "predictor": sd, ...}
+    if "encoder" in ckpt and isinstance(ckpt["encoder"], dict):
+        encoder.load_state_dict(ckpt["encoder"], strict=False)
+    else:
+        # Supervised twin checkpoint — pull encoder via DigitalTwin
+        try:
+            twin = _build_twin(path, "cpu", random_init=False)
+            return twin.encoder
+        except Exception:
+            pass
+    return encoder
+
+
+def _fit_eval_encoder_cls(
+    encoder,
+    eeg_tr: np.ndarray,
+    y_tr: np.ndarray,
+    eeg_te: np.ndarray,
+    y_te: np.ndarray,
+    ft_epochs: int,
+    device: str,
+) -> float:
+    """
+    Fine-tune encoder + linear head end-to-end with cross-entropy.
+    Tests whether the encoder's pretrained weights provide a useful initialisation
+    compared to random (ablation_encoder_cls).
+    """
+    import copy
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.metrics import balanced_accuracy_score
+
+    enc = copy.deepcopy(encoder).to(device)
+    n_classes = len(np.unique(y_tr))
+    head = nn.Linear(enc.d_model, n_classes).to(device)
+
+    T_use = min(eeg_tr.shape[1], 256)
+    X_tr = torch.from_numpy(eeg_tr[:, -T_use:, :].astype(np.float32))
+    X_te = torch.from_numpy(eeg_te[:, -T_use:, :].astype(np.float32))
+    y_tr_t = torch.tensor(y_tr, dtype=torch.long)
+
+    loader = DataLoader(
+        TensorDataset(X_tr, y_tr_t),
+        batch_size=min(16, len(X_tr)),
+        shuffle=True,
+        drop_last=False,
+    )
+
+    for p in enc.parameters():
+        p.requires_grad_(True)
+    enc.train()
+    head.train()
+
+    opt = optim.Adam(
+        list(enc.parameters()) + list(head.parameters()),
+        lr=1e-3,
+        weight_decay=0.1,
+    )
+
+    for _ in range(ft_epochs):
+        for Xb, yb in loader:
+            Xb, yb = Xb.to(device), yb.to(device)
+            out, _ = enc(Xb)
+            z = out[:, -64:, :].mean(1)
+            loss = nn.functional.cross_entropy(head(z), yb)
+            opt.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(
+                list(enc.parameters()) + list(head.parameters()), 1.0
+            )
+            opt.step()
+
+    enc.eval()
+    head.eval()
+    with torch.no_grad():
+        out_te, _ = enc(X_te.to(device))
+        z_te = out_te[:, -64:, :].mean(1)
+        preds = head(z_te).argmax(1).cpu().numpy()
+
+    return float(balanced_accuracy_score(y_te, preds))
+
+
+def _fit_eval_encoder_cls_planned(
+    encoder,
+    eeg_tr: np.ndarray,
+    y_tr: np.ndarray,
+    eeg_te: np.ndarray,
+    y_te: np.ndarray,
+    ft_epochs: int,
+    device: str,
+) -> float:
+    """
+    Like encoder_ft_cls but classifies from the planner's self-conditioned
+    predicted next latent T(h, decoder(h).mu) instead of raw h.
+
+    Trains: encoder + transition + decoder + cls head jointly with the
+    supervised + self-consistency loss.  At test time uses LatencyPlanner
+    .self_condition() — zero-gradient, one forward pass.
+
+    This is the 'world-model' condition: the classifier operates on where
+    the brain state is headed, not just where it is now.
+    """
+    import copy
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.metrics import balanced_accuracy_score
+
+    from v2_digital_self_replication.core.transition_model import (
+        ActionConditionedTransition, transition_self_consistency_loss,
+    )
+    from v2_digital_self_replication.core.latency_planner import LatencyPlanner
+    from v2_digital_self_replication.core.intent_decoder import IntentDecoder
+    from v2_digital_self_replication.config import V2Config
+
+    enc = copy.deepcopy(encoder).to(device)
+    dec_cfg = V2Config().decoder
+    decoder = IntentDecoder(
+        d_model=enc.d_model, n_dof=dec_cfg.n_dof, d_hidden=dec_cfg.d_hidden
+    ).to(device)
+    transition = ActionConditionedTransition(
+        d_model=enc.d_model, d_dof=dec_cfg.n_dof
+    ).to(device)
+    planner = LatencyPlanner(transition=transition, decoder=decoder)
+
+    n_classes = len(np.unique(y_tr))
+    head = nn.Linear(enc.d_model, n_classes).to(device)
+
+    T_use = min(eeg_tr.shape[1], 256)
+    X_tr = torch.from_numpy(eeg_tr[:, -T_use:, :].astype(np.float32))
+    X_te = torch.from_numpy(eeg_te[:, -T_use:, :].astype(np.float32))
+    y_tr_t = torch.tensor(y_tr, dtype=torch.long)
+
+    loader = DataLoader(
+        TensorDataset(X_tr, y_tr_t),
+        batch_size=min(16, len(X_tr)),
+        shuffle=True,
+        drop_last=False,
+    )
+
+    for p in enc.parameters():
+        p.requires_grad_(True)
+    enc.train(); decoder.train(); transition.train(); head.train()
+
+    opt = optim.Adam(
+        list(enc.parameters()) + list(decoder.parameters())
+        + list(transition.parameters()) + list(head.parameters()),
+        lr=1e-3, weight_decay=0.1,
+    )
+
+    for _ in range(ft_epochs):
+        for Xb, yb in loader:
+            Xb, yb = Xb.to(device), yb.to(device)
+            out, _ = enc(Xb)
+            h = out[:, -64:, :].mean(1)              # (B, d_model)
+            # Self-condition: predict next latent via world model
+            a = decoder(h).mu.detach()               # current decoded action
+            h_plan = transition(h, a)                # (B, d_model)
+            # Classify from planned state
+            loss = nn.functional.cross_entropy(head(h_plan), yb)
+            # Add self-consistency: T(h, decoder(h).mu) must still decode same
+            loss = loss + transition_self_consistency_loss(
+                transition, decoder, h, weight=0.1
+            )
+            opt.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(
+                list(enc.parameters()) + list(transition.parameters())
+                + list(decoder.parameters()) + list(head.parameters()), 1.0
+            )
+            opt.step()
+
+    enc.eval(); decoder.eval(); transition.eval(); head.eval()
+    with torch.no_grad():
+        out_te, _ = enc(X_te.to(device))
+        h_te = out_te[:, -64:, :].mean(1)
+        h_te_plan = planner.self_condition(h_te)     # T(h, decoder(h).mu)
+        preds = head(h_te_plan).argmax(1).cpu().numpy()
+
+    return float(balanced_accuracy_score(y_te, preds))
+
+
 def _calibration_corr(sigma: np.ndarray, dof_pred: np.ndarray,
                       dof_true: np.ndarray) -> float:
     """
@@ -274,20 +484,32 @@ def _run_subject_cv(
     folds: int,
     ft_epochs: int,
     device: str,
+    cns_checkpoint: str | None = None,
+    fast: bool = False,
+    ft_epochs_cls: int | None = None,
 ) -> dict:
     from sklearn.model_selection import StratifiedKFold
     from sklearn.preprocessing import LabelEncoder
 
     from v2_digital_self_replication.data.intent_mapping import labels_to_intents
 
+    cls_epochs = ft_epochs_cls if ft_epochs_cls is not None else ft_epochs
+
     le      = LabelEncoder().fit(sorted(set(labels)))
     y       = le.transform(labels)
     skf     = StratifiedKFold(n_splits=folds, shuffle=True, random_state=42)
     X_raw   = eeg.transpose(0, 2, 1)    # (n, 21, T) for pyriemann
 
-    fold_results = {k: [] for k in
-                    ["jepa_ft", "ablation_ft", "zero_shot_probe",
-                     "csp_lda", "mdm", "calib_corr"]}
+    # In fast mode skip the three known-null conditions (A/B/C) and calibration
+    slow_conditions = ["jepa_ft", "ablation_ft", "zero_shot_probe", "calib_corr"]
+    base_conditions = ([] if fast else slow_conditions) + [
+        "csp_lda", "mdm", "encoder_ft_cls", "ablation_encoder_cls",
+        "encoder_ft_cls_planned",
+    ]
+    if cns_checkpoint:
+        base_conditions.append("encoder_ft_cls_cns")
+        base_conditions.append("encoder_ft_cls_cns_planned")
+    fold_results = {k: [] for k in base_conditions}
 
     for fold_idx, (tr_idx, te_idx) in enumerate(skf.split(eeg, y)):
         log.info("    fold %d/%d", fold_idx + 1, folds)
@@ -297,26 +519,33 @@ def _run_subject_cv(
         y_tr, y_te         = y[tr_idx], y[te_idx]
         X_tr, X_te         = X_raw[tr_idx], X_raw[te_idx]
 
-        # ── A. Our system: JEPA-pretrained + fine-tuned ──────────────────────
-        twin_ft = _build_twin(checkpoint, device, random_init=False)
-        twin_ft = _finetune_twin(twin_ft, eeg_tr, labels_tr, ft_epochs, device)
-        acc_ft, lats_te, dof_te, sigma_te = _encode_and_predict(twin_ft, eeg_te, labels_te)
-        fold_results["jepa_ft"].append(acc_ft)
+        if not fast:
+            # ── A. Our system: JEPA-pretrained + fine-tuned ──────────────────
+            twin_ft = _build_twin(checkpoint, device, random_init=False)
+            twin_ft = _finetune_twin(twin_ft, eeg_tr, labels_tr, ft_epochs, device)
+            acc_ft, lats_te, dof_te, sigma_te = _encode_and_predict(twin_ft, eeg_te, labels_te)
+            fold_results["jepa_ft"].append(acc_ft)
 
-        # ── B. Ablation: random init + fine-tuned ────────────────────────────
-        twin_rnd = _build_twin(None, device, random_init=True)
-        twin_rnd = _finetune_twin(twin_rnd, eeg_tr, labels_tr, ft_epochs, device)
-        acc_rnd, _, _, _ = _encode_and_predict(twin_rnd, eeg_te, labels_te)
-        fold_results["ablation_ft"].append(acc_rnd)
+            # ── B. Ablation: random init + fine-tuned ────────────────────────
+            twin_rnd = _build_twin(None, device, random_init=True)
+            twin_rnd = _finetune_twin(twin_rnd, eeg_tr, labels_tr, ft_epochs, device)
+            acc_rnd, _, _, _ = _encode_and_predict(twin_rnd, eeg_te, labels_te)
+            fold_results["ablation_ft"].append(acc_rnd)
 
-        # ── C. Zero-shot: JEPA encoder → linear probe ────────────────────────
-        twin_zs = _build_twin(checkpoint, device, random_init=False)
-        _, lats_tr, _, _ = _encode_and_predict(twin_zs, eeg_tr, labels_tr)
-        acc_zs = _zero_shot_probe(
-            lats_tr, le.transform(labels_tr),
-            lats_te, le.transform(labels_te),
-        )
-        fold_results["zero_shot_probe"].append(acc_zs)
+            # ── C. Zero-shot: JEPA encoder → linear probe ────────────────────
+            twin_zs = _build_twin(checkpoint, device, random_init=False)
+            _, lats_tr, _, _ = _encode_and_predict(twin_zs, eeg_tr, labels_tr)
+            acc_zs = _zero_shot_probe(
+                lats_tr, le.transform(labels_tr),
+                lats_te, le.transform(labels_te),
+            )
+            fold_results["zero_shot_probe"].append(acc_zs)
+
+            # ── Calibration ──────────────────────────────────────────────────
+            from v2_digital_self_replication.data.intent_mapping import labels_to_intents
+            dof_true_te = labels_to_intents(labels_te)
+            corr = _calibration_corr(sigma_te, dof_te, dof_true_te)
+            fold_results["calib_corr"].append(corr)
 
         # ── D. CSP + LDA ─────────────────────────────────────────────────────
         try:
@@ -334,11 +563,44 @@ def _run_subject_cv(
             acc_mdm = float("nan")
         fold_results["mdm"].append(acc_mdm)
 
-        # ── Calibration ──────────────────────────────────────────────────────
-        from v2_digital_self_replication.data.intent_mapping import labels_to_intents
-        dof_true_te = labels_to_intents(labels_te)
-        corr = _calibration_corr(sigma_te, dof_te, dof_true_te)
-        fold_results["calib_corr"].append(corr)
+        # ── F. encoder_ft_cls: JEPA encoder fine-tuned e2e with cross-entropy ─
+        enc_jepa = _load_encoder_from_ckpt(checkpoint, random_init=False)
+        acc_enc_ft = _fit_eval_encoder_cls(
+            enc_jepa, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
+        )
+        fold_results["encoder_ft_cls"].append(acc_enc_ft)
+
+        # ── G. ablation: random-init encoder fine-tuned e2e with cross-entropy ─
+        enc_rnd = _load_encoder_from_ckpt(None, random_init=True)
+        acc_abl_enc = _fit_eval_encoder_cls(
+            enc_rnd, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
+        )
+        fold_results["ablation_encoder_cls"].append(acc_abl_enc)
+
+        # ── I. encoder_ft_cls_planned: world-model condition ─────────────────
+        #    Train encoder + transition + decoder + cls head jointly.
+        #    At test time classify from T(h, decoder(h).mu) — the MC-guided
+        #    self-conditioned predicted next latent.
+        enc_plan = _load_encoder_from_ckpt(checkpoint, random_init=False)
+        acc_planned = _fit_eval_encoder_cls_planned(
+            enc_plan, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
+        )
+        fold_results["encoder_ft_cls_planned"].append(acc_planned)
+
+        # ── H. encoder_ft_cls_cns: CNS cross-modal encoder fine-tuned e2e ─────
+        if cns_checkpoint:
+            enc_cns = _load_encoder_from_ckpt(cns_checkpoint, random_init=False)
+            acc_cns = _fit_eval_encoder_cls(
+                enc_cns, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
+            )
+            fold_results["encoder_ft_cls_cns"].append(acc_cns)
+
+            # CNS + planned (world model applied to cross-modal encoder)
+            enc_cns_plan = _load_encoder_from_ckpt(cns_checkpoint, random_init=False)
+            acc_cns_planned = _fit_eval_encoder_cls_planned(
+                enc_cns_plan, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
+            )
+            fold_results["encoder_ft_cls_cns_planned"].append(acc_cns_planned)
 
     # Aggregate across folds
     summary = {}
@@ -432,34 +694,49 @@ def main():
             folds=args.folds,
             ft_epochs=args.ft_epochs,
             device=args.device,
+            cns_checkpoint=args.cns_checkpoint,
+            fast=args.fast,
+            ft_epochs_cls=args.ft_epochs_cls,
         )
         all_subject_results.append(result)
         subject_ids_done.append(subj)
 
-        # Live progress summary
-        jepa_means = [s["jepa_ft"]["mean"] for s in all_subject_results]
-        log.info("  ↳ Subject %d jepa_ft=%.1f%%  (running mean: %.1f±%.1f%%)",
+        # Live progress summary — use primary metric (encoder_ft_cls always present)
+        primary_means = [s["encoder_ft_cls"]["mean"] for s in all_subject_results]
+        log.info("  ↳ Subject %d encoder_ft_cls=%.1f%%  (running mean: %.1f±%.1f%%)",
                  subj,
-                 result["jepa_ft"]["mean"] * 100,
-                 np.mean(jepa_means) * 100,
-                 np.std(jepa_means) * 100)
+                 result["encoder_ft_cls"]["mean"] * 100,
+                 np.mean(primary_means) * 100,
+                 np.std(primary_means) * 100)
 
     if not all_subject_results:
         log.error("No subjects succeeded")
         return 1
 
     # ── Aggregate across subjects ─────────────────────────────────────────────
-    conditions = ["jepa_ft", "ablation_ft", "zero_shot_probe", "csp_lda", "mdm"]
+    conditions = [
+        "encoder_ft_cls", "encoder_ft_cls_planned",
+        "ablation_encoder_cls", "csp_lda", "mdm",
+    ]
+    if not args.fast:
+        conditions = ["jepa_ft", "ablation_ft", "zero_shot_probe"] + conditions
+    if args.cns_checkpoint:
+        conditions.append("encoder_ft_cls_cns")
+        conditions.append("encoder_ft_cls_cns_planned")
     agg = {}
     for cond in conditions:
         means = [s[cond]["mean"] for s in all_subject_results
-                 if not np.isnan(s[cond]["mean"])]
-        agg[cond] = _bootstrap_ci(means)
+                 if cond in s and not np.isnan(s[cond]["mean"])]
+        if means:
+            agg[cond] = _bootstrap_ci(means)
 
-    calib_corrs = [s["calib_corr"]["mean"] for s in all_subject_results]
-    agg["calib_corr"] = _bootstrap_ci(calib_corrs)
+    if not args.fast:
+        calib_corrs = [s["calib_corr"]["mean"] for s in all_subject_results
+                       if "calib_corr" in s]
+        if calib_corrs:
+            agg["calib_corr"] = _bootstrap_ci(calib_corrs)
 
-    stats = _wilcoxon_vs_baselines(all_subject_results)
+    stats = _wilcoxon_vs_baselines(all_subject_results) if not args.fast else {}
     chance = 1.0 / len(args.classes)
 
     # ── Save ─────────────────────────────────────────────────────────────────
@@ -485,25 +762,29 @@ def main():
     print(f"  Classes: {args.classes}  |  Chance: {chance*100:.1f}%")
     print("═" * 60)
     labels_map = {
-        "jepa_ft":          "Our system (JEPA + fine-tune)",
-        "ablation_ft":      "Ablation  (random init + fine-tune)",
-        "zero_shot_probe":  "Zero-shot  (JEPA encoder + log. reg.)",
-        "csp_lda":          "CSP + LDA",
-        "mdm":              "MDM (Riemannian)",
+        "encoder_ft_cls":            "JEPA encoder + cls head (e2e FT)",
+        "encoder_ft_cls_planned":    "JEPA encoder + world-model planner + cls [PRIMARY]",
+        "ablation_encoder_cls":      "Random encoder + cls head (e2e FT) [ablation]",
+        "zero_shot_probe":           "JEPA encoder + LogReg (zero-shot)",
+        "jepa_ft":                   "JEPA + IntentDecoder FT",
+        "ablation_ft":               "Random + IntentDecoder FT",
+        "csp_lda":                   "CSP + LDA",
+        "mdm":                       "MDM (Riemannian)",
     }
+    if args.cns_checkpoint:
+        labels_map["encoder_ft_cls_cns"] = "CNS cross-modal encoder + cls head [Phase 2]"
+        labels_map["encoder_ft_cls_cns_planned"] = "CNS encoder + world-model planner + cls [Phase 2+WM]"
     for cond, label in labels_map.items():
+        if cond not in agg:
+            continue
         a = agg[cond]
-        p_str = ""
-        key = f"jepa_ft_vs_{cond}"
-        if key in stats:
-            p = stats[key]["p_value"]
-            p_str = f"  (p={p:.3f} vs. JEPA)" if not np.isnan(p) else ""
-        print(f"  {label:<40} {a['mean']*100:5.1f}%  "
-              f"[{a['ci_lo']*100:.1f}–{a['ci_hi']*100:.1f}]{p_str}")
+        print(f"  {label:<50} {a['mean']*100:5.1f}%  "
+              f"[{a['ci_lo']*100:.1f}–{a['ci_hi']*100:.1f}%]")
 
-    print(f"  {'Calibration (σ–error correlation)':<40} "
-          f"r={agg['calib_corr']['mean']:+.3f}  "
-          f"[{agg['calib_corr']['ci_lo']:+.3f}–{agg['calib_corr']['ci_hi']:+.3f}]")
+    if "calib_corr" in agg:
+        print(f"  {'Calibration (σ–error correlation)':<40} "
+              f"r={agg['calib_corr']['mean']:+.3f}  "
+              f"[{agg['calib_corr']['ci_lo']:+.3f}–{agg['calib_corr']['ci_hi']:+.3f}]")
     print("═" * 60)
     return 0
 

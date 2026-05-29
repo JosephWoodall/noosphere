@@ -1,236 +1,0 @@
-[07:01:01] === Step 1: Generate synthetic data ===
-[07:01:01]   Subjects: 10   Trials: 50   Duration: 4.0s   FS: 256Hz   Seed: 42
-[07:01:01]   Output dir: /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-[07:01:01]   Log file:   /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/01_generate_data.log
-07:01:01  INFO      generate_data — Generating data: 10 subjects × 50 trials × 4.0s @ 256 Hz  (T=1024 samples/trial)
-07:01:01  INFO      generate_data — Output: /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-07:01:55  INFO      generate_data — Generated in 54.0s
-07:01:55  INFO      generate_data —   EEG shape per subject:      (50, 1024, 21)  (trials × timesteps × channels)
-07:01:55  INFO      generate_data —   Commands shape per subject: (50, 1024, 6)  (trials × timesteps × dof)
-07:01:55  INFO      generate_data —   ERN labels shape:           (50, 1024)  (trials × timesteps)
-07:01:56  INFO      generate_data — Saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-[07:01:56] ✓ Data generation complete → /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-[07:01:56] === Step 2: JEPA pretraining ===
-[07:01:56]   Data dir:       /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-[07:01:56]   Checkpoint dir: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints
-[07:01:56]   Epochs: 15   Batch: 64   LR: 3e-4   Device: cuda
-[07:01:56]   Log file: /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/02_pretrain_jepa.log
-07:01:56  INFO      pretrain_jepa — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-07:01:56  INFO      pretrain_jepa —   10 subjects, 50 trials each, T=1024, fs=256 Hz
-07:01:58  INFO      pretrain_jepa — Starting JEPA pretraining: 15 epochs, window=128, stride=64, device=cuda
-07:01:58  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining: 7999 windows, 15 epochs
-07:02:07  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   1/15  loss=0.152526  9.1s
-07:02:11  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   2/15  loss=0.076595  3.5s
-07:02:15  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   3/15  loss=0.046085  3.5s
-07:02:18  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   4/15  loss=0.039273  3.5s
-07:02:22  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   5/15  loss=0.035194  3.5s
-07:02:25  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   6/15  loss=0.031946  3.5s
-07:02:29  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   7/15  loss=0.030086  3.5s
-07:02:32  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   8/15  loss=0.028966  3.5s
-07:02:36  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch   9/15  loss=0.028239  3.5s
-07:02:39  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  10/15  loss=0.028059  3.6s
-07:02:43  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  11/15  loss=0.028022  3.6s
-07:02:46  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  12/15  loss=0.028470  3.6s
-07:02:50  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  13/15  loss=0.029337  3.6s
-07:02:54  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  14/15  loss=0.030737  3.5s
-07:02:57  INFO      v2_digital_self_replication.training.pretrain_jepa — Epoch  15/15  loss=0.032448  3.5s
-07:02:57  INFO      v2_digital_self_replication.training.pretrain_jepa — JEPA pretraining complete. Best loss: 0.028022
-07:02:57  INFO      pretrain_jepa — Pretraining complete. Final encoder saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
-[07:02:58] ✓ JEPA pretraining complete → /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
-[07:02:58] === Step 3: Supervised fine-tuning ===
-[07:02:58]   Data dir:       /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-[07:02:58]   Encoder ckpt:   /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
-[07:02:58]   Checkpoint dir: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints
-[07:02:58]   Epochs: 5   Batch: 64   Freeze encoder: true   Device: cuda
-[07:02:58]   Log file: /home/redleadr/workspace/noosphere/v2_digital_self_replication/logs/03_finetune.log
-07:02:59  INFO      finetune — Loading dataset from /home/redleadr/workspace/noosphere/v2_digital_self_replication/data/generated
-07:02:59  INFO      finetune —   10 subjects, 50 trials, T=1024
-07:03:01  INFO      faiss.loader — Loading faiss with AVX2 support.
-07:03:01  INFO      faiss.loader — Could not load library with AVX2 support due to:
-ModuleNotFoundError("No module named 'faiss.swigfaiss_avx2'")
-07:03:01  INFO      faiss.loader — Loading faiss.
-07:03:01  INFO      faiss.loader — Successfully loaded faiss.
-07:03:01  INFO      v2_digital_self_replication.training.pretrain_jepa — Loaded JEPA encoder weights from /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
-07:03:01  INFO      finetune — Loaded JEPA encoder from /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/jepa_encoder_final.pt
-07:03:01  INFO      finetune — Fine-tuning: 5 epochs, freeze_encoder=True, device=cuda
-07:03:01  INFO      v2_digital_self_replication.training.online_train — Supervised training: 4000 windows, 5 epochs
-07:03:11  INFO      v2_digital_self_replication.training.online_train — Epoch   1/5  loss=0.095826  10.0s
-07:03:11  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-07:03:12  INFO      v2_digital_self_replication.training.online_train — Epoch   2/5  loss=-0.080084  1.0s
-07:03:12  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-07:03:14  INFO      v2_digital_self_replication.training.online_train — Epoch   3/5  loss=-0.088179  1.1s
-07:03:14  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-07:03:15  INFO      v2_digital_self_replication.training.online_train — Epoch   4/5  loss=-0.097581  1.0s
-07:03:15  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-07:03:16  INFO      v2_digital_self_replication.training.online_train — Epoch   5/5  loss=-0.112223  1.0s
-07:03:16  INFO      v2_digital_self_replication.agent.digital_twin — Saved checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-07:03:16  INFO      v2_digital_self_replication.training.online_train — Supervised training complete. Best loss: -0.112223
-07:03:16  INFO      finetune — Fine-tuning complete. Twin checkpoint saved to /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-[07:03:17] ✓ Fine-tuning complete → /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-[07:03:17] === Step 5: Subject calibration ===
-[07:03:17]   Input checkpoint:  /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-[07:03:17]   Output checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/calibrated.pt
-[07:03:17]   Subject ID: 1  Seed: 0
-[07:03:17]   Reps per target: 3  Capture: 2.0s  FT epochs: 5
-[07:03:17]   Device: cuda
-07:03:19  INFO      faiss.loader — Loading faiss with AVX2 support.
-07:03:19  INFO      faiss.loader — Could not load library with AVX2 support due to:
-ModuleNotFoundError("No module named 'faiss.swigfaiss_avx2'")
-07:03:19  INFO      faiss.loader — Loading faiss.
-07:03:19  INFO      faiss.loader — Successfully loaded faiss.
-07:03:19  INFO      v2_digital_self_replication.agent.digital_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt (step 0)
-07:03:19  INFO      calibrate — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-
-==================================================
-  CALIBRATION — 7 movements × 3 reps
-  Capture: 2.0s per rep (512 samples @ 256 Hz)
-==================================================
-
-Press ENTER to begin...
-
-──────────────────────────────────────────────────
-  TARGET: REACH FORWARD  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REACH FORWARD]
-
-──────────────────────────────────────────────────
-  TARGET: REACH FORWARD  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REACH FORWARD]
-
-──────────────────────────────────────────────────
-  TARGET: REACH FORWARD  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REACH FORWARD]
-
-──────────────────────────────────────────────────
-  TARGET: ELBOW FLEX  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [ELBOW FLEX]
-
-──────────────────────────────────────────────────
-  TARGET: ELBOW FLEX  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [ELBOW FLEX]
-
-──────────────────────────────────────────────────
-  TARGET: ELBOW FLEX  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [ELBOW FLEX]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP CLOSE  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP CLOSE]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP CLOSE  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP CLOSE]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP CLOSE  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP CLOSE]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP OPEN  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP OPEN]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP OPEN  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP OPEN]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP OPEN  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP OPEN]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CW  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CW  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CW  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CCW  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CCW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CCW  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CCW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CCW  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CCW]
-
-──────────────────────────────────────────────────
-  TARGET: REST  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REST]
-
-──────────────────────────────────────────────────
-  TARGET: REST  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REST]
-
-──────────────────────────────────────────────────
-  TARGET: REST  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-07:06:11  INFO      calibrate — Total calibration samples: 10752
-Traceback (most recent call last):
-  File "<frozen runpy>", line 203, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/cli/calibrate.py", line 165, in <module>
-    sys.exit(main())
-             ~~~~^^
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/cli/calibrate.py", line 152, in main
-    trainer.train(dataset, n_epochs=args.ft_epochs, window_len=W, batch_size=min(32, n_wins))
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/training/online_train.py", line 136, in train
-    dataset = _build_supervised_dataset(eeg_dict, window_len=window_len)
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/training/online_train.py", line 85, in _build_supervised_dataset
-    cmd_list.append(cmd_trials[i, s + window_len - 1])
-                    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-IndexError: index 63 is out of bounds for axis 1 with size 6
-  Captured 512 samples for [REST]
-
-==================================================
-  Fine-tuning for 5 epoch(s) on 10752 samples...
-==================================================
-

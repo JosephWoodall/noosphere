@@ -1,161 +1,0 @@
-07:03:19  INFO      faiss.loader — Loading faiss with AVX2 support.
-07:03:19  INFO      faiss.loader — Could not load library with AVX2 support due to:
-ModuleNotFoundError("No module named 'faiss.swigfaiss_avx2'")
-07:03:19  INFO      faiss.loader — Loading faiss.
-07:03:19  INFO      faiss.loader — Successfully loaded faiss.
-07:03:19  INFO      v2_digital_self_replication.agent.digital_twin — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt (step 0)
-07:03:19  INFO      calibrate — Loaded checkpoint: /home/redleadr/workspace/noosphere/v2_digital_self_replication/checkpoints/supervised_best.pt
-
-==================================================
-  CALIBRATION — 7 movements × 3 reps
-  Capture: 2.0s per rep (512 samples @ 256 Hz)
-==================================================
-
-Press ENTER to begin...
-
-──────────────────────────────────────────────────
-  TARGET: REACH FORWARD  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REACH FORWARD]
-
-──────────────────────────────────────────────────
-  TARGET: REACH FORWARD  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REACH FORWARD]
-
-──────────────────────────────────────────────────
-  TARGET: REACH FORWARD  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REACH FORWARD]
-
-──────────────────────────────────────────────────
-  TARGET: ELBOW FLEX  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [ELBOW FLEX]
-
-──────────────────────────────────────────────────
-  TARGET: ELBOW FLEX  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [ELBOW FLEX]
-
-──────────────────────────────────────────────────
-  TARGET: ELBOW FLEX  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [ELBOW FLEX]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP CLOSE  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP CLOSE]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP CLOSE  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP CLOSE]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP CLOSE  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP CLOSE]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP OPEN  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP OPEN]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP OPEN  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP OPEN]
-
-──────────────────────────────────────────────────
-  TARGET: GRIP OPEN  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [GRIP OPEN]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CW  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CW  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CW  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CCW  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CCW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CCW  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CCW]
-
-──────────────────────────────────────────────────
-  TARGET: WRIST ROTATE CCW  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [WRIST ROTATE CCW]
-
-──────────────────────────────────────────────────
-  TARGET: REST  (rep 1/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REST]
-
-──────────────────────────────────────────────────
-  TARGET: REST  (rep 2/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-  Captured 512 samples for [REST]
-
-──────────────────────────────────────────────────
-  TARGET: REST  (rep 3/3)
-──────────────────────────────────────────────────
-  Get ready... 3  Get ready... 2  Get ready... 1  GO!                    
-07:06:11  INFO      calibrate — Total calibration samples: 10752
-Traceback (most recent call last):
-  File "<frozen runpy>", line 203, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/cli/calibrate.py", line 165, in <module>
-    sys.exit(main())
-             ~~~~^^
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/cli/calibrate.py", line 152, in main
-    trainer.train(dataset, n_epochs=args.ft_epochs, window_len=W, batch_size=min(32, n_wins))
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/training/online_train.py", line 136, in train
-    dataset = _build_supervised_dataset(eeg_dict, window_len=window_len)
-  File "/home/redleadr/workspace/noosphere/v2_digital_self_replication/training/online_train.py", line 85, in _build_supervised_dataset
-    cmd_list.append(cmd_trials[i, s + window_len - 1])
-                    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-IndexError: index 63 is out of bounds for axis 1 with size 6
-  Captured 512 samples for [REST]
-
-==================================================
-  Fine-tuning for 5 epoch(s) on 10752 samples...
-==================================================
-

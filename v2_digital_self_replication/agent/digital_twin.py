@@ -36,6 +36,8 @@ import torch.optim as optim
 from v2_digital_self_replication.config import V2Config
 from v2_digital_self_replication.core.stream_encoder import StreamEncoder
 from v2_digital_self_replication.core.intent_decoder import IntentDecoder, IntentLoss
+from v2_digital_self_replication.core.transition_model import ActionConditionedTransition
+from v2_digital_self_replication.core.latency_planner import LatencyPlanner
 from v2_digital_self_replication.core.kalman_filter import AdaptiveKalmanFilter
 from v2_digital_self_replication.core.safety_gate import SafetyGate, SafetyConfig
 from v2_digital_self_replication.agent.memory_store import MemoryStore, Experience
@@ -70,6 +72,14 @@ class DigitalTwin(nn.Module):
             n_dof=dec_cfg.n_dof,
             d_hidden=dec_cfg.d_hidden,
         )
+        self.transition = ActionConditionedTransition(
+            d_model=enc_cfg.d_model,
+            d_dof=dec_cfg.n_dof,
+        )
+        self.planner = LatencyPlanner(
+            transition=self.transition,
+            decoder=self.decoder,
+        )
         self._loss_fn = IntentLoss(ern_weight=1.0, sigma_reg=0.01)
 
         self._kalman = AdaptiveKalmanFilter(
@@ -92,7 +102,8 @@ class DigitalTwin(nn.Module):
 
         online_cfg = self.cfg.online
         self._optimizer = optim.AdamW(
-            list(self.encoder.parameters()) + list(self.decoder.parameters()),
+            list(self.encoder.parameters()) + list(self.decoder.parameters())
+            + list(self.transition.parameters()),
             lr=online_cfg.adapt_lr,
             weight_decay=1e-5,
         )
@@ -245,6 +256,7 @@ class DigitalTwin(nn.Module):
         torch.save({
             "encoder": self.encoder.state_dict(),
             "decoder": self.decoder.state_dict(),
+            "transition": self.transition.state_dict(),
             "ema_params": {k: v.cpu() for k, v in self._ema_params.items()},
             "step_count": self._step_count,
             "safety_stats": self._safety.stats,
@@ -252,9 +264,11 @@ class DigitalTwin(nn.Module):
         logger.info("Saved checkpoint: %s", path)
 
     def load(self, path: str):
-        ckpt = torch.load(path, map_location="cpu")
+        ckpt = torch.load(path, map_location="cpu", weights_only=True)
         self.encoder.load_state_dict(ckpt["encoder"])
         self.decoder.load_state_dict(ckpt["decoder"])
+        if "transition" in ckpt:
+            self.transition.load_state_dict(ckpt["transition"])
         self._ema_params = ckpt.get("ema_params", self._ema_params)
         self._step_count = ckpt.get("step_count", 0)
         logger.info("Loaded checkpoint: %s (step %d)", path, self._step_count)

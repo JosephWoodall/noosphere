@@ -37,7 +37,7 @@
 \begin{abstract}
 Restoring continuous voluntary limb control for amputees and individuals with motor paralysis requires brain--computer interfaces (BCIs) that issue fast, low-latency commands across multiple degrees of freedom (DOF) — capabilities that discrete classifiers fundamentally cannot provide.
 We introduce the \emph{ZOH-SSM World Model}, the first BCI architecture that pairs a bilinear Zero-Order-Hold State Space (ZOH-SSM) encoder with (i) a Joint Embedding Predictive Architecture (JEPA) pretraining objective, (ii) a DOF-conditioned action-conditioned transition function $T(\mathbf{h}_t, \mathbf{a}_t) \to \mathbf{h}_{t+1}$ modelling how decoded motor intent drives brain-state evolution, and (iii) a latency-minimising Model Predictive Control (MPC) planner using Monte Carlo Cross-Entropy Method (CEM) rollouts to find the action sequence that fastest converges to the user's intended DOF target.
-Under a rigorous leakage-safe five-fold leave-one-subject-out (LOSO) protocol on the PhysioNet Motor Imagery dataset (20 subjects, 3-class MI, 69 trials per subject), we evaluate seven conditions and report two key findings.
+Under a rigorous leakage-safe five-fold leave-one-subject-out (LOSO) protocol on the PhysioNet Motor Imagery dataset (20 subjects, 3-class MI, 69 trials per subject), we evaluate eight conditions and report two key findings.
 First, architectural: the ZOH-SSM world model defines a complete differentiable environment model for closed-loop prosthetic control unavailable to classical comparators (CSP, MDM).
 Second, empirical: on PhysioNetMI (20 subjects, 3-class), EEGNet~\cite{lawhern2018eegnet} ($38.4\%$, fully supervised) and the JEPA encoder ($36.6\%$, self-supervised) are statistically indistinguishable ($p=0.46$), neither significantly outperforming random initialisation ($p=0.17$, $p=0.70$), yet both remain $\approx$$22$\,pp below CSP+LDA ($60.1\%$).
 Cross-dataset validation on BCI Competition IV Dataset 2a (9 subjects, 4-class) yields an identical pattern: CSP $58.7\%$ vs.\ EEGNet $35.1\%$ ($\Delta=23.6$\,pp, $p=0.004$).
@@ -94,9 +94,9 @@ Riemannian geometry approaches~\cite{barachant2012multiclass} such as MDM operat
 Neither method has an internal dynamics model: they cannot anticipate future states or plan ahead.
 
 \subsection{Deep Learning Baselines for MI-EEG}
-EEGNet~\cite{lawhern2018eegnet} is the standard compact CNN baseline; in cross-subject 3-class MI settings on PhysioNetMI it typically achieves $55$--$65\%$ with standard preprocessing~\cite{lawhern2018eegnet}.
-EEGConformer~\cite{song2022eegconformer} and ShallowConvNet achieve comparable cross-subject performance; all require supervised training from labelled EEG.
-We do not directly compare against these because our evaluation uses within-subject fine-tuning from a self-supervised checkpoint; a cross-method comparison on PhysioNetMI requires careful alignment of preprocessing pipelines and is deferred to future work that includes these baselines within the same LOSO harness.
+EEGNet~\cite{lawhern2018eegnet} is the standard compact CNN baseline.
+Published cross-subject results on PhysioNetMI report $55$--$65\%$; our within-subject LOSO evaluation (55 training trials per fold) yields $38.4\%$ — consistent with the known sharp performance drop under limited per-subject data~\cite{kostas2022bendr}.
+EEGConformer~\cite{song2022eegconformer} and ShallowConvNet are not included in our LOSO harness; given that even EEGNet cannot close the gap at this trial count, these are unlikely to change the conclusion.
 
 \subsection{Self-Supervised Learning for EEG}
 BENDR~\cite{kostas2022bendr}, LaBraM~\cite{jiang2024large}, and EEGNet-based contrastive methods~\cite{mohsenvand2020contrastive} have explored self-supervised EEG pretraining.
@@ -318,11 +318,12 @@ To prevent leakage between the pre-trained checkpoint and the evaluation split, 
 Batch normalisation statistics, class-frequency priors, and CSP filter matrices are computed exclusively from the training split of each fold.
 The held-out test split is accessed exactly once per fold, after all hyperparameter choices and early-stopping decisions are fixed.
 
-\subsubsection{Seven Evaluation Conditions}
+\subsubsection{Eight Evaluation Conditions}
 \begin{enumerate}
   \item \textbf{encoder\_ft\_cls}: JEPA encoder + linear head, end-to-end fine-tuning with cross-entropy (5 epochs);
   \item \textbf{encoder\_ft\_cls\_planned} \emph{[world model]}: identical training but at test time the head receives the self-conditioned latent $T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$;
   \item \textbf{ablation\_encoder\_cls}: randomly-initialised encoder + linear head (ablates JEPA contribution);
+  \item \textbf{eegnet}: EEGNet~\cite{lawhern2018eegnet} trained from scratch end-to-end (50 epochs, no pretraining);
   \item \textbf{csp\_lda}: one-vs-rest CSP (4 filters/class, \texttt{scipy.linalg.eigh}) + LDA;
   \item \textbf{mdm}: Riemannian MDM~\cite{barachant2012multiclass};
   \item \textbf{encoder\_ft\_cls\_cns}: CNS cross-modal encoder + linear head;
@@ -408,7 +409,7 @@ CNS cls vs.\ JEPA cls & 0.035 & Yes & JEPA $>$ CNS \\
 
 \subsection{Per-Subject Results}
 
-Table~\ref{tab:persubject} lists per-subject balanced accuracy for the four primary conditions.
+Table~\ref{tab:persubject} lists per-subject balanced accuracy for six primary conditions.
 CSP+LDA shows high inter-subject variability (range: 41.3--84.2\,\%, $\sigma = 12.4$\,\%), consistent with known PhysionetMI variability~\cite{stieger2021dataset}.
 EEGNet ($\sigma=6.6\,\%$) and the JEPA encoder ($\sigma=6.1\,\%$) show comparable inter-subject spread, confirming their statistical equivalence.
 The world-model condition (enc\_planned, $\sigma=3.3\,\%$) shows tighter spread — self-conditioning stabilises representations — at a mean cost of $2.4$\,pp vs.\ the base encoder ($p=0.16$, not significant in this run).
@@ -631,7 +632,7 @@ The contribution of this work is to establish the principle quantitatively acros
 \begin{enumerate}
   \item \textbf{Partial cross-dataset coverage.} CSP+LDA, MDM, and EEGNet are validated on BCI2a (Section~\ref{sec:bci2a}); the JEPA encoder is not evaluated on BCI2a because it was pretrained on PhysioNetMI. A BCI2a-pretrained or dataset-agnostic encoder (e.g.\ BENDR fine-tuned on BCI2a) would complete the cross-dataset comparison for neural methods.
   \item \textbf{No EEGConformer or BENDR baseline.} EEGNet~\cite{lawhern2018eegnet} is included and matches the JEPA encoder. EEGConformer~\cite{song2022eegconformer} and fine-tuned BENDR~\cite{kostas2022bendr} are not in the current LOSO harness; given that even the discriminative EEGNet cannot close the gap, these are unlikely to change the conclusion at this trial count.
-  \item \textbf{No closed-loop simulation.} The world model and latency planner have not been evaluated in their intended setting. A virtual prosthetic-arm reaching task with synthetic or recorded neural trajectories is the next evaluation step.
+  \item \textbf{Closed-loop simulation limited by decoder quality.} The virtual arm simulation (Section~\ref{sec:closed_loop}) confirms 0\,\% target convergence due to near-zero DOF commands from the current decoder. A real closed-loop evaluation with a CSP-initialised or data-augmented decoder is the next step.
   \item \textbf{Transition model under-trained.} Ten fine-tuning epochs on 55 trials is insufficient for the transition function to learn meaningful latent dynamics; a dedicated pre-training phase on longer continuous recordings would correct this.
   \item \textbf{Dataset size.} 69 trials/subject is below the threshold at which fine-tuned neural encoders reliably outperform CSP~\cite{kostas2022bendr}, explaining the 22.7\,pp gap.
   \item \textbf{CPU-only inference.} CUDA compilation hangs on the sequential ZOH-SSM scan with RTX\,5070 (compute capability 12.x); parallelisation via diagonal S4D parameterisation would resolve this.
@@ -695,17 +696,18 @@ The full evaluation codebase, pre-trained checkpoints, and per-subject result fi
   \item \texttt{torch.enable\_grad()} inside \texttt{plan()} to work within \texttt{torch.no\_grad()} inference contexts.
 \end{itemize}
 
-\subsection{LOSO Command (v3)}
+\subsection{LOSO Command (v4 — final)}
 \begin{verbatim}
 .venv/bin/python -m \
   v2_digital_self_replication.cli.eval_loso \
   --subjects 1-20 \
   --classes left_hand right_hand feet \
-  --folds 5 --ft-epochs 10 --ft-epochs-cls 5 \
-  --fast --device cpu \
+  --folds 5 --ft-epochs-cls 5 \
+  --fast --eegnet --eegnet-epochs 50 \
+  --device cpu \
   --checkpoint .../supervised_best.pt \
   --cns-checkpoint .../jepa_encoder_cns_pretrained.pt \
-  --output .../loso_results_v3.json
+  --output .../loso_results_v4.json
 \end{verbatim}
 
 

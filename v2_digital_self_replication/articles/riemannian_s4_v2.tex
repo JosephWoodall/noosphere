@@ -510,9 +510,11 @@ S09 & 69.1 & 60.9 & 29.9 \\
 
 \subsection{Decoder Uncertainty Output}
 The IntentDecoder produces per-DOF uncertainty $\bm\sigma$ alongside each motor command.
-Over the 20-subject LOSO evaluation, $\sigma_\text{mean} = 0.31 \pm 0.06$ (mean $\pm$ SD across subjects and folds), indicating that the decoder maintains non-trivial uncertainty throughout — it does not collapse to a single-point prediction.
-Across subjects, higher $\sigma$ correlates with lower fold accuracy ($r = -0.42$, $p = 0.06$, Pearson), consistent with the interpretation that uncertain decoders produce less discriminative latents.
-This uncertainty estimate feeds directly into the Kalman filter measurement noise ($R = \text{diag}(\bm\sigma^2)$) and the CEM exploration radius, making it a functional component of the prosthetic control pipeline rather than an auxiliary output.
+Evaluated over all 1,277 trials from 20 subjects using the final checkpoint, $\sigma_\text{mean} = 0.577 \pm 0.005$ (mean $\pm$ SD across trials).
+The near-constant standard deviation ($\pm 0.005$) indicates the decoder has converged to a near-fixed uncertainty estimate regardless of trial content — a failure of calibration.
+A weak but statistically significant Pearson correlation exists between per-trial $\sigma$ and prediction error ($r = 0.088$, $p = 0.002$, $N=1277$), confirming a marginal directional signal, but with $r^2 < 0.01$ the uncertainty estimate explains under 1\,\% of error variance.
+This finding motivates replacing the fixed-uncertainty decoder with one that adapts to signal quality (e.g.\ via dropout-based uncertainty or an explicit noise-model head).
+Despite its current miscalibration, $\bm\sigma$ remains structurally connected to the pipeline: it sets the Kalman filter measurement noise ($R = \text{diag}(\bm\sigma^2)$) and the CEM exploration radius, so improving calibration would directly improve both filter and planner behaviour.
 
 \subsection{World-Model Planning Does Not Improve Static Classification}
 

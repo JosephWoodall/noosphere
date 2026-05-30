@@ -30,15 +30,19 @@ log = logging.getLogger("eval_bci2a_fast")
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--subjects",      type=str, default="1-9")
-    p.add_argument("--classes",       type=str, nargs="+",
+    p.add_argument("--subjects",           type=str, default="1-9")
+    p.add_argument("--classes",            type=str, nargs="+",
                    default=["left_hand", "right_hand", "feet", "tongue"])
-    p.add_argument("--folds",         type=int, default=5)
-    p.add_argument("--eegnet-epochs", type=int, default=50)
-    p.add_argument("--device",        type=str, default="cpu")
-    p.add_argument("--output",        type=str,
+    p.add_argument("--folds",              type=int, default=5)
+    p.add_argument("--eegnet-epochs",      type=int, default=50)
+    p.add_argument("--encoder-checkpoint", type=str, default=None,
+                   help="BCI2a-pretrained JEPA encoder checkpoint. "
+                        "When provided, adds encoder_ft_cls condition.")
+    p.add_argument("--ft-epochs-cls",      type=int, default=5)
+    p.add_argument("--device",             type=str, default="cpu")
+    p.add_argument("--output",             type=str,
                    default="v2_digital_self_replication/logs/loso_bci2a_fast.json")
-    p.add_argument("--log-level",     type=str, default="INFO")
+    p.add_argument("--log-level",          type=str, default="INFO")
     return p.parse_args()
 
 
@@ -145,16 +149,20 @@ def _fit_eval_eegnet(eeg_tr, y_tr, eeg_te, y_te, n_epochs, device):
     return float(balanced_accuracy_score(y_te, preds))
 
 
-def _run_subject(eeg, labels, folds, eegnet_epochs, device):
+def _run_subject(eeg, labels, folds, eegnet_epochs, device,
+                 encoder_checkpoint=None, ft_epochs_cls=5):
     from sklearn.model_selection import StratifiedKFold
     from sklearn.preprocessing import LabelEncoder
 
     le   = LabelEncoder().fit(sorted(set(labels)))
     y    = le.transform(labels)
     skf  = StratifiedKFold(n_splits=folds, shuffle=True, random_state=42)
-    X_raw = eeg.transpose(0, 2, 1)   # (n, C, T) for pyriemann
+    X_raw = eeg.transpose(0, 2, 1)
 
-    results = {"csp_lda": [], "mdm": [], "eegnet": []}
+    conds = ["csp_lda", "mdm", "eegnet"]
+    if encoder_checkpoint:
+        conds.append("encoder_ft_cls")
+    results = {k: [] for k in conds}
 
     for fi, (tr_idx, te_idx) in enumerate(skf.split(eeg, y)):
         log.info("    fold %d/%d", fi + 1, folds)
@@ -175,6 +183,16 @@ def _run_subject(eeg, labels, folds, eegnet_epochs, device):
         results["eegnet"].append(
             _fit_eval_eegnet(eeg_tr, y_tr, eeg_te, y_te, eegnet_epochs, device)
         )
+
+        if encoder_checkpoint:
+            from v2_digital_self_replication.cli.eval_loso import (
+                _load_encoder_from_ckpt, _fit_eval_encoder_cls,
+            )
+            enc = _load_encoder_from_ckpt(encoder_checkpoint, random_init=False)
+            results["encoder_ft_cls"].append(
+                _fit_eval_encoder_cls(enc, eeg_tr, y_tr, eeg_te, y_te,
+                                      ft_epochs_cls, device)
+            )
 
     summary = {}
     for k, vals in results.items():
@@ -211,7 +229,9 @@ def main():
             log.warning("  Too few trials (%d), skipping", eeg.shape[0]); continue
 
         log.info("  Trials: %d  shape: %s", len(labels), eeg.shape)
-        result = _run_subject(eeg, labels, args.folds, args.eegnet_epochs, args.device)
+        result = _run_subject(eeg, labels, args.folds, args.eegnet_epochs, args.device,
+                              encoder_checkpoint=args.encoder_checkpoint,
+                              ft_epochs_cls=args.ft_epochs_cls)
         all_results.append(result)
         done_subjects.append(subj)
 
@@ -225,9 +245,12 @@ def main():
         log.error("No subjects succeeded"); return 1
 
     chance = 1.0 / len(args.classes)
+    conds = ["csp_lda", "mdm", "eegnet"]
+    if args.encoder_checkpoint:
+        conds.append("encoder_ft_cls")
     agg = {
         k: _bootstrap_ci([s[k]["mean"] for s in all_results if k in s])
-        for k in ["csp_lda", "mdm", "eegnet"]
+        for k in conds
     }
 
     out_data = {
@@ -245,8 +268,10 @@ def main():
     print(f"  BCI2a Fast — {len(done_subjects)} subjects, {args.folds}-fold CV")
     print(f"  Classes: {args.classes}  |  Chance: {chance*100:.1f}%")
     print("═" * 56)
-    for cond, label in [("csp_lda","CSP+LDA"), ("mdm","MDM (Riemannian)"),
-                         ("eegnet","EEGNet (Lawhern 2018)")]:
+    label_map = [("csp_lda","CSP+LDA"), ("mdm","MDM (Riemannian)"),
+                 ("eegnet","EEGNet (Lawhern 2018)"),
+                 ("encoder_ft_cls","JEPA encoder (BCI2a-pretrained)")]
+    for cond, label in label_map:
         a = agg[cond]
         print(f"  {label:<28} {a['mean']*100:5.1f}%  "
               f"[{a['ci_lo']*100:.1f}–{a['ci_hi']*100:.1f}%]")

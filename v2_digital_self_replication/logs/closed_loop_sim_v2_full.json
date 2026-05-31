@@ -1,0 +1,3788 @@
+{
+  "aggregate": {
+    "oracle": {
+      "ttt": {
+        "mean": 193.0,
+        "std": 0.0
+      },
+      "final_error": {
+        "mean": 0.24609375
+      },
+      "path_efficiency": {
+        "mean": 1.0
+      },
+      "convergence_rate": 1.0
+    },
+    "csp": {
+      "ttt": {
+        "mean": 333.7368421052632,
+        "std": 84.10635003579391
+      },
+      "final_error": {
+        "mean": 1.252159107000308
+      },
+      "path_efficiency": {
+        "mean": 1.0
+      },
+      "convergence_rate": 0.2631578947368421
+    },
+    "jepa": {
+      "ttt": {
+        "mean": 384.0,
+        "std": 0.0
+      },
+      "final_error": {
+        "mean": 0.9839250261622264
+      },
+      "path_efficiency": {
+        "mean": 0.5025237605956853
+      },
+      "convergence_rate": 0.0
+    },
+    "ac_ssm": {
+      "ttt": {
+        "mean": 319.37593984962405,
+        "std": 90.37104812052584
+      },
+      "final_error": {
+        "mean": 1.146712913549036
+      },
+      "path_efficiency": {
+        "mean": 1.0
+      },
+      "convergence_rate": 0.3383458646616541
+    },
+    "statistics": {
+      "n_trials": 133,
+      "p_csp_vs_jepa_ttt": 1.6485266344986434e-09,
+      "p_ac_vs_jepa_ttt": 9.851722355899584e-12,
+      "p_ac_vs_csp_ttt": 0.2112995473337107
+    }
+  },
+  "trial_results": [
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0598853826522827,
+        "path_efficiency": 0.4348507367450379,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9024521112442017,
+        "path_efficiency": 0.44156913045309115,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9125393033027649,
+        "path_efficiency": 0.4357678544592317,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0548826456069946,
+        "path_efficiency": 0.41513216842313727,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.03960382938385,
+        "path_efficiency": 0.5809284498342221,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9455217719078064,
+        "path_efficiency": 0.4278447240437241,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.974090039730072,
+        "path_efficiency": 0.591622951671173,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0561316013336182,
+        "path_efficiency": 0.40772611826905764,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.969277024269104,
+        "path_efficiency": 0.5273130883700483,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0353875160217285,
+        "path_efficiency": 0.4677159540018744,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9781970977783203,
+        "path_efficiency": 0.4519084419359507,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.8851604461669922,
+        "path_efficiency": 0.7603206653965233,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9090380072593689,
+        "path_efficiency": 0.7576113789607247,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9700009822845459,
+        "path_efficiency": 0.44227147366909125,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0613665580749512,
+        "path_efficiency": 0.4423199541603202,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9073247313499451,
+        "path_efficiency": 0.7586951649759265,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 2,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.059159755706787,
+        "path_efficiency": 0.42726078474732293,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.978108286857605,
+        "path_efficiency": 0.4415504004760007,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 2,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.8780969977378845,
+        "path_efficiency": 0.6640975613797631,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 2,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9484162330627441,
+        "path_efficiency": 0.4543483302028534,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9539157748222351,
+        "path_efficiency": 0.3990074606527916,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9864760041236877,
+        "path_efficiency": 0.6832226815029561,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9494566917419434,
+        "path_efficiency": 0.41350103268285837,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9263474345207214,
+        "path_efficiency": 0.5481122137461882,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9749061465263367,
+        "path_efficiency": 0.5667663265983262,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 2,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0376288890838623,
+        "path_efficiency": 0.6887571935335207,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 2,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0593000650405884,
+        "path_efficiency": 0.43737839453829547,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 2,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0554070472717285,
+        "path_efficiency": 0.41514074036668164,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.976925790309906,
+        "path_efficiency": 0.5890014357885324,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 3,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0591922998428345,
+        "path_efficiency": 0.4239601041464048,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9695488214492798,
+        "path_efficiency": 0.48493110730460653,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9544664621353149,
+        "path_efficiency": 0.39749729008895324,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0641247034072876,
+        "path_efficiency": 0.44059013600076125,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9698378443717957,
+        "path_efficiency": 0.4300056441436248,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.8878058791160583,
+        "path_efficiency": 0.7563456621221204,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 3,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0294711589813232,
+        "path_efficiency": 0.40264849894307986,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 3,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9614413976669312,
+        "path_efficiency": 0.41727539735345465,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9417820572853088,
+        "path_efficiency": 0.4103856075084255,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0639052391052246,
+        "path_efficiency": 0.4467203908388272,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9806477427482605,
+        "path_efficiency": 0.4338912701326726,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 3,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.8890275955200195,
+        "path_efficiency": 0.7177388005021819,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 3,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9772672653198242,
+        "path_efficiency": 0.43583296253900744,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 4,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9541649222373962,
+        "path_efficiency": 0.42855830337257683,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9191461205482483,
+        "path_efficiency": 0.5383954710039541,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 4,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9500065445899963,
+        "path_efficiency": 0.40649752028565805,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 4,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9510813355445862,
+        "path_efficiency": 0.44009797302680587,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9544093608856201,
+        "path_efficiency": 0.3992623225517172,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9902898073196411,
+        "path_efficiency": 0.7298961070861429,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.054611325263977,
+        "path_efficiency": 0.40532428355251887,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0584144592285156,
+        "path_efficiency": 0.4273748163575093,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.056401014328003,
+        "path_efficiency": 0.4191732338264949,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 4,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0571295022964478,
+        "path_efficiency": 0.4043452565882848,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 4,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9228684902191162,
+        "path_efficiency": 0.42926998810115896,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 4,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9696146249771118,
+        "path_efficiency": 0.4363254999391285,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 4,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9822388887405396,
+        "path_efficiency": 0.6196041732562153,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 5,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.8802060484886169,
+        "path_efficiency": 0.6939845443548611,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.045047640800476,
+        "path_efficiency": 0.5567594044081248,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 5,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9500887393951416,
+        "path_efficiency": 0.41295674572062946,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 5,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.054908037185669,
+        "path_efficiency": 0.41714182620900686,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9492460489273071,
+        "path_efficiency": 0.41643248381199527,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9106845259666443,
+        "path_efficiency": 0.4412806354739465,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0290669202804565,
+        "path_efficiency": 0.6759595786023158,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 5,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.051863670349121,
+        "path_efficiency": 0.5361519253622973,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9317212104797363,
+        "path_efficiency": 0.5208879845046731,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9552634954452515,
+        "path_efficiency": 0.4110850653045238,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0566579103469849,
+        "path_efficiency": 0.5302872560954286,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 5,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.991340160369873,
+        "path_efficiency": 0.73625954368097,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 5,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9544839262962341,
+        "path_efficiency": 0.40346658657293877,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9491233825683594,
+        "path_efficiency": 0.4095407960590146,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9332917928695679,
+        "path_efficiency": 0.4270045241369445,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9213315844535828,
+        "path_efficiency": 0.539601837996457,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.884809136390686,
+        "path_efficiency": 0.7072860124662925,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9491339325904846,
+        "path_efficiency": 0.4647373670511371,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9174129366874695,
+        "path_efficiency": 0.5460248412626046,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 6,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9620561003684998,
+        "path_efficiency": 0.4315951154918149,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0249662399291992,
+        "path_efficiency": 0.7808574511124675,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 6,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0276684761047363,
+        "path_efficiency": 0.7308926640108935,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0612903833389282,
+        "path_efficiency": 0.425097552087059,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 6,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9765850305557251,
+        "path_efficiency": 0.46114762133160125,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 6,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.026666283607483,
+        "path_efficiency": 0.7655731650456916,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 6,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9496753811836243,
+        "path_efficiency": 0.41741986307587686,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0542709827423096,
+        "path_efficiency": 0.40766592117102113,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9754079580307007,
+        "path_efficiency": 0.46988863639147377,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 7,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9786787033081055,
+        "path_efficiency": 0.46449220167995137,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.920185923576355,
+        "path_efficiency": 0.7744826626875898,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 7,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.060068964958191,
+        "path_efficiency": 0.47162916950353917,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 7,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9561914205551147,
+        "path_efficiency": 0.4249278359260571,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 7,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9571453928947449,
+        "path_efficiency": 0.518819488143195,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0601954460144043,
+        "path_efficiency": 0.4256425120251944,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9464629292488098,
+        "path_efficiency": 0.4452655404516184,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.8846172094345093,
+        "path_efficiency": 0.7028282441669261,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9484168887138367,
+        "path_efficiency": 0.4407830298672669,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.042022943496704,
+        "path_efficiency": 0.44488416582623147,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9497827887535095,
+        "path_efficiency": 0.4314755566990448,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 7,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0326286554336548,
+        "path_efficiency": 0.6788710887434737,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.940986692905426,
+        "path_efficiency": 0.39759849428094174,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9864001870155334,
+        "path_efficiency": 0.6494225080561491,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9893805384635925,
+        "path_efficiency": 0.6623878705948063,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0560729503631592,
+        "path_efficiency": 0.4090890636200255,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9707682132720947,
+        "path_efficiency": 0.40190597690105745,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9611704349517822,
+        "path_efficiency": 0.4054830973727242,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 8,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9536749124526978,
+        "path_efficiency": 0.42000990399024196,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9437825083732605,
+        "path_efficiency": 0.44531786385772726,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0574243068695068,
+        "path_efficiency": 0.40900315263333736,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9266782402992249,
+        "path_efficiency": 0.5499237835383033,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 8,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0228488445281982,
+        "path_efficiency": 0.7609146014507214,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 8,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9900669455528259,
+        "path_efficiency": 0.6885797253950409,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 8,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0452651977539062,
+        "path_efficiency": 0.48952179742815094,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 9,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9586085677146912,
+        "path_efficiency": 0.4077643670606196,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.061379313468933,
+        "path_efficiency": 0.44934560240979676,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9655721187591553,
+        "path_efficiency": 0.42908058612778566,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 9,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9758995175361633,
+        "path_efficiency": 0.5706983703919677,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9534372687339783,
+        "path_efficiency": 0.41580279410911325,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 9,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.047213077545166,
+        "path_efficiency": 0.49118331325447107,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0554693937301636,
+        "path_efficiency": 0.40457120569273297,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 9,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0569195747375488,
+        "path_efficiency": 0.4217024026921945,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9767798185348511,
+        "path_efficiency": 0.4638689323308501,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9306005239486694,
+        "path_efficiency": 0.5230633293178175,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 9,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9542168378829956,
+        "path_efficiency": 0.4274352292688078,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9650517702102661,
+        "path_efficiency": 0.49621235989647916,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 9,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9836629629135132,
+        "path_efficiency": 0.460253871529312,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9636363387107849,
+        "path_efficiency": 0.42254793427189835,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9903449416160583,
+        "path_efficiency": 0.73660874114149,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 10,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9688014388084412,
+        "path_efficiency": 0.41898339093543546,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9773712158203125,
+        "path_efficiency": 0.4583788239596134,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0574991703033447,
+        "path_efficiency": 0.4234619817435855,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9512242674827576,
+        "path_efficiency": 0.44112841628089083,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 10,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9825716614723206,
+        "path_efficiency": 0.6191692779728702,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 10,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9804461598396301,
+        "path_efficiency": 0.6335230526973339,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 10,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.062831997871399,
+        "path_efficiency": 0.44536573626337406,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0680642127990723,
+        "path_efficiency": 0.46852572533974557,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0503963232040405,
+        "path_efficiency": 0.3842585674703839,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 10,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9549458026885986,
+        "path_efficiency": 0.4187892312786868,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 10,
+      "label": "left_hand"
+    }
+  ]
+}

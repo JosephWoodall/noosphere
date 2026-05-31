@@ -96,33 +96,64 @@ class BiosignalSSMCell(nn.Module):
 
 
 class BiosignalSSMBlock(nn.Module):
-    """SSM cell wrapped in GLU projection + residual, matching the TSSM block pattern."""
+    """SSM cell wrapped in GLU projection + residual, matching the TSSM block pattern.
 
-    def __init__(self, d_model: int, d_state: int = 64, dropout: float = 0.1):
+    Optional action conditioning: when d_dof > 0, a previous motor command a_prev
+    is injected into the SSM input via a SiLU-gated additive bias.  The gate is
+    content-adaptive (depends on the current input), so the block learns when motor
+    context actually modulates brain dynamics vs. when to ignore it (e.g. rest state).
+    """
+
+    def __init__(self, d_model: int, d_state: int = 64, dropout: float = 0.1,
+                 d_dof: int = 0):
         super().__init__()
         self.d_model = d_model
         self.d_state = d_state
+        self.d_dof = d_dof
         self.norm = nn.LayerNorm(d_model)
         self.in_proj = nn.Linear(d_model, d_model * 2, bias=False)
         self.ssm = BiosignalSSMCell(d_model, d_state)
         self.out_proj = nn.Linear(d_model, d_model, bias=False)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor):
-        """x: (B, T, d_model) → (B, T, d_model), h_final (B, d_model, d_state)."""
+        if d_dof > 0:
+            # action_proj: maps previous DOF command → SSM input space
+            self.action_proj = nn.Linear(d_dof, d_model, bias=False)
+            # gate_proj: content-adaptive scalar gate (SiLU-gated, from LLM codebase pattern)
+            self.gate_proj = nn.Linear(d_model, d_model, bias=False)
+            nn.init.zeros_(self.action_proj.weight)  # start with zero injection
+
+    def forward(self, x: torch.Tensor,
+                a_prev: Optional[torch.Tensor] = None):
+        """x: (B, T, d_model), a_prev: (B, d_dof) optional previous command.
+        → (B, T, d_model), h_final (B, d_model, d_state)."""
         residual = x
         x_proj = self.in_proj(self.norm(x))           # (B, T, 2*d_model)
         x_ssm, gate = x_proj.chunk(2, dim=-1)
+
+        # Inject previous motor command as SiLU-gated additive bias to SSM input
+        if self.d_dof > 0 and a_prev is not None:
+            action_bias = self.action_proj(a_prev).unsqueeze(1)  # (B, 1, d_model)
+            content_gate = F.silu(self.gate_proj(x_ssm))         # (B, T, d_model)
+            x_ssm = x_ssm + content_gate * action_bias
+
         y_ssm, h_final = self.ssm(x_ssm)
         y = y_ssm * F.silu(gate)                       # GLU
         out = self.dropout(self.out_proj(y))
         return residual + out, h_final
 
-    def decode_step(self, x_t: torch.Tensor, h_prev: torch.Tensor):
+    def decode_step(self, x_t: torch.Tensor, h_prev: torch.Tensor,
+                    a_prev: Optional[torch.Tensor] = None):
         """x_t: (B, d_model), h_prev: (B, d_model, d_state)."""
         residual = x_t
         x_proj = self.in_proj(self.norm(x_t))         # (B, 2*d_model)
         x_ssm, gate = x_proj.chunk(2, dim=-1)
+
+        if self.d_dof > 0 and a_prev is not None:
+            action_bias = self.action_proj(a_prev)          # (B, d_model)
+            content_gate = F.silu(self.gate_proj(x_ssm))   # (B, d_model)
+            x_ssm = x_ssm + content_gate * action_bias
+
         y_ssm, h_new = self.ssm.decode_step(x_ssm, h_prev)
         y = y_ssm * F.silu(gate)
         out = self.dropout(self.out_proj(y))
@@ -164,6 +195,13 @@ class StreamEncoder(nn.Module):
 
     Training: forward() processes a full (B, T, C) window.
     Inference: decode_step() processes one sample at a time using cached hidden states.
+
+    Optional action conditioning (d_dof > 0): inject previous motor command a_prev
+    into the first SSM block via SiLU-gated additive bias.  Backward compatible:
+    when d_dof=0 or a_prev=None, behaves identically to the original.
+
+    Optional EEG reconstruction head (n_eeg_recon > 0): reconstruct raw EEG from
+    latent states, enabling unsupervised world-model training on label-free data.
     """
 
     def __init__(
@@ -174,16 +212,29 @@ class StreamEncoder(nn.Module):
         n_eeg: int = 21,
         n_prop: int = 6,
         dropout: float = 0.1,
+        d_dof: int = 0,
+        n_eeg_recon: int = 0,
     ):
         super().__init__()
         self.d_model = d_model
         self.d_state = d_state
         self.n_layers = n_layers
+        self.d_dof = d_dof
         self.fusion = MultiModalFusion(n_eeg=n_eeg, n_prop=n_prop, d_model=d_model)
+        # Action conditioning injected into first block only; deeper blocks see already-
+        # conditioned representations so re-injection would double-count.
         self.blocks = nn.ModuleList([
-            BiosignalSSMBlock(d_model, d_state, dropout) for _ in range(n_layers)
+            BiosignalSSMBlock(d_model, d_state, dropout,
+                              d_dof=d_dof if i == 0 else 0)
+            for i in range(n_layers)
         ])
         self.norm_out = nn.LayerNorm(d_model)
+
+        # EEG reconstruction head: latent → raw EEG channels
+        if n_eeg_recon > 0:
+            self.eeg_recon_head = nn.Linear(d_model, n_eeg_recon)
+        else:
+            self.eeg_recon_head = None
 
     def forward(
         self,
@@ -191,14 +242,22 @@ class StreamEncoder(nn.Module):
         hrv: Optional[torch.Tensor] = None,
         gsr: Optional[torch.Tensor] = None,
         prop: Optional[torch.Tensor] = None,
+        a_prev: Optional[torch.Tensor] = None,
     ):
-        """Returns (B, T, d_model) encoded sequence and list of final hidden states per layer."""
+        """Returns (B, T, d_model) encoded sequence and list of final hidden states per layer.
+        a_prev: (B, d_dof) previous motor command, injected into first block if d_dof > 0."""
         x = self.fusion(eeg, hrv, gsr, prop)
         hidden_states = []
-        for block in self.blocks:
-            x, h_final = block(x)
+        for i, block in enumerate(self.blocks):
+            x, h_final = block(x, a_prev=a_prev if i == 0 else None)
             hidden_states.append(h_final)
         return self.norm_out(x), hidden_states
+
+    def reconstruct_eeg(self, encoded: torch.Tensor) -> Optional[torch.Tensor]:
+        """encoded: (B, T, d_model) → (B, T, n_eeg) reconstructed EEG, or None."""
+        if self.eeg_recon_head is None:
+            return None
+        return self.eeg_recon_head(encoded)
 
     def decode_step(
         self,
@@ -207,6 +266,7 @@ class StreamEncoder(nn.Module):
         gsr_t: Optional[torch.Tensor] = None,
         prop_t: Optional[torch.Tensor] = None,
         hidden_states: Optional[list] = None,
+        a_prev: Optional[torch.Tensor] = None,
     ):
         """
         Process one timestep. Inputs: (B, C) each.
@@ -225,7 +285,8 @@ class StreamEncoder(nn.Module):
                     x_t.shape[0], self.d_model, self.d_state,
                     device=x_t.device, dtype=x_t.dtype,
                 )
-            x_t, h_new = block.decode_step(x_t, h_prev)
+            x_t, h_new = block.decode_step(x_t, h_prev,
+                                            a_prev=a_prev if i == 0 else None)
             new_hidden.append(h_new)
 
         return self.norm_out(x_t), new_hidden

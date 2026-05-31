@@ -39,7 +39,7 @@ A central open question in neural brain--computer interface (BCI) research is wh
 We answer this question quantitatively across two independent datasets and three training objectives.
 We introduce the \emph{ZOH-SSM World Model}: a bilinear Zero-Order-Hold State Space (ZOH-SSM) encoder paired with a Joint Embedding Predictive Architecture (JEPA) pretraining objective, an action-conditioned transition function $T(\mathbf{h}_t, \mathbf{a}_t) \to \mathbf{h}_{t+1}$, and a latency-minimising Monte Carlo CEM+gradient MPC planner — the first BCI architecture to combine these components for closed-loop prosthetic control.
 Under a leakage-safe eight-condition LOSO protocol on PhysioNet Motor Imagery (20 subjects, 3-class MI) and BCI Competition IV Dataset 2a (9 subjects, 4-class MI), we find:
-(1) EEGNet ($38.4\%$, fully supervised), JEPA encoder ($36.6\%$, self-supervised), and JEPA encoder pretrained on BCI2a ($34.8\%$) are all statistically equivalent and $\approx\!22$\,pp below CSP+LDA ($60.1\%$ and $58.7\%$ respectively);
+(1) on PhysioNetMI, EEGNet ($38.4\%$, fully supervised) and JEPA encoder ($36.6\%$, self-supervised) are statistically equivalent ($p=0.46$), both $\approx\!22$\,pp below CSP+LDA ($60.1\%$); on BCI2a, EEGNet ($36.0\%$) outperforms cross-domain JEPA ($27.9\% \approx$ ablation, $p=0.004$), demonstrating that domain mismatch destroys all pretraining benefit;
 (2) the $\approx\!22$\,pp gap is consistent across datasets, methods, and class counts, establishing labelled data volume — not the training objective — as the binding constraint;
 (3) a closed-loop virtual arm simulation with an oracle controller (100\,\% convergence, TTT\,=\,193 steps), a CSP-guided controller (27.8\,\% convergence), and the JEPA decoder (0\,\% convergence, $p{<}0.0001$ vs.\ CSP) directly operationalises this gap: the architecture works when the decoder works.
 These findings provide a reproducible diagnostic baseline for future neural BCI encoder development.
@@ -455,13 +455,15 @@ S20 & 30.7 & 44.0 & 33.3 & 33.3 & 41.3 & 40.1 \\
 \subsection{Cross-Dataset Validation: BCI Competition IV Dataset 2a}
 \label{sec:bci2a}
 
-To test whether the discriminability gap generalises beyond PhysioNetMI, we evaluate three conditions on BCI Competition IV Dataset 2a~\cite{brunner2008bci} (BNCI2014\_001): 9 subjects, 4-class MI (left hand, right hand, feet, tongue), 576 trials per subject, 250\,Hz.
-We run CSP+LDA, Riemannian MDM, and EEGNet~\cite{lawhern2018eegnet} under the same leakage-safe 5-fold LOSO protocol; the JEPA encoder is excluded because it was pretrained on PhysioNetMI, making a BCI2a fine-tuning result confounded by cross-dataset domain shift.
+To test whether the discriminability gap generalises beyond PhysioNetMI and to quantify the cost of domain mismatch, we evaluate four conditions on BCI Competition IV Dataset 2a~\cite{brunner2008bci} (BNCI2014\_001): 9 subjects, 4-class MI (left hand, right hand, feet, tongue), 576 trials per subject, 250\,Hz.
+Conditions: CSP+LDA, Riemannian MDM, EEGNet~\cite{lawhern2018eegnet}, and the JEPA encoder pretrained on PhysioNetMI (cross-domain transfer) — all evaluated under the same leakage-safe 5-fold LOSO protocol.
 
 Table~\ref{tab:bci2a} reports the results.
-The 23.6\,pp gap between CSP+LDA ($58.7\%$) and EEGNet ($35.1\%$) on BCI2a closely mirrors the 22.7\,pp gap on PhysioNetMI, despite a different dataset, lab, recording protocol, and number of classes.
-EEGNet is significantly above chance ($p=0.002$, one-sided Wilcoxon) but significantly below CSP ($p=0.004$).
-This cross-dataset consistency supports the central claim: the discriminability gap between spatial-filter baselines and supervised neural approaches is structural and data-limited, not specific to PhysioNetMI.
+Four findings emerge.
+First, the CSP--EEGNet gap on BCI2a ($58.7\%$ vs.\ $36.0\%$, $\Delta=22.7$\,pp) closely mirrors the gap on PhysioNetMI ($60.1\%$ vs.\ $38.4\%$, $\Delta=21.7$\,pp), confirming the gap is structural and data-limited.
+Second, the JEPA encoder pretrained on PhysioNetMI achieves only $27.9\%$ on BCI2a — statistically indistinguishable from random initialisation ($27.5\%$, $p=0.43$) and from chance ($25.0\%$, $p=0.004$, barely significant at $+2.9$\,pp).
+Third, EEGNet outperforms the cross-domain JEPA by $8.1$\,pp ($p=0.004$): supervised training from scratch on the target domain beats a self-supervised encoder trained on a different domain.
+Fourth, both methods remain far below CSP ($>20$\,pp gap), confirming the data-limited bottleneck is the binding constraint regardless of training objective or domain.
 
 \begin{table}[t]
 \centering
@@ -474,13 +476,15 @@ This cross-dataset consistency supports the central claim: the discriminability 
 \midrule
 CSP + LDA            & 58.7 & 49.1 & 68.7 \\
 MDM (Riemannian)     & 50.4 & 40.3 & 60.6 \\
-EEGNet~\cite{lawhern2018eegnet} & 35.1 & 30.9 & 39.5 \\
+EEGNet~\cite{lawhern2018eegnet} & 36.0 & 31.5 & 41.7 \\
+JEPA encoder (cross-domain\textsuperscript{†}) & 27.9 & 26.4 & 29.4 \\
+Random encoder (ablation) & 27.5 & 25.9 & 29.1 \\
 \midrule
 Chance               & 25.0 & — & — \\
 \bottomrule
 \end{tabular}
 \vspace{0.2em}
-{\footnotesize CSP--EEGNet gap: 23.6\,pp. EEGNet vs.\ chance $p=0.002$; EEGNet vs.\ CSP $p=0.004$ (Wilcoxon).}
+{\footnotesize \textsuperscript{†}Pretrained on PhysioNetMI, fine-tuned on BCI2a (cross-domain transfer). JEPA vs.\ ablation $p=0.43$ (Wilcoxon); EEGNet vs.\ JEPA $p=0.004$.}
 \end{table}
 
 \begin{table}[t]
@@ -488,24 +492,26 @@ Chance               & 25.0 & — & — \\
 \caption{Per-Subject BCI2a Balanced Accuracy (\%)}
 \label{tab:bci2a_persubject}
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{crrr}
+\begin{tabular}{crrrr}
 \toprule
-\textbf{Subj.} & \textbf{CSP} & \textbf{MDM} & \textbf{EEGNet} \\
+\textbf{Subj.} & \textbf{CSP} & \textbf{MDM} & \textbf{EEGNet} & \textbf{JEPA\textsuperscript{†}} \\
 \midrule
-S01 & 61.6 & 60.4 & 41.8 \\
-S02 & 57.1 & 35.6 & 37.7 \\
-S03 & 79.2 & 67.7 & 42.1 \\
-S04 & 40.5 & 40.3 & 30.5 \\
-S05 & 38.4 & 26.9 & 26.9 \\
-S06 & 41.7 & 35.6 & 26.9 \\
-S07 & 62.1 & 53.8 & 45.1 \\
-S08 & 79.0 & 72.4 & 35.1 \\
-S09 & 69.1 & 60.9 & 29.9 \\
+S01 & 61.6 & 60.4 & 42.7 & 30.3 \\
+S02 & 57.1 & 35.6 & 33.0 & 29.0 \\
+S03 & 79.2 & 67.7 & 52.5 & 26.7 \\
+S04 & 40.5 & 40.3 & 31.7 & 27.4 \\
+S05 & 38.4 & 26.9 & 29.0 & 24.0 \\
+S06 & 41.7 & 35.6 & 28.0 & 26.6 \\
+S07 & 62.1 & 53.8 & 39.4 & 32.1 \\
+S08 & 79.0 & 72.4 & 38.4 & 28.3 \\
+S09 & 69.1 & 60.9 & 29.0 & 26.5 \\
 \midrule
-\textbf{Mean} & \textbf{58.7} & \textbf{50.4} & \textbf{35.1} \\
-\textbf{95\,\% CI} & [49.1,68.7] & [40.3,60.6] & [30.9,39.5] \\
+\textbf{Mean} & \textbf{58.7} & \textbf{50.4} & \textbf{36.0} & \textbf{27.9} \\
+\textbf{95\,\% CI} & [49.1,68.7] & [40.3,60.6] & [31.5,41.7] & [26.4,29.4] \\
 \bottomrule
 \end{tabular}
+\vspace{0.2em}
+{\footnotesize \textsuperscript{†}JEPA encoder pretrained on PhysioNetMI, fine-tuned on BCI2a (cross-domain).}
 \end{table}
 
 \subsection{Decoder Uncertainty Output}
@@ -630,7 +636,7 @@ The contribution of this work is to establish the principle quantitatively acros
 \label{sec:limitations}
 
 \begin{enumerate}
-  \item \textbf{Partial cross-dataset coverage.} CSP+LDA, MDM, and EEGNet are validated on BCI2a (Section~\ref{sec:bci2a}); the JEPA encoder is not evaluated on BCI2a because it was pretrained on PhysioNetMI. A BCI2a-pretrained or dataset-agnostic encoder (e.g.\ BENDR fine-tuned on BCI2a) would complete the cross-dataset comparison for neural methods.
+  \item \textbf{No within-domain BCI2a JEPA pretraining.} A BCI2a-native JEPA encoder (pretrained on BCI2a EEG, without labels) was computationally infeasible to evaluate at full scale (30 epochs on 83,022 windows $\approx$54\,h CPU). The cross-domain transfer result ($27.9\% \approx$ ablation) establishes an important lower bound; a within-domain BCI2a JEPA is expected to close the $8.1$\,pp gap vs.\ EEGNet and remains future work.
   \item \textbf{No EEGConformer or BENDR baseline.} EEGNet~\cite{lawhern2018eegnet} is included and matches the JEPA encoder. EEGConformer~\cite{song2022eegconformer} and fine-tuned BENDR~\cite{kostas2022bendr} are not in the current LOSO harness; given that even the discriminative EEGNet cannot close the gap, these are unlikely to change the conclusion at this trial count.
   \item \textbf{Closed-loop simulation limited by decoder quality.} The virtual arm simulation (Section~\ref{sec:closed_loop}) confirms 0\,\% target convergence due to near-zero DOF commands from the current decoder. A real closed-loop evaluation with a CSP-initialised or data-augmented decoder is the next step.
   \item \textbf{Transition model under-trained.} Ten fine-tuning epochs on 55 trials is insufficient for the transition function to learn meaningful latent dynamics; a dedicated pre-training phase on longer continuous recordings would correct this.

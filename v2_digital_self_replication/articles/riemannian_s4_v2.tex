@@ -37,7 +37,7 @@
 \begin{abstract}
 A central open question in neural brain--computer interface (BCI) research is whether the performance gap between classical spatial-filter methods (CSP) and modern neural encoders is caused by the encoder's training objective or by the volume of available labelled data.
 We answer this question quantitatively across two independent datasets and three training objectives.
-We introduce the \emph{ZOH-SSM World Model}: a bilinear Zero-Order-Hold State Space (ZOH-SSM) encoder paired with a Joint Embedding Predictive Architecture (JEPA) pretraining objective, an action-conditioned transition function $T(\mathbf{h}_t, \mathbf{a}_t) \to \mathbf{h}_{t+1}$, and a latency-minimising Monte Carlo CEM+gradient MPC planner — the first BCI architecture to combine these components for closed-loop prosthetic control.
+We introduce the \emph{ZOH-SSM World Model}: a bilinear Zero-Order-Hold State Space (ZOH-SSM) encoder paired with a Joint Embedding Predictive Architecture (JEPA) pretraining objective, an action-conditioned transition function $T(\mathbf{h}_t, \mathbf{a}_t) \to \mathbf{h}_{t+1}$, and a latency-minimising Monte Carlo CEM+gradient MPC planner — to our knowledge, the first BCI architecture to combine a learned world model with MPC planning for closed-loop prosthetic control.
 Under a leakage-safe eight-condition LOSO protocol on PhysioNet Motor Imagery (20 subjects, 3-class MI) and BCI Competition IV Dataset 2a (9 subjects, 4-class MI), we find:
 (1) on PhysioNetMI, EEGNet ($38.4\%$, fully supervised) and JEPA encoder ($36.6\%$, self-supervised) are statistically equivalent ($p=0.46$), both $\approx\!22$\,pp below CSP+LDA ($60.1\%$); on BCI2a, EEGNet ($36.0\%$) outperforms cross-domain JEPA ($27.9\% \approx$ ablation, $p=0.004$), demonstrating that domain mismatch destroys all pretraining benefit;
 (2) the $\approx\!22$\,pp gap is consistent across datasets, methods, and class counts, establishing labelled data volume — not the training objective — as the binding constraint;
@@ -112,7 +112,7 @@ Our ZOH-SSM cell introduces a bilinear multiplicative term absent in prior SSM-B
 Hafner et al.~\cite{hafner2020dreamer} and Schrittwieser et al.~\cite{schrittwieser2020muzero} demonstrate learned world models for planning in high-dimensional observation spaces.
 Williams et al.~\cite{williams2017information} introduce MPPI for real-time MPC over learned dynamics.
 Chua et al.~\cite{chua2018deep} show CEM-based MPC (PETS) outperforms pure gradient methods via probabilistic ensemble rollouts.
-No prior work applies a learned world model with MPC planning to EEG-based BCI.
+To our knowledge, no prior work applies a learned world model with MPC planning to EEG-based BCI.
 
 \subsection{Latency in Closed-Loop BCI}
 Shenoy and Carmena~\cite{shenoy2013combining} establish that closed-loop BCI performance depends on decoder latency: sub-300\,ms response is required for natural prosthetic control.
@@ -292,7 +292,7 @@ The CEM phase samples from $\mathcal{N}(\bm\mu_\text{dec}, \bm\sigma_\text{dec})
 High $\bm\sigma$ (ambiguous neural state) triggers wide exploration; low $\bm\sigma$ (clear intent) tightens the search.
 This coupling is not a design choice — it emerges from using the brain's own decoded uncertainty as the proposal distribution.
 
-For real-time BCI inference, a fast path $\mathbf{h}_\text{plan} = T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$ (self-conditioning, one forward pass, $<$5\,ms CPU) is available without the full optimisation loop.
+For real-time BCI inference, a fast path $\mathbf{h}_\text{plan} = T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$ (self-conditioning, one forward pass) is available without the full optimisation loop. Benchmarked on CPU: $10.9$\,ms per call, supporting control loops up to $\approx\!90$\,Hz. Streaming inference via \texttt{decode\_step()} averages $26.9$\,ms per EEG sample ($37$\,Hz), within the $10$--$64$\,Hz range typical of closed-loop BCI controllers; GPU parallelisation via diagonal S4D parameterisation is expected to reduce these by one to two orders of magnitude.
 
 \subsection{Cross-Modal CNS Extension}
 \label{sec:crossmodal}
@@ -641,7 +641,7 @@ The contribution of this work is to establish the principle quantitatively acros
   \item \textbf{Closed-loop simulation limited by decoder quality.} The virtual arm simulation (Section~\ref{sec:closed_loop}) confirms 0\,\% target convergence due to near-zero DOF commands from the current decoder. A real closed-loop evaluation with a CSP-initialised or data-augmented decoder is the next step.
   \item \textbf{Transition model under-trained.} Ten fine-tuning epochs on 55 trials is insufficient for the transition function to learn meaningful latent dynamics; a dedicated pre-training phase on longer continuous recordings would correct this.
   \item \textbf{Dataset size.} 69 trials/subject is below the threshold at which fine-tuned neural encoders reliably outperform CSP~\cite{kostas2022bendr}, explaining the 22.7\,pp gap.
-  \item \textbf{CPU-only inference.} CUDA compilation hangs on the sequential ZOH-SSM scan with RTX\,5070 (compute capability 12.x); parallelisation via diagonal S4D parameterisation would resolve this.
+  \item \textbf{CPU inference speed.} \texttt{decode\_step()} runs at $26.9$\,ms ($37$\,Hz) and \texttt{self\_condition()} at $10.9$\,ms on CPU. This supports typical BCI control loop rates ($10$--$64$\,Hz) but leaves no headroom for higher rates. CUDA compilation hangs on the sequential ZOH-SSM scan with RTX\,5070 (compute capability 12.x); diagonal S4D parameterisation would resolve this and is expected to reduce latency by one to two orders of magnitude.
 \end{enumerate}
 
 
@@ -698,7 +698,7 @@ The full evaluation codebase, pre-trained checkpoints, and per-subject result fi
 \subsection{LatencyPlanner}
 \begin{itemize}
   \item $H=3$; $\gamma=0.8$; $K=32$ MC rollouts; elite fraction $\rho=0.25$; $n_\text{iter}=12$ gradient steps; Adam $\text{lr}=0.05$.
-  \item Fast path: single forward pass $T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$, $<$5\,ms CPU.
+  \item Fast path: single forward pass $T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$, $10.9$\,ms CPU ($N=2560$ trials, post-compile). \texttt{decode\_step()}: $26.9$\,ms, $37$\,Hz.
   \item \texttt{torch.enable\_grad()} inside \texttt{plan()} to work within \texttt{torch.no\_grad()} inference contexts.
 \end{itemize}
 

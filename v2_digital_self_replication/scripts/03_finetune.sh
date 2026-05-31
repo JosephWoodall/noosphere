@@ -10,9 +10,9 @@
 #   DATA_DIR          input data directory                (default: v2/.../data/generated)
 #   CHECKPOINT_DIR    checkpoints directory               (default: v2/.../checkpoints)
 #   ENCODER_CKPT      path to JEPA encoder checkpoint     (default: CHECKPOINT_DIR/jepa_encoder_final.pt)
-#   FT_EPOCHS         fine-tuning epochs                  (default: 20)
+#   FT_EPOCHS         fine-tuning epochs                  (default: 5)
 #   BATCH_SIZE        batch size                          (default: 64)
-#   WINDOW_LEN        EEG window length (samples)         (default: 256)
+#   WINDOW_LEN        EEG window length (samples)         (default: 128 = 500ms @ 256Hz)
 #   FREEZE_ENCODER    "true" to freeze backbone           (default: true)
 #   DEVICE            cpu or cuda                         (default: cpu)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -20,9 +20,9 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/env.sh"
 
 ENCODER_CKPT="${ENCODER_CKPT:-$CHECKPOINT_DIR/jepa_encoder_final.pt}"
-FT_EPOCHS="${FT_EPOCHS:-20}"
+FT_EPOCHS="${FT_EPOCHS:-5}"
 BATCH_SIZE="${BATCH_SIZE:-64}"
-WINDOW_LEN="${WINDOW_LEN:-256}"
+WINDOW_LEN="${WINDOW_LEN:-128}"
 FREEZE_ENCODER="${FREEZE_ENCODER:-true}"
 LOG_FILE="$LOG_DIR/03_finetune.log"
 
@@ -49,7 +49,6 @@ _log "  Log file: $LOG_FILE"
     $FREEZE_FLAG                       \
     --device         "$DEVICE"         \
     --log-level      INFO              \
-    --log-file       "$LOG_FILE"       \
     2>&1 | tee -a "$LOG_FILE"
 
 _ok "Fine-tuning complete → $CHECKPOINT_DIR/supervised_best.pt"

@@ -32,6 +32,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 from v2_digital_self_replication.config import V2Config
 from v2_digital_self_replication.agent.digital_twin import DigitalTwin
 from v2_digital_self_replication.core.intent_decoder import IntentLoss
+from v2_digital_self_replication.core.transition_model import transition_self_consistency_loss
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,10 @@ class SupervisedTrainer:
             for p in twin.encoder.blocks[-1].parameters():
                 p.requires_grad_(True)
 
+        # Always train transition model — it's newly initialised
+        for p in twin.transition.parameters():
+            p.requires_grad_(True)
+
         trainable = [p for p in twin.parameters() if p.requires_grad]
         self.optimizer = optim.AdamW(trainable, lr=1e-3, weight_decay=1e-4)
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
@@ -152,6 +157,14 @@ class SupervisedTrainer:
                 intent = self.twin.decoder(enc_out)
 
                 loss = self._loss_fn(intent, cmd_batch, ern_label=ern_batch)
+
+                # Transition self-consistency: T(h, decoder(h).mu) must still
+                # decode to the same intent. Trains the world model jointly.
+                h_pooled = enc_out[:, -64:, :].mean(1)   # (B, d_model)
+                loss = loss + transition_self_consistency_loss(
+                    self.twin.transition, self.twin.decoder, h_pooled, weight=0.1
+                )
+
                 self.optimizer.zero_grad()
                 loss.backward()
                 nn.utils.clip_grad_norm_(

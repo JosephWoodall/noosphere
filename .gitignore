@@ -1,2 +1,13 @@
 .venv
 .gemini_internal/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+*.pt
+*.pth
+*.npy
+*.log
+v2_digital_self_replication/data/nlb_cache/

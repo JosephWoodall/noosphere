@@ -11,12 +11,50 @@ Design principles:
 
 from __future__ import annotations
 
-import math
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+def _bilinear_scan(
+    x: torch.Tensor,
+    bar_A: torch.Tensor,
+    bar_B: torch.Tensor,
+    bar_W: torch.Tensor,
+    C: torch.Tensor,
+    D: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Bilinear SSM scan over sequence dimension T.
+
+    x:     (B, T, d_model)
+    bar_A: (d_model, d_state)  — ZOH transition
+    bar_B: (d_model, d_state)
+    bar_W: (d_model, d_state)  — bilinear binding weight
+    C:     (d_model, d_state)  — output projection
+    D:     (d_model,)          — skip connection
+
+    Returns: outputs (B, T, d_model), h_final (B, d_model, d_state)
+    """
+    B = x.shape[0]
+    T = x.shape[1]
+    d_model = x.shape[2]
+    d_state = bar_A.shape[1]
+
+    h = torch.zeros(B, d_model, d_state, device=x.device, dtype=x.dtype)
+    out = torch.zeros(B, T, d_model, device=x.device, dtype=x.dtype)
+
+    for t in range(T):
+        x_t = x[:, t, :].unsqueeze(-1)              # (B, d_model, 1)
+        h = bar_A * h + bar_B * x_t + bar_W * torch.tanh(h * x_t)
+        out[:, t, :] = (C * h).sum(-1) + D * x[:, t, :]
+
+    return out, h
+
+
+_bilinear_scan = torch.compile(_bilinear_scan, dynamic=True)
 
 
 class BiosignalSSMCell(nn.Module):
@@ -45,16 +83,8 @@ class BiosignalSSMCell(nn.Module):
 
     def forward(self, x: torch.Tensor):
         """Full sequence. x: (B, T, d_model) → (B, T, d_model), h_final (B, d_model, d_state)."""
-        B, T, _ = x.shape
         bar_A, bar_B, bar_W = self._discretize()
-        h = torch.zeros(B, self.d_model, self.d_state, device=x.device, dtype=x.dtype)
-        outputs = []
-        for t in range(T):
-            x_t = x[:, t, :].unsqueeze(-1)  # (B, d_model, 1)
-            h = bar_A * h + bar_B * x_t + bar_W * torch.tanh(h * x_t)
-            y_t = (self.C * h).sum(-1) + self.D * x[:, t, :]  # (B, d_model)
-            outputs.append(y_t.unsqueeze(1))
-        return torch.cat(outputs, dim=1), h
+        return _bilinear_scan(x, bar_A, bar_B, bar_W, self.C, self.D)
 
     def decode_step(self, x_t: torch.Tensor, h_prev: torch.Tensor):
         """Single step. x_t: (B, d_model), h_prev: (B, d_model, d_state)."""

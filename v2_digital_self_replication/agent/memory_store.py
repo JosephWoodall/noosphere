@@ -34,10 +34,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Experience:
-    eeg: np.ndarray        # (T, 21) — raw EEG window
+    eeg: np.ndarray            # (T, 21) — raw EEG window
     command_pred: np.ndarray   # (6,) — what we predicted
     command_actual: np.ndarray # (6,) — what actually happened (proprioceptive feedback)
     ern_prob: float
+    latent: Optional[np.ndarray] = None   # (1, d_model) — encoder output at this step
     timestamp: float = field(default_factory=time.monotonic)
 
 
@@ -212,6 +213,13 @@ class MemoryStore:
 
     def log_episode(self, **kwargs):
         self.episodic.log_episode(**kwargs)
+        # Build episode embedding from mean of recent latents → semantic index
+        latents = [e.latent for e in self.short_term.recent(64) if e.latent is not None]
+        if latents:
+            stacked = np.stack([l.squeeze() for l in latents])
+            embedding = stacked.mean(0).astype(np.float32)
+            payload = {k: v for k, v in kwargs.items()}
+            self.semantic.add(embedding, payload)
 
     def close(self):
         self.episodic.close()

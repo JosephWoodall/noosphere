@@ -211,11 +211,18 @@ class JEPATrainer:
         eeg_dict: dict,
         window_len: int = 256,
         stride: int = 64,
+        cns_teacher=None,
     ):
         """
         Full JEPA pretraining loop.
         eeg_dict: from data.synthetic_eeg.make_training_batch()
+        cns_teacher: optional frozen CNSEncoder; if provided, uses cross-modal
+                     Sinkhorn OT loss instead of EMA loss (Phase 2 mode).
         """
+        if cns_teacher is not None:
+            self._train_cross_modal(eeg_dict, cns_teacher, window_len, stride)
+            return
+
         dataset = MultiSubjectEEGDataset(eeg_dict, window_len=window_len, stride=stride)
         loader  = DataLoader(
             dataset,
@@ -244,6 +251,33 @@ class JEPATrainer:
 
         self._save_checkpoint(self.cfg.jepa.n_epochs - 1, best_loss, tag="final")
         logger.info("JEPA pretraining complete. Best loss: %.6f", best_loss)
+
+    def _train_cross_modal(self, eeg_dict: dict, cns_teacher, window_len: int, stride: int):
+        """Delegate to CrossModalJEPATrainer when a CNS teacher is available."""
+        from v2_digital_self_replication.training.cross_modal_jepa import CrossModalJEPATrainer
+        from v2_digital_self_replication.data.nlb_loader import NLBLoader
+
+        # Concatenate all EEG trials into a flat (total_T, 21) array
+        segments = []
+        for sub_data in eeg_dict.values():
+            eeg = sub_data["eeg"]  # (n_trials, T, 21)
+            for trial in eeg:
+                segments.append(trial)
+        eeg_flat = np.concatenate(segments, axis=0)
+
+        # Load CNS data (uses cache if available)
+        nlb = NLBLoader()
+        cns_data = nlb.load(smooth=True)
+
+        trainer = CrossModalJEPATrainer(
+            cns_encoder=cns_teacher,
+            eeg_encoder=self.encoder,
+            config=self.cfg,
+            device=str(self.device),
+        )
+        trainer.train(eeg_flat, cns_data, window_len=window_len, stride=stride)
+        # Sync weights back to self.encoder (already the same object)
+        logger.info("Cross-modal JEPA complete.")
 
     def _save_checkpoint(self, epoch: int, loss: float, tag: str = ""):
         path = f"{self.cfg.checkpoint_dir}/jepa_encoder_{tag}.pt"

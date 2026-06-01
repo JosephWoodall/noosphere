@@ -1,0 +1,1 @@
+Neural BCI decoders are bounded by labelled data volume, not architecture—all neural methods sit ~22 pp below CSP+LDA across two independent datasets. Injecting previous motor commands into SSM recurrence converts a non-functional decoder (0% closed-loop convergence) into one competitive with classical spatial filters (33.8% vs. 26.3%).

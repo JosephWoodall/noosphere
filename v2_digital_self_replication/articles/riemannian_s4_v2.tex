@@ -83,7 +83,7 @@ We combine these advances in the \emph{ZOH-SSM World Model} (Section~\ref{sec:me
   \item A leakage-safe eight-condition LOSO evaluation across 20 PhysioNetMI subjects and cross-dataset validation on BCI2a (9 subjects), establishing the $\approx\!22$\,pp CSP--neural gap as data-limited and quantifying AC-SSM's improvement over the MLP world-model baseline.
   \item A four-controller closed-loop virtual arm simulation ($N=133$ trials, 10 subjects) demonstrating that the AC-SSM achieves $33.8\%$ target convergence (versus $0\%$ for the standard JEPA decoder, $p{<}0.0001$; equivalent to CSP at $26.3\%$, $p=0.21$), directly operationalising the world-model contribution.
 \end{enumerate}
-
+\vspace*{-0.5\baselineskip}
 
 %% -----------------------------------------------------------------------
 \section{Related Work}
@@ -130,7 +130,66 @@ Our planner directly optimises a discounted cost that penalises late convergence
 \section{Methods}
 \label{sec:methods}
 
-\begin{figure*}[t]
+Fig.~\ref{fig:overview} provides an at-a-glance architecture overview; Figs.~\ref{fig:pipeline} and~\ref{fig:architecture} detail the full inference pipeline and the encoder layer stack respectively.
+
+%% ── Compact single-column overview (quick-read) ──────────────────────────────
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  block/.style={rectangle, draw, rounded corners=2pt,
+    fill=blue!12, minimum width=1.5cm, minimum height=0.75cm,
+    text centered, text width=1.45cm},
+  novel/.style={rectangle, draw, line width=1.6pt, rounded corners=2pt,
+    fill=orange!28, minimum width=1.5cm, minimum height=0.75cm,
+    text centered, text width=1.45cm},
+  io/.style={rectangle, draw, rounded corners=2pt,
+    fill=cyan!25, minimum width=1.25cm, minimum height=0.68cm,
+    text centered, text width=1.2cm},
+  outbox/.style={rectangle, draw, rounded corners=2pt,
+    fill=green!22, minimum width=1.35cm, minimum height=0.58cm,
+    text centered, text width=1.3cm, font=\scriptsize},
+  side/.style={rectangle, draw, rounded corners=2pt,
+    fill=orange!22, minimum width=1.15cm, minimum height=0.58cm,
+    text centered, text width=1.1cm, font=\scriptsize},
+  arr/.style={-{Stealth[length=2.5mm]}, thick},
+]
+%% Left-to-right data flow
+\node[io]     (inp)  at (0.0,  0.0) {EEG\\$T{\times}21$};
+\node[novel]  (b1)   at (2.0,  0.0) {\textbf{AC-SSM}\\Block~1};
+\node[block]  (b24)  at (4.0,  0.0) {SSM\\Blocks 2--4};
+\node[block]  (pool) at (6.0,  0.0) {Temporal\\Pool};
+\node[block]  (dec)  at (8.0,  0.0) {Intent\\Decoder};
+%% Output heads
+\node[outbox] (mu)   at (10.3,  0.58) {$\bm\mu$: 6-DOF};
+\node[outbox] (sig)  at (10.3,  0.00) {$\bm\sigma$: uncert.};
+\node[outbox] (ern)  at (10.3, -0.58) {$p_\text{ERN}$: ERN};
+%% Previous motor command
+\node[side]   (act)  at (2.0,  -1.45) {$\mathbf{a}_{t-1}$\\prev.\,cmd};
+%% Arrows
+\draw[arr] (inp)  -- (b1);
+\draw[arr] (b1)   -- (b24);
+\draw[arr] (b24)  -- (pool);
+\draw[arr] (pool) -- (dec);
+\draw[arr] (dec.east) -- ++(3mm,0) |- (mu.west);
+\draw[arr] (dec.east) --             (sig.west);
+\draw[arr] (dec.east) -- ++(3mm,0) |- (ern.west);
+\draw[arr] (act.north) --
+    node[right=1mm, font=\tiny]{SiLU} (b1.south);
+\end{tikzpicture}%
+}%
+\caption{Architecture overview (inference path).
+\textbf{Orange} (thick border): novel action-conditioned Block~1, where the
+previous motor command $\mathbf{a}_{t-1}$ enters via a SiLU gate.
+\textbf{Blue:} standard ZOH-SSM blocks (2--4).
+\textbf{Cyan:} EEG input tensor.
+\textbf{Green:} three decoder heads ($\bm\mu$, $\bm\sigma$, $p_\text{ERN}$).
+Full pipeline: Fig.~\ref{fig:pipeline}; layer detail: Fig.~\ref{fig:architecture}.}
+\label{fig:overview}
+\end{figure}
+
+\begin{figure*}[!t]
 \centering
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
@@ -242,7 +301,7 @@ replaces the full CEM optimisation loop ($<$5\,ms CPU).}
 \end{figure*}
 
 %% -----------------------------------------------------------------------
-\begin{figure*}[t]
+\begin{figure*}[!t]
 \centering
 \begin{tikzpicture}[
   every node/.style={font=\small},
@@ -627,8 +686,12 @@ S20 & n/a & 38.0 & 35.7 & 32.3 & 31.0 & 41.3 & 40.1 \\
 \textbf{95\,\% CI} & n/a & [34.1,39.2] & [32.4,37.2] & [30.5,36.5] & [33.2,38.2] & [54.7,65.6] & [42.5,52.8] \\
 \bottomrule
 \end{tabular}
-\vspace{0.3em}
-{\footnotesize EEGNet = EEGNet (Lawhern 2018)~\cite{lawhern2018eegnet}; Enc = encoder\_ft\_cls; AC-SSM = action-conditioned SSM (this work); Enc+WM = MLP world-model planner; Abl = ablation; CSP = CSP+LDA; MDM = Riemannian MDM.}
+\par\vspace{2pt}
+\begin{minipage}{\linewidth}
+{\footnotesize\raggedright EEGNet = EEGNet (Lawhern 2018)~\cite{lawhern2018eegnet};
+Enc = encoder\_ft\_cls; AC-SSM = action-conditioned SSM (this work);
+Enc+WM = MLP world-model planner; Abl = ablation; CSP = CSP+LDA; MDM = Riemannian MDM.}
+\end{minipage}
 \end{table*}
 
 \subsection{Cross-Dataset Validation: BCI Competition IV Dataset 2a}

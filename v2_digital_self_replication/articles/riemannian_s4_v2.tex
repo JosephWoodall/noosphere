@@ -1,5 +1,5 @@
 %% IEEE TNSRE submission – Riemannian-S4 v2
-%% Compile: pdflatex -> bibtex -> pdflatex x2
+%% Compile: pdflatex x2 (bibliography is inline; no bibtex step needed)
 \documentclass[journal]{IEEEtran}
 
 \usepackage{amsmath,amssymb,bm}
@@ -25,7 +25,7 @@
   \thanks{Manuscript submitted to IEEE Transactions on Neural Systems and
     Rehabilitation Engineering, May 2026.}%
   \thanks{J.~Woodall is an independent researcher in neural engineering and
-    brain--computer interfaces (e-mail: josephlw4@gmail.com).}%
+    brain-computer interfaces (e-mail: josephlw4@gmail.com).}%
   \thanks{\emph{Conflict of interest:} The author declares no competing
     financial interests or personal relationships that could have influenced
     this work.}%
@@ -35,15 +35,15 @@
 
 %% -----------------------------------------------------------------------
 \begin{abstract}
-Closed-loop prosthetic BCI requires a decoder that both classifies motor intent and drives a continuous-DOF arm toward a goal — yet standard neural decoders fail the second task entirely because they have no internal dynamics model.
+Closed-loop prosthetic BCI requires a decoder that both classifies motor intent and drives a continuous-DOF arm toward a goal, yet standard neural decoders fail the second task entirely because they have no internal dynamics model.
 We introduce the \emph{Action-Conditioned ZOH-SSM World Model}: a bilinear Zero-Order-Hold State Space encoder whose first recurrent block receives the previous motor command as a SiLU-gated control input, forcing the latent space to encode motor-context dynamics rather than EEG autocorrelation alone.
 A joint training objective combines cross-entropy classification, unsupervised EEG reconstruction (label-free world-model signal), and cosine alignment to a JEPA-pretrained encoder.
 A hybrid CEM+gradient MPC planner exploits the world model for latency-minimising closed-loop control.
 
 Under a leakage-safe eight-condition LOSO protocol on PhysioNet Motor Imagery (20 subjects, 3-class MI) and BCI Competition IV Dataset 2a (9 subjects, 4-class MI), we find:
-(1) on PhysioNetMI, EEGNet ($38.4\%$, fully supervised) and JEPA encoder ($36.5\%$, self-supervised) are statistically equivalent ($p=0.60$), both $\approx\!22$\,pp below CSP+LDA ($60.1\%$), establishing labelled data volume — not training objective — as the binding constraint for static classification;
+(1) on PhysioNetMI, EEGNet ($38.4\%$, fully supervised) and JEPA encoder ($36.5\%$, self-supervised) are statistically equivalent ($p=0.60$), both $\approx\!22$\,pp below CSP+LDA ($60.1\%$), establishing labelled data volume (not training objective) as the binding constraint for static classification;
 (2) the AC-SSM encoder achieves comparable static accuracy to the JEPA baseline while providing the action-conditioned latent structure required for closed-loop control;
-(3) a four-controller virtual arm simulation ($N=133$ trials, 10 subjects) shows the AC-SSM achieves $33.8\%$ closed-loop target convergence ($p{<}0.0001$ vs.\ the JEPA decoder at $0\%$; $p=0.21$ vs.\ CSP at $26.3\%$, not significant) — demonstrating that action conditioning in the SSM recurrence converts a non-functional decoder into one competitive with classical methods.
+(3) a four-controller virtual arm simulation ($N=133$ trials, 10 subjects) shows the AC-SSM achieves $33.8\%$ closed-loop target convergence ($p{<}0.0001$ vs.\ the JEPA decoder at $0\%$; $p=0.21$ vs.\ CSP at $26.3\%$, not significant), demonstrating that action conditioning in the SSM recurrence converts a non-functional decoder into one competitive with classical methods.
 These results establish action-conditioned SSMs as a viable architecture for data-efficient closed-loop neural prosthetic control.
 Code, pre-trained checkpoints, and per-subject results are publicly available.
 \end{abstract}
@@ -58,8 +58,8 @@ EEG, motor imagery BCI, state space model, action conditioning, world model, mod
 \label{sec:intro}
 
 Approximately 2.1\,million people in the United States are living with limb loss, with upper-limb amputees representing a population for whom dexterous prosthetic control is a central quality-of-life determinant~\cite{shenoy2013combining}.
-Motor imagery (MI) brain--computer interfaces (BCIs) offer a non-invasive pathway to voluntary control without residual muscle function, by decoding oscillatory EEG signatures associated with imagined limb movements~\cite{pfurtscheller2001motor}.
-Despite decades of research, clinical translation remains limited: the predominant evaluation paradigm — epoch, bandpass, extract power features, classify with LDA — treats prosthetic control as a discrete $K$-class classification task.
+Motor imagery (MI) brain-computer interfaces (BCIs) offer a non-invasive pathway to voluntary control without residual muscle function, by decoding oscillatory EEG signatures associated with imagined limb movements~\cite{pfurtscheller2001motor}.
+Despite decades of research, clinical translation remains limited: the predominant evaluation paradigm (epoch, bandpass, extract power features, classify with LDA) treats prosthetic control as a discrete $K$-class classification task.
 This framing is clinically misaligned: a real prosthetic hand does not switch discretely between $K$ states; it moves continuously in six degrees of freedom (DOF), and neurophysiological studies establish that natural motor commands must be delivered within 300\,ms of intent onset to feel responsive~\cite{shenoy2013combining}.
 Furthermore, existing decoders are purely reactive: they wait for a full EEG window before issuing any command, imposing an irreducible latency floor that continuous-DOF control cannot afford.
 
@@ -79,9 +79,9 @@ We combine these advances in the \emph{ZOH-SSM World Model} (Section~\ref{sec:me
   \item A bilinear ZOH-SSM cell that captures phase--amplitude coupling via a multiplicative state--input term, implemented with \texttt{torch.compile} for causal streaming inference at $O(1)$ per step.
   \item A JEPA pretraining pipeline for multi-channel EEG with EMA target and Sinkhorn-Knopp latent alignment, providing a motor-context-neutral initialisation that the AC-SSM subsequently specialises.
   \item \textbf{Action-Conditioned SSM (AC-SSM)}: SiLU-gated injection of the previous motor command $\mathbf{a}_{t-1}$ into the first SSM block's recurrence, with a joint training objective combining cross-entropy classification, EEG reconstruction (label-free world-model signal on all EEG timesteps), and cosine alignment to the JEPA baseline. This is the first SSM architecture to condition EEG brain-state dynamics on motor context within the recurrence.
-  \item \textbf{LatencyPlanner}: a hybrid CEM+gradient MPC planner. The CEM phase samples $K=32$ action trajectories from $\mathcal{N}(\bm\mu_\text{dec}, \bm\sigma_\text{dec})$ — using the decoder's uncertainty as the exploration radius — selects the elite 25\%, and warm-starts gradient descent on the discounted cost-to-go $J = \sum_k \gamma^k \|\text{dec}(T^k(\mathbf{h}, \mathbf{a}_k)).\bm\mu - \mathbf{a}_\text{goal}\|^2$ with $\gamma=0.8$.
+  \item \textbf{LatencyPlanner}: a hybrid CEM+gradient MPC planner. The CEM phase samples $K=32$ action trajectories from $\mathcal{N}(\bm\mu_\text{dec}, \bm\sigma_\text{dec})$, using the decoder's uncertainty as the exploration radius, selects the elite 25\%, and warm-starts gradient descent on the discounted cost-to-go $J = \sum_k \gamma^k \|\text{dec}(T^k(\mathbf{h}, \mathbf{a}_k)).\bm\mu - \mathbf{a}_\text{goal}\|^2$ with $\gamma=0.8$.
   \item A leakage-safe eight-condition LOSO evaluation across 20 PhysioNetMI subjects and cross-dataset validation on BCI2a (9 subjects), establishing the $\approx\!22$\,pp CSP--neural gap as data-limited and quantifying AC-SSM's improvement over the MLP world-model baseline.
-  \item A four-controller closed-loop virtual arm simulation ($N=133$ trials, 10 subjects) demonstrating that the AC-SSM achieves $33.8\%$ target convergence — versus $0\%$ for the standard JEPA decoder ($p{<}0.0001$) and statistically equivalent to CSP ($26.3\%$, $p=0.21$) — directly operationalising the world-model contribution.
+  \item A four-controller closed-loop virtual arm simulation ($N=133$ trials, 10 subjects) demonstrating that the AC-SSM achieves $33.8\%$ target convergence (versus $0\%$ for the standard JEPA decoder, $p{<}0.0001$; equivalent to CSP at $26.3\%$, $p=0.21$), directly operationalising the world-model contribution.
 \end{enumerate}
 
 
@@ -103,11 +103,11 @@ ShallowConvNet~\cite{schirrmeister2017deep} is not included; it is architectural
 
 \subsection{Self-Supervised and Foundation Models for EEG}
 BENDR~\cite{kostas2022bendr} is the closest precedent for large-scale EEG pretraining: a contrastive masked-patch objective over raw signal, pretrained on 13 MOABB datasets.
-Under their within-dataset fine-tuning evaluation, BENDR achieves accuracy in the $37$--$42\%$ range on PhysioNetMI-class benchmarks at comparable trial counts --- consistent with our finding that the CSP gap is independent of training objective.
+Under their within-dataset fine-tuning evaluation, BENDR achieves accuracy in the $37$--$42\%$ range on PhysioNetMI-class benchmarks at comparable trial counts, consistent with our finding that the CSP gap is independent of training objective.
 Direct integration of BENDR into our harness was not feasible: BENDR's preprocessing pipeline requires 256-channel EEG with a reference channel set and epoch length incompatible with our 21-channel LOSO protocol; a faithful comparison would require re-pretraining from scratch ($\approx$100\,h).
 We therefore report BENDR's published range as a literature reference rather than a re-evaluated number.
 LaBraM~\cite{jiang2024large} and EEGNet-based contrastive methods~\cite{mohsenvand2020contrastive} are similarly outside our evaluation scope.
-JEPA trains in representation space rather than signal space, avoiding the pixel-level reconstruction bias toward non-class-correlated EEG variance — but none of these self-supervised architectures incorporate an action-conditioned world model or latency-minimising planner.
+JEPA trains in representation space rather than signal space, avoiding the pixel-level reconstruction bias toward non-class-correlated EEG variance; none of these self-supervised architectures incorporate an action-conditioned world model or latency-minimising planner.
 
 \subsection{State Space Models in BCI}
 S4~\cite{gu2022efficiently} and S4D have been applied to EEG classification~\cite{yi2022s4eeg}.
@@ -132,86 +132,228 @@ Our planner directly optimises a discounted cost that penalises late convergence
 
 \begin{figure*}[t]
 \centering
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-  node distance=5mm and 7mm,
   every node/.style={font=\small},
-  block/.style={rectangle, draw, rounded corners=2pt, minimum width=1.6cm,
-                minimum height=0.7cm, text centered, fill=blue!8},
-  newblock/.style={rectangle, draw, rounded corners=2pt, minimum width=1.6cm,
-                   minimum height=0.7cm, text centered, fill=orange!18,
-                   thick},
-  smallblock/.style={rectangle, draw, rounded corners=2pt, minimum width=1.2cm,
-                     minimum height=0.6cm, text centered, fill=green!10},
+  block/.style={rectangle, draw, rounded corners=2pt,
+                minimum width=1.7cm, minimum height=0.72cm,
+                text centered, text width=1.6cm, fill=blue!8},
+  newblock/.style={rectangle, draw, rounded corners=2pt,
+                   minimum width=1.7cm, minimum height=0.72cm,
+                   text centered, text width=1.6cm, fill=orange!18, thick},
+  outblock/.style={rectangle, draw, rounded corners=2pt,
+                   minimum width=2.5cm, minimum height=0.62cm,
+                   text centered, fill=gray!7},
   arr/.style={-{Stealth[length=2mm]}, thick},
   darr/.style={-{Stealth[length=2mm]}, thick, dashed, gray},
 ]
 
-%% ── Input modalities ────────────────────────────────────────────────────────
-\node[block] (eeg)  {EEG\\(21\,ch)};
-\node[block, below=3mm of eeg]  (hrv)  {HRV/GSR};
-\node[block, below=3mm of hrv]  (prop) {Prop.\\(6\,DOF)};
+%% Absolute-coordinate layout eliminates all arrow crossings.
+%% x-columns: 0 (inputs), 2.4 (fusion), 4.9 (encoder), 7.4 (latent),
+%%            9.8 (decoder/transition), 13.0 (outputs)
+%% y-rows:    1.2 / 0 / -1.3 (inputs); 1.6 (JEPA);
+%%            0.9 (decoder); -1.1 (transition); -2.6 (planner);
+%%            -4.1 (Kalman); -5.5 (safety); -6.9 (hardware)
 
-%% ── Fusion ──────────────────────────────────────────────────────────────────
-\node[block, right=of hrv] (fuse) {Modal\\Fusion};
-\draw[arr] (eeg.east)  -- ++(3mm,0) |- (fuse.north west);
+%% ── Input modalities ─────────────────────────────────────────────────────
+\node[block] (eeg)  at (0,  1.2) {EEG\\(21\,ch)};
+\node[block] (hrv)  at (0,  0.0) {HRV/GSR};
+\node[block] (prop) at (0, -1.3) {Prop.\ (6\,DOF)};
+
+%% ── Fusion ───────────────────────────────────────────────────────────────
+\node[block] (fuse) at (2.4, 0.0) {Modal\\Fusion};
+\draw[arr] (eeg.east)  -- ++(4mm,0) |- (fuse.north west);
 \draw[arr] (hrv.east)  -- (fuse.west);
-\draw[arr] (prop.east) -- ++(3mm,0) |- (fuse.south west);
+\draw[arr] (prop.east) -- ++(4mm,0) |- (fuse.south west);
 
-%% ── Encoder stack ───────────────────────────────────────────────────────────
-\node[block, right=of fuse]  (enc)  {ZOH-SSM\\$\times$4 blocks};
+%% ── Encoder ──────────────────────────────────────────────────────────────
+\node[block] (enc) at (4.9, 0.0) {ZOH-SSM\\$\times$4 layers};
 \draw[arr] (fuse) -- (enc);
 
-%% ── JEPA pretraining (dashed, offline) ─────────────────────────────────────
-\node[smallblock, above=8mm of enc] (jepa) {JEPA\\pretrain};
-\draw[darr] (enc.north) -- (jepa.south) node[midway,right,gray]{\tiny offline};
+\node[outblock] (jepa) at (4.9, 1.6) {JEPA\\pretrain};
+\draw[darr] (enc.north) -- (jepa.south)
+    node[midway, right=1.5mm, gray, font=\tiny] {offline};
 
-%% ── Latent ──────────────────────────────────────────────────────────────────
-\node[block, right=18mm of enc] (lat) {Latent $\mathbf{h}$\\(128-d)};
+%% ── Latent ───────────────────────────────────────────────────────────────
+\node[block] (lat) at (7.4, 0.0) {Latent $\mathbf{h}$\\(128-d)};
 \draw[arr] (enc) -- (lat);
 
-%% ── Decoder ─────────────────────────────────────────────────────────────────
-\node[block, right=of lat, yshift=10mm]  (dec) {Intent\\Decoder};
-\draw[arr] (lat.north east) -- (dec.west);
+%% ── Intent Decoder (upper path) ──────────────────────────────────────────
+\node[block] (dec) at (9.8, 0.9) {Intent\\Decoder};
+\draw[arr] (lat.north east) -- ++(3mm,0) |- (dec.west);
 
-\node[smallblock, right=of dec, yshift= 6mm] (mu)    {$\bm\mu$\,(6-DOF)};
-\node[smallblock, right=of dec, yshift= 0mm] (sigma) {$\bm\sigma$\,(uncert.)};
-\node[smallblock, right=of dec, yshift=-6mm] (ern)   {$p_\text{ERN}$};
-\draw[arr] (dec.east) -- ++(2mm,0) |- (mu.west);
-\draw[arr] (dec.east) -- (sigma.west);
-\draw[arr] (dec.east) -- ++(2mm,0) |- (ern.west);
+%% Output nodes in their own column -- no arrows need to cross back left
+\node[outblock] (mu)    at (13.0,  1.4) {$\bm\mu$: 6-DOF cmd};
+\node[outblock] (sigma) at (13.0,  0.9) {$\bm\sigma$: uncertainty};
+\node[outblock] (ern)   at (13.0,  0.4) {$p_\text{ERN}$: error sig.};
+\draw[arr] (dec.east) -- ++(3mm,0) |- (mu.west);
+\draw[arr] (dec.east) --            (sigma.west);
+\draw[arr] (dec.east) -- ++(3mm,0) |- (ern.west);
 
-%% ── NEW: Transition model ───────────────────────────────────────────────────
-\node[newblock, right=of lat, yshift=-12mm] (trans) {Action-Cond.\\Transition $T$};
-\draw[arr] (lat.south east) -- (trans.west);
-\draw[darr, bend right=20] (mu.south) to node[right,gray]{\tiny $\mathbf{a}$} (trans.north east);
+%% ── Action-Conditioned Transition (lower path) ───────────────────────────
+\node[newblock] (trans) at (9.8, -1.1) {Action-Cond.\\ Transition $T$};
+\draw[arr] (lat.south east) -- ++(3mm,0) |- (trans.west);
+%% mu feeds the action input to the transition
+\draw[darr] (mu.west) -- ++(-3mm,0) -- ++(0,-8mm) -- ++(0,-16mm)
+    -| (trans.north) node[near end, right=1mm, gray, font=\tiny] {$\mathbf{a}$};
 
-%% ── NEW: Latency Planner ────────────────────────────────────────────────────
-\node[newblock, below=8mm of trans] (plan) {Latency\\Planner (CEM)};
+%% ── Latency Planner ──────────────────────────────────────────────────────
+\node[newblock] (plan) at (9.8, -2.6) {Latency\\Planner (CEM)};
 \draw[arr] (trans.south) -- (plan.north);
-\draw[darr] (dec.south) -- ++(0,-3mm) -| (plan.north west) node[near start,below,gray]{\tiny $\bm\mu,\bm\sigma$};
 
-%% ── Kalman + Safety ─────────────────────────────────────────────────────────
-\node[block, below=8mm of plan] (kalman) {Kalman\\Filter};
-\draw[arr] (plan.south) -- node[right]{\tiny $\hat{\mathbf{a}}$} (kalman.north);
-\draw[darr, bend left=25] (sigma.south) to (kalman.east);
+%% ── Kalman Filter ────────────────────────────────────────────────────────
+\node[block] (kalman) at (9.8, -4.1) {Kalman\\Filter};
+\draw[arr] (plan.south) -- node[right=1mm, font=\tiny] {$\hat{\mathbf{a}}$} (kalman.north);
+%% sigma routes: right past output column, then down to kalman's y, then left
+\draw[darr] (sigma.east) -- ++(6mm,0) |- (kalman.east);
 
-\node[block, below=6mm of kalman] (safety) {Safety Gate\\(ERN/\,$\sigma$)};
+%% ── Safety Gate ──────────────────────────────────────────────────────────
+\node[block] (safety) at (9.8, -5.5) {Safety Gate\\(ERN, $\bm\sigma$)};
 \draw[arr] (kalman) -- (safety);
-\draw[darr, bend left=30] (ern.south) to (safety.east);
+%% ern routes: right past output column, then down to safety's y, then left
+\draw[darr] (ern.east) -- ++(6mm,0) |- (safety.east);
 
-\node[block, below=6mm of safety] (hw) {Hardware\\(6-DOF arm)};
+%% ── Hardware ─────────────────────────────────────────────────────────────
+\node[block] (hw) at (9.8, -6.9) {Hardware\\(6-DOF arm)};
 \draw[arr] (safety) -- (hw);
 
-%% ── Legend ──────────────────────────────────────────────────────────────────
-\begin{scope}[shift={($(hw.south west)+(-10mm,-8mm)$)}]
-  \node[block,   minimum width=1.0cm, minimum height=0.4cm] (l1) at (0,0) {};
-  \node[right=1mm of l1, font=\footnotesize] {Prior work (ZOH-SSM + JEPA)};
-  \node[newblock, minimum width=1.0cm, minimum height=0.4cm] (l2) at (0,-7mm) {};
-  \node[right=1mm of l2, font=\footnotesize] {New: world model components};
-\end{scope}
-\end{tikzpicture}
-\caption{ZOH-SSM World Model inference pipeline. Blue blocks constitute the pretrained encoder-decoder (ZOH-SSM with JEPA objective); orange blocks are the novel world-model additions: the \emph{ActionConditionedTransition} $T(\mathbf{h},\mathbf{a})$ and the hybrid CEM+gradient \emph{LatencyPlanner}. Dashed arrows indicate offline pretraining (JEPA) or information flow through uncertainty estimates. During real-time BCI operation the fast path $\mathbf{h}_\text{plan} = T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$ replaces the full CEM loop ($<$5\,ms CPU).}
+%% ── Legend ───────────────────────────────────────────────────────────────
+\node[block,    minimum width=0.9cm, minimum height=0.4cm, text width=0.9cm]
+    (l1) at (0, -5.5) {};
+\node[right=2mm of l1, font=\footnotesize, anchor=west]
+    {ZOH-SSM + JEPA (prior work)};
+\node[newblock, minimum width=0.9cm, minimum height=0.4cm, text width=0.9cm]
+    (l2) at (0, -6.3) {};
+\node[right=2mm of l2, font=\footnotesize, anchor=west]
+    {World-model additions (new)};
+
+\end{tikzpicture}%
+}%
+\caption{ZOH-SSM World Model inference pipeline.
+Blue blocks: pretrained encoder-decoder (ZOH-SSM + JEPA objective).
+Orange blocks: novel world-model components (Action-Conditioned Transition $T(\mathbf{h},\mathbf{a})$
+and hybrid CEM+gradient Latency Planner).
+Gray output nodes: decoder outputs fed to downstream components.
+Dashed arrows indicate offline pretraining or uncertainty signal routing.
+In real-time BCI operation the fast self-conditioning path
+$\mathbf{h}_\text{plan} = T(\mathbf{h}, \mathrm{dec}(\mathbf{h}).\bm\mu)$
+replaces the full CEM optimisation loop ($<$5\,ms CPU).}
 \label{fig:pipeline}
+\end{figure*}
+
+%% -----------------------------------------------------------------------
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  %% Blue: standard ZOH-SSM blocks
+  mbox/.style={rectangle, draw, line width=0.9pt, rounded corners=4pt,
+               minimum width=8.5cm, minimum height=0.9cm,
+               text centered, text width=8.3cm,
+               fill=blue!35, draw=blue!60!black},
+  %% Orange (thick border): novel action-conditioned block
+  acbox/.style={rectangle, draw, line width=2.2pt, rounded corners=4pt,
+                minimum width=8.5cm, minimum height=1.2cm,
+                text centered, text width=8.3cm,
+                fill=orange!55, draw=orange!80!black},
+  %% Cyan: input / latent data tensors
+  iobox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+                minimum width=5.0cm, minimum height=0.75cm,
+                text centered, fill=cyan!40, draw=cyan!70!black},
+  %% Green: decoder output heads
+  obox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+               minimum width=3.0cm, minimum height=1.05cm,
+               text centered, fill=green!35, draw=green!60!black},
+  %% Orange side box: action signal input
+  sidebox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+                  minimum width=2.4cm, minimum height=0.9cm,
+                  text centered, fill=orange!45, draw=orange!70!black},
+  arr/.style={-{Stealth[length=2.5mm]}, line width=1.1pt},
+  lbl/.style={font=\scriptsize, fill=white, inner sep=2pt, rounded corners=2pt},
+]
+
+%% ── EEG Input ──────────────────────────────────────────────────────────────
+\node[iobox] (inp) at (0, 0)
+  {EEG input: $\mathbf{X} \in \mathbb{R}^{T \times 21}$};
+
+%% ── AC-SSM Block 1: novel action-conditioned layer ─────────────────────────
+\node[acbox] (b1) at (0, -1.8)
+  {\textbf{AC-SSM Block 1} \quad \emph{(this work)}\\[2pt]
+   ZOH bilinear cell $+$ SiLU-gated action input $\mathbf{a}_{t-1}$};
+\draw[arr] (inp.south) -- (b1.north);
+
+%% Previous motor command enters via SiLU gate
+\node[sidebox] (act) at (5.8, -1.8)
+  {$\mathbf{a}_{t-1}$\\[-1pt]{\footnotesize prev.\ cmd}};
+\draw[arr] (act.west) --
+  node[above=1.5mm, lbl] {\footnotesize SiLU gate} (b1.east);
+
+%% ── ZOH-SSM Blocks 2–4 ─────────────────────────────────────────────────────
+\node[mbox] (b24) at (0, -3.65)
+  {ZOH-SSM Blocks 2--4 \quad ($\times\!3$ identical bilinear cells, no action input)};
+\draw[arr] (b1.south) --
+  node[right=3mm, lbl] {LayerNorm $+$ Residual} (b24.north);
+
+%% ── Temporal Pooling ────────────────────────────────────────────────────────
+\node[mbox] (pool) at (0, -5.35)
+  {Temporal Pool:\quad
+   $\mathbf{z}_t = \dfrac{1}{64}\!\sum_{\tau=T-63}^{T}\!\mathbf{h}_\tau
+   \;\in\mathbb{R}^{128}$};
+\draw[arr] (b24.south) --
+  node[right=3mm, lbl] {LayerNorm $+$ Residual} (pool.north);
+
+%% ── 128-d Latent ────────────────────────────────────────────────────────────
+\node[iobox] (lat) at (0, -6.9)
+  {Latent $\mathbf{z}_t \in \mathbb{R}^{128}$};
+\draw[arr] (pool.south) -- (lat.north);
+
+%% ── Intent Decoder MLP ──────────────────────────────────────────────────────
+\node[mbox] (dec) at (0, -8.4)
+  {Intent Decoder: 2-layer MLP
+   ($d_{\mathrm{hidden}}{=}256$, GELU activations, LayerNorm)};
+\draw[arr] (lat.south) -- (dec.north);
+
+%% ── Three decoder output heads ──────────────────────────────────────────────
+\node[obox] (mu)    at (-3.6, -10.0)
+  {$\bm\mu \in [-1,1]^6$\\[3pt]{\scriptsize 6-DOF velocity cmd}};
+\node[obox] (sigma) at ( 0.0, -10.0)
+  {$\bm\sigma \in \mathbb{R}^6_{>0}$\\[3pt]{\scriptsize per-DOF uncertainty}};
+\node[obox] (ern)   at ( 3.6, -10.0)
+  {$p_\text{ERN} \in [0,1]$\\[3pt]{\scriptsize error-related negativity}};
+\draw[arr] (dec.south) -- ++(0,-0.4) -| (mu.north);
+\draw[arr] (dec.south) -- (sigma.north);
+\draw[arr] (dec.south) -- ++(0,-0.4) -| (ern.north);
+
+%% ── Colour legend ───────────────────────────────────────────────────────────
+\node[mbox,    minimum width=1.2cm, minimum height=0.45cm, text width=1.1cm]
+    (la) at (-6.8, -5.35) {};
+\node[anchor=west, font=\footnotesize] at (-6.15, -5.35)
+    {Standard ZOH-SSM block};
+\node[acbox,   minimum width=1.2cm, minimum height=0.45cm, text width=1.1cm,
+               line width=1.5pt]
+    (lb) at (-6.8, -6.15) {};
+\node[anchor=west, font=\footnotesize] at (-6.15, -6.15)
+    {Novel AC-SSM block (action-cond.)};
+\node[iobox,   minimum width=1.2cm, minimum height=0.45cm]
+    (lc) at (-6.8, -6.95) {};
+\node[anchor=west, font=\footnotesize] at (-6.15, -6.95)
+    {Data tensor / latent};
+\node[obox,    minimum width=1.2cm, minimum height=0.45cm]
+    (ld) at (-6.8, -7.75) {};
+\node[anchor=west, font=\footnotesize] at (-6.15, -7.75)
+    {Decoder output head};
+
+\end{tikzpicture}
+\caption{AC-SSM encoder-decoder architecture (inference path).
+\textbf{Orange (thick border):} novel action-conditioned Block~1 — the key
+architectural contribution — where the previous motor command
+$\mathbf{a}_{t-1}$ is injected into the ZOH bilinear recurrence via a SiLU
+gate. \textbf{Blue:} standard bilinear ZOH-SSM blocks (2--4) with LayerNorm
+and residual connections; these receive no direct action input.
+\textbf{Cyan:} input and latent data tensors. \textbf{Green:} three decoder
+output heads ($\bm\mu$, $\bm\sigma$, $p_\text{ERN}$). The JEPA pretraining
+path and closed-loop CEM planner are shown in Fig.~\ref{fig:pipeline}.}
+\label{fig:architecture}
 \end{figure*}
 
 \subsection{ZOH-SSM Cell}
@@ -225,7 +367,7 @@ Given input $\mathbf{x}_t \in \mathbb{R}^C$ and hidden state $\mathbf{h}_{t-1} \
 \end{align}
 The bilinear term $\bar{\mathbf{W}}\tanh(\mathbf{h}_{t-1} \odot \mathbf{x}_t')$ captures multiplicative phase--amplitude coupling~\cite{canolty2010functional}, a known correlate of motor imagery.
 Discretisation follows the zero-order hold convention, ensuring exact integration of piecewise-constant inputs.
-The encoder stacks $L=4$ cells with LayerNorm and residual connections, projecting to $d_\text{model}=128$.
+The encoder stacks $L=4$ cells with LayerNorm and residual connections, projecting to $d_\text{model}=128$ (Fig.~\ref{fig:architecture}).
 The pooled latent $\mathbf{z}_t = \frac{1}{64}\sum_{\tau=T-63}^{T} \mathbf{h}_\tau \in \mathbb{R}^{128}$ aggregates the last 64 timesteps.
 
 \subsection{JEPA Pretraining}
@@ -260,7 +402,7 @@ $T_\phi$ is trained jointly with the supervised objective via a \emph{self-consi
   \mathcal{L}_\text{sc} = 0.1 \cdot \text{MSE}\bigl(\text{dec}(T_\phi(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)).\bm\mu,\; \text{sg}(\text{dec}(\mathbf{h}).\bm\mu)\bigr).
   \label{eq:selfconsistency}
 \end{equation}
-This enforces that the planned state $T(\mathbf{h}, \bm\mu)$ still decodes to the same intent $\bm\mu$ — it trains the transition model to map current states toward a stable intent attractor without pulling the decoder with it.
+This enforces that the planned state $T(\mathbf{h}, \bm\mu)$ still decodes to the same intent $\bm\mu$; this trains the transition model to map current states toward a stable intent attractor without pulling the decoder with it.
 The stop-gradient on the target prevents collapse.
 
 \subsection{CEM-Guided Latency Planner}
@@ -296,7 +438,7 @@ The hybrid CEM+gradient solver proceeds in two phases (Algorithm~\ref{alg:cem}):
 
 The CEM phase samples from $\mathcal{N}(\bm\mu_\text{dec}, \bm\sigma_\text{dec})$: the decoder's uncertainty $\bm\sigma$ directly determines the MC exploration radius.
 High $\bm\sigma$ (ambiguous neural state) triggers wide exploration; low $\bm\sigma$ (clear intent) tightens the search.
-This coupling is not a design choice — it emerges from using the brain's own decoded uncertainty as the proposal distribution.
+This coupling is not a design choice; it emerges from using the brain's own decoded uncertainty as the proposal distribution.
 
 For real-time BCI inference, a fast path $\mathbf{h}_\text{plan} = T(\mathbf{h}, \text{dec}(\mathbf{h}).\bm\mu)$ (self-conditioning, one forward pass) is available without the full optimisation loop. Benchmarked on CPU: $10.9$\,ms per call, supporting control loops up to $\approx\!90$\,Hz. Streaming inference via \texttt{decode\_step()} averages $26.9$\,ms per EEG sample ($37$\,Hz), within the $10$--$64$\,Hz range typical of closed-loop BCI controllers; GPU parallelisation via diagonal S4D parameterisation is expected to reduce these by one to two orders of magnitude.
 
@@ -351,7 +493,7 @@ Chance: $33.\overline{3}\%$.
 
 Table~\ref{tab:aggregate} summarises aggregate balanced accuracy across 20 subjects and five folds.
 EEGNet ($38.4\%$) and the JEPA encoder ($36.5\%$) are statistically indistinguishable ($p=0.60$); neither significantly outperforms random initialisation.
-EEGConformer ($36.0\%$, Table~\ref{tab:aggregate}) confirms the pattern: a modern convolutional transformer does not close the CSP gap under this data volume.
+EEGConformer ($41.1\%$, Table~\ref{tab:aggregate}) confirms the pattern: a modern convolutional transformer does not close the CSP gap under this data volume.
 All neural methods remain $\approx\!22$\,pp below CSP+LDA, consistent with a data-limited bottleneck rather than an architectural one.
 The AC-SSM ($34.7\%$) is comparable to the JEPA baseline; its primary contribution is in the closed-loop regime (Section~\ref{sec:closed_loop}).
 
@@ -380,7 +522,7 @@ The AC-SSM ($34.7\%$) is comparable to the JEPA baseline; its primary contributi
 \quad \textbf{CSP + LDA} & \textbf{60.1} & 54.7 & 65.6 \\
 \quad MDM (Riemannian) & 47.5 & 42.5 & 52.8 \\
 \midrule
-Chance & 33.3 & — & — \\
+Chance & 33.3 & n/a & n/a \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -389,12 +531,12 @@ Chance & 33.3 & — & — \\
 
 Wilcoxon tests on per-subject means (Table~\ref{tab:wilcoxon}) reveal:
 \begin{enumerate}
-  \item EEGNet vs.\ JEPA encoder: $p = 0.46$ — \emph{not significant}. A fully supervised discriminative model trained from scratch is statistically equivalent to a self-supervised JEPA encoder with 5-epoch fine-tuning. The pretraining objective does not determine the performance ceiling; labelled data volume does.
-  \item JEPA encoder vs.\ random init: $p = 0.70$ — \emph{not significant}. The 1.1\,pp margin ($36.6\%$ vs.\ $35.5\%$) is within run-to-run noise; JEPA pretraining provides no statistically detectable benefit at this data scale.
-  \item EEGNet vs.\ chance: $p = 0.003$ (one-sided); JEPA encoder vs.\ chance: $p = 0.023$ — both methods are marginally above chance, consistent with a real but weak signal.
-  \item JEPA encoder vs.\ CSP+LDA: $p < 0.0001$ — CSP vastly superior; $23.5$\,pp gap.
-  \item EEGNet vs.\ CSP+LDA: $p < 0.001$ — $21.8$\,pp gap; the discriminative objective does not close the gap at this data scale.
-  \item CNS cross-modal vs.\ JEPA: $p = 0.035$ — CNS pretraining on synthetic spike trains \emph{significantly underperforms} ($32.7\%$).
+  \item EEGNet vs.\ JEPA encoder: $p = 0.46$ (\emph{not significant}). A fully supervised discriminative model trained from scratch is statistically equivalent to a self-supervised JEPA encoder with 5-epoch fine-tuning. The pretraining objective does not determine the performance ceiling; labelled data volume does.
+  \item JEPA encoder vs.\ random init: $p = 0.70$ (\emph{not significant}). The 0.8\,pp margin ($36.5\%$ vs.\ $35.7\%$) is within run-to-run noise; JEPA pretraining provides no statistically detectable benefit at this data scale.
+  \item EEGNet vs.\ chance: $p = 0.003$ (one-sided); JEPA encoder vs.\ chance: $p = 0.023$. Both methods are marginally above chance, consistent with a real but weak signal.
+  \item JEPA encoder vs.\ CSP+LDA: $p < 0.0001$; CSP vastly superior at $23.6$\,pp above JEPA.
+  \item EEGNet vs.\ CSP+LDA: $p < 0.001$; $21.7$\,pp gap. The discriminative objective does not close the gap at this data scale.
+  \item CNS cross-modal vs.\ JEPA: $p = 0.035$. CNS pretraining on synthetic spike trains \emph{significantly underperforms} ($32.7\%$).
 \end{enumerate}
 
 \begin{table}[t]
@@ -451,54 +593,54 @@ Table~\ref{tab:persubject} lists per-subject balanced accuracy for the primary c
 CSP+LDA shows high inter-subject variability (range: 41.3--84.2\,\%, $\sigma = 12.4$\,\%), consistent with known PhysionetMI variability~\cite{stieger2021dataset}.
 EEGNet, EEGConformer, and the JEPA encoder show comparable inter-subject spread ($\sigma \approx 6$\,\%), confirming their statistical equivalence and the data-limited nature of the gap.
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \caption{Per-Subject Balanced Accuracy (\%)}
 \label{tab:persubject}
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{5pt}
 \begin{tabular}{crrrrrrr}
 \toprule
 \textbf{Subj.} & \textbf{EEGNet} & \textbf{Enc} & \textbf{AC-SSM} & \textbf{Enc+WM} & \textbf{Abl} & \textbf{CSP} & \textbf{MDM} \\
 \midrule
-S01 & — & 43.3 & 29.0 & 27.7 & 29.0 & 78.2 & 66.5 \\
-S02 & — & 42.0 & 40.0 & 30.3 & 34.7 & 71.9 & 63.7 \\
-S03 & — & 36.7 & 38.3 & 31.3 & 38.7 & 49.5 & 61.1 \\
-S04 & — & 43.3 & 37.3 & 41.7 & 46.7 & 68.1 & 55.1 \\
-S05 & — & 35.7 & 33.7 & 39.7 & 41.7 & 63.6 & 46.3 \\
-S06 & — & 35.7 & 32.3 & 43.0 & 34.3 & 63.6 & 36.3 \\
-S07 & — & 35.7 & 31.7 & 33.0 & 31.0 & 83.7 & 63.3 \\
-S08 & — & 37.0 & 35.0 & 33.3 & 30.0 & 57.1 & 54.0 \\
-S09 & — & 29.7 & 23.3 & 32.0 & 24.7 & 50.8 & 39.6 \\
-S10 & — & 29.3 & 33.0 & 22.3 & 40.0 & 63.8 & 44.6 \\
-S11 & — & 45.0 & 41.0 & 36.7 & 43.7 & 57.4 & 43.2 \\
-S12 & — & 48.7 & 41.7 & 45.7 & 43.3 & 58.6 & 56.3 \\
-S13 & — & 29.3 & 37.7 & 33.7 & 33.3 & 50.8 & 28.5 \\
-S14 & — & 31.7 & 45.3 & 30.7 & 34.3 & 62.1 & 53.8 \\
-S15 & — & 28.0 & 40.7 & 26.7 & 33.3 & 84.2 & 59.1 \\
-S16 & — & 41.7 & 33.0 & 40.7 & 43.0 & 49.0 & 33.5 \\
-S17 & — & 30.0 & 27.0 & 21.3 & 28.7 & 42.9 & 34.7 \\
-S18 & — & 36.0 & 27.0 & 36.7 & 34.0 & 58.1 & 34.9 \\
-S19 & — & 33.3 & 31.7 & 28.3 & 38.0 & 48.1 & 35.0 \\
-S20 & — & 38.0 & 35.7 & 32.3 & 31.0 & 41.3 & 40.1 \\
+S01 & n/a & 43.3 & 29.0 & 27.7 & 29.0 & 78.2 & 66.5 \\
+S02 & n/a & 42.0 & 40.0 & 30.3 & 34.7 & 71.9 & 63.7 \\
+S03 & n/a & 36.7 & 38.3 & 31.3 & 38.7 & 49.5 & 61.1 \\
+S04 & n/a & 43.3 & 37.3 & 41.7 & 46.7 & 68.1 & 55.1 \\
+S05 & n/a & 35.7 & 33.7 & 39.7 & 41.7 & 63.6 & 46.3 \\
+S06 & n/a & 35.7 & 32.3 & 43.0 & 34.3 & 63.6 & 36.3 \\
+S07 & n/a & 35.7 & 31.7 & 33.0 & 31.0 & 83.7 & 63.3 \\
+S08 & n/a & 37.0 & 35.0 & 33.3 & 30.0 & 57.1 & 54.0 \\
+S09 & n/a & 29.7 & 23.3 & 32.0 & 24.7 & 50.8 & 39.6 \\
+S10 & n/a & 29.3 & 33.0 & 22.3 & 40.0 & 63.8 & 44.6 \\
+S11 & n/a & 45.0 & 41.0 & 36.7 & 43.7 & 57.4 & 43.2 \\
+S12 & n/a & 48.7 & 41.7 & 45.7 & 43.3 & 58.6 & 56.3 \\
+S13 & n/a & 29.3 & 37.7 & 33.7 & 33.3 & 50.8 & 28.5 \\
+S14 & n/a & 31.7 & 45.3 & 30.7 & 34.3 & 62.1 & 53.8 \\
+S15 & n/a & 28.0 & 40.7 & 26.7 & 33.3 & 84.2 & 59.1 \\
+S16 & n/a & 41.7 & 33.0 & 40.7 & 43.0 & 49.0 & 33.5 \\
+S17 & n/a & 30.0 & 27.0 & 21.3 & 28.7 & 42.9 & 34.7 \\
+S18 & n/a & 36.0 & 27.0 & 36.7 & 34.0 & 58.1 & 34.9 \\
+S19 & n/a & 33.3 & 31.7 & 28.3 & 38.0 & 48.1 & 35.0 \\
+S20 & n/a & 38.0 & 35.7 & 32.3 & 31.0 & 41.3 & 40.1 \\
 \midrule
-\textbf{Mean} & \textbf{—} & \textbf{36.5} & \textbf{34.7} & \textbf{33.3} & \textbf{35.7} & \textbf{60.1} & \textbf{47.5} \\
-\textbf{95\,\% CI} & — & [34.1,39.2] & [32.4,37.2] & [30.5,36.5] & [33.2,38.2] & [54.7,65.6] & [42.5,52.8] \\
+\textbf{Mean} & \textbf{n/a} & \textbf{36.5} & \textbf{34.7} & \textbf{33.3} & \textbf{35.7} & \textbf{60.1} & \textbf{47.5} \\
+\textbf{95\,\% CI} & n/a & [34.1,39.2] & [32.4,37.2] & [30.5,36.5] & [33.2,38.2] & [54.7,65.6] & [42.5,52.8] \\
 \bottomrule
 \end{tabular}
 \vspace{0.3em}
 {\footnotesize EEGNet = EEGNet (Lawhern 2018)~\cite{lawhern2018eegnet}; Enc = encoder\_ft\_cls; AC-SSM = action-conditioned SSM (this work); Enc+WM = MLP world-model planner; Abl = ablation; CSP = CSP+LDA; MDM = Riemannian MDM.}
-\end{table}
+\end{table*}
 
 \subsection{Cross-Dataset Validation: BCI Competition IV Dataset 2a}
 \label{sec:bci2a}
 
 To test whether the discriminability gap generalises beyond PhysioNetMI and to quantify the cost of domain mismatch, we evaluate four conditions on BCI Competition IV Dataset 2a~\cite{brunner2008bci} (BNCI2014\_001): 9 subjects, 4-class MI (left hand, right hand, feet, tongue), 576 trials per subject, 250\,Hz.
-Conditions: CSP+LDA, Riemannian MDM, EEGNet~\cite{lawhern2018eegnet}, and the JEPA encoder pretrained on PhysioNetMI (cross-domain transfer) — all evaluated under the same leakage-safe 5-fold LOSO protocol.
+Conditions: CSP+LDA, Riemannian MDM, EEGNet~\cite{lawhern2018eegnet}, and the JEPA encoder pretrained on PhysioNetMI (cross-domain transfer), all evaluated under the same leakage-safe 5-fold LOSO protocol.
 
 Table~\ref{tab:bci2a} reports the results.
 Four findings emerge.
 First, the CSP--EEGNet gap on BCI2a ($58.7\%$ vs.\ $36.0\%$, $\Delta=22.7$\,pp) closely mirrors the gap on PhysioNetMI ($60.1\%$ vs.\ $38.4\%$, $\Delta=21.7$\,pp), confirming the gap is structural and data-limited.
-Second, the JEPA encoder pretrained on PhysioNetMI achieves only $27.9\%$ on BCI2a — statistically indistinguishable from random initialisation ($27.5\%$, $p=0.43$) and from chance ($25.0\%$, $p=0.004$, barely significant at $+2.9$\,pp).
+Second, the JEPA encoder pretrained on PhysioNetMI achieves only $27.9\%$ on BCI2a, statistically indistinguishable from random initialisation ($27.5\%$, $p=0.43$) and from chance ($25.0\%$, $p=0.004$, barely significant at $+2.9$\,pp).
 Third, EEGNet outperforms the cross-domain JEPA by $8.1$\,pp ($p=0.004$): supervised training from scratch on the target domain beats a self-supervised encoder trained on a different domain.
 Fourth, both methods remain far below CSP ($>20$\,pp gap), confirming the data-limited bottleneck is the binding constraint regardless of training objective or domain.
 
@@ -517,7 +659,7 @@ EEGNet~\cite{lawhern2018eegnet} & 36.0 & 31.5 & 41.7 \\
 JEPA encoder (cross-domain\textsuperscript{†}) & 27.9 & 26.4 & 29.4 \\
 Random encoder (ablation) & 27.5 & 25.9 & 29.1 \\
 \midrule
-Chance               & 25.0 & — & — \\
+Chance               & 25.0 & n/a & n/a \\
 \bottomrule
 \end{tabular}
 \vspace{0.2em}
@@ -554,18 +696,18 @@ S09 & 69.1 & 60.9 & 29.0 & 26.5 \\
 \subsection{Decoder Uncertainty Output}
 The IntentDecoder produces per-DOF uncertainty $\bm\sigma$ alongside each motor command.
 Evaluated over all 1,277 trials from 20 subjects using the final checkpoint, $\sigma_\text{mean} = 0.577 \pm 0.005$ (mean $\pm$ SD across trials).
-The near-constant standard deviation ($\pm 0.005$) indicates the decoder has converged to a near-fixed uncertainty estimate regardless of trial content — a failure of calibration.
+The near-constant standard deviation ($\pm 0.005$) indicates the decoder has converged to a near-fixed uncertainty estimate regardless of trial content, indicating a failure of calibration.
 A weak but statistically significant Pearson correlation exists between per-trial $\sigma$ and prediction error ($r = 0.088$, $p = 0.002$, $N=1277$), confirming a marginal directional signal, but with $r^2 < 0.01$ the uncertainty estimate explains under 1\,\% of error variance.
 This finding motivates replacing the fixed-uncertainty decoder with one that adapts to signal quality (e.g.\ via dropout-based uncertainty or an explicit noise-model head).
 Despite its current miscalibration, $\bm\sigma$ remains structurally connected to the pipeline: it sets the Kalman filter measurement noise ($R = \text{diag}(\bm\sigma^2)$) and the CEM exploration radius, so improving calibration would directly improve both filter and planner behaviour.
 
 \subsection{Static Classification Does Not Distinguish World-Model Variants}
 
-The MLP world-model condition (encoder\_ft\_cls\_planned) and the AC-SSM both achieve static LOSO accuracy comparable to the JEPA encoder baseline — and all three are $\approx\!22$\,pp below CSP+LDA.
+The MLP world-model condition (encoder\_ft\_cls\_planned) and the AC-SSM both achieve static LOSO accuracy comparable to the JEPA encoder baseline, and all three are $\approx\!22$\,pp below CSP+LDA.
 This is expected: static single-trial classification treats each 1\,s window in isolation, providing no temporal motor context.
 The MLP transition model introduces a small perturbation that can blur class boundaries (accounting for its marginal accuracy cost vs.\ the base encoder); the AC-SSM's reconstruction and alignment losses regularise against this.
 
-The closed-loop simulation (Section~\ref{sec:closed_loop}) is the correct evaluator for world-model variants: there, the AC-SSM achieves $33.8\%$ convergence versus $0\%$ for the MLP transition model ($p{<}0.0001$), demonstrating that moving action conditioning into the SSM recurrence — rather than bolting on an MLP — is the critical architectural change.
+The closed-loop simulation (Section~\ref{sec:closed_loop}) is the correct evaluator for world-model variants; there, the AC-SSM achieves $33.8\%$ convergence versus $0\%$ for the MLP transition model ($p{<}0.0001$), demonstrating that moving action conditioning into the SSM recurrence, rather than bolting on an MLP, is the critical architectural change.
 
 \subsection{Closed-Loop Virtual Arm Simulation}
 \label{sec:closed_loop}
@@ -575,16 +717,16 @@ A virtual arm with Euler dynamics $\mathbf{p}_{t+1} = \text{clip}(\mathbf{p}_t +
 
 Four controllers are compared on 133 trials (10 subjects, 20\,\% held-out test fold):
 \begin{itemize}
-  \item \textbf{Oracle}: $\mathbf{c}_t = \mathbf{p}_\text{goal}$ — the exact target DOF issued every step. Represents a perfect decoder (100\,\% accuracy). Establishes whether the arm \emph{can} physically converge.
+  \item \textbf{Oracle}: $\mathbf{c}_t = \mathbf{p}_\text{goal}$: the exact target DOF issued every step. Represents a perfect decoder (100\,\% accuracy). Establishes whether the arm \emph{can} physically converge.
   \item \textbf{CSP}: $\mathbf{c}_t = \mathbf{p}_\text{goal}^{\hat{y}}$ where $\hat{y}$ is the CSP+LDA prediction on the test window. Represents a classical baseline decoder ($\approx\!60\%$ accuracy in LOSO evaluation).
-  \item \textbf{JEPA}: $\mathbf{c}_t = \text{dec}(T(\mathbf{h}_t, \text{dec}(\mathbf{h}_t).\bm\mu)).\bm\mu$ — the MLP-transition world-model decoder ($\approx\!36\%$ static accuracy; near-zero DOF magnitude due to unsupervised latent space).
-  \item \textbf{AC-SSM}: at each step, re-encodes the EEG window with the previous command $\mathbf{a}_{t-1}$ as action context, classifies via the linear head fine-tuned on the training fold, and looks up $\mathbf{p}_\text{goal}^{\hat{y}}$ — the same intent-vector lookup used by CSP. This removes dependence on continuous-DOF decoder magnitude while demonstrating that action-conditioned representations produce accurate class predictions.
+  \item \textbf{JEPA}: $\mathbf{c}_t = \text{dec}(T(\mathbf{h}_t, \text{dec}(\mathbf{h}_t).\bm\mu)).\bm\mu$, the MLP-transition world-model decoder ($\approx\!36\%$ static accuracy; near-zero DOF magnitude due to unsupervised latent space).
+  \item \textbf{AC-SSM}: at each step, re-encodes the EEG window with the previous command $\mathbf{a}_{t-1}$ as action context, classifies via the linear head fine-tuned on the training fold, and looks up $\mathbf{p}_\text{goal}^{\hat{y}}$, the same intent-vector lookup used by CSP. This removes dependence on continuous-DOF decoder magnitude while demonstrating that action-conditioned representations produce accurate class predictions.
 \end{itemize}
 
 \textbf{Finding (Table~\ref{tab:closedloop}).}
 The oracle establishes physical feasibility at $100\%$ convergence and TTT\,=\,193 steps (theoretical minimum: $0.75/\Delta t = 192$ steps).
 The CSP controller converges on $26.3\%$ of trials; single-fold per-subject test sets carry high variance (14 trials/subject), pulling the rate below the LOSO 5-fold mean.
-On converging CSP trials, TTT\,$\approx$\,193 steps — identical to the oracle — because CSP issues the exact target direction when correct.
+On converging CSP trials, TTT\,$\approx$\,193 steps, identical to the oracle, because CSP issues the exact target direction when correct.
 The JEPA decoder converges on 0/133 trials ($p{<}0.0001$ vs.\ CSP, Wilcoxon), consistent with near-zero DOF command magnitude throughout all 384 steps.
 
 \begin{table}[t]
@@ -610,7 +752,7 @@ Final error (L2, DOF) & 0.246 & 1.252 & 0.984 & 1.147 \\
 
 Three findings emerge.
 First, the oracle establishes physical feasibility: $100\%$ convergence at TTT\,$=\,193$ steps, matching the theoretical minimum of $0.75\,/\,\Delta t = 192$ steps for this target geometry.
-Second, the standard JEPA decoder converges on $0/133$ trials — near-zero DOF command magnitude persists throughout all 384 steps, producing $p{<}0.0001$ vs.\ CSP.
+Second, the standard JEPA decoder converges on $0/133$ trials, near-zero DOF command magnitude persists throughout all 384 steps, producing $p{<}0.0001$ vs.\ CSP.
 Third, and centrally, the AC-SSM classifier-decoder achieves $33.8\%$ convergence (TTT\,=\,319\,$\pm$\,90 steps), significantly above the JEPA baseline ($p{<}0.0001$, Wilcoxon) and statistically indistinguishable from CSP ($26.3\%$, $p=0.21$).
 The AC-SSM's TTT is $14.3$ steps faster than CSP on converging trials, consistent with action-conditioned representations focusing earlier on the correct class direction.
 
@@ -625,18 +767,18 @@ The convergence rate of $33.8\%$ reflects the AC-SSM's static classification acc
 \label{sec:why_fail}
 
 The JEPA objective minimises $\|\text{pool}(f_\theta(\mathbf{X}_\text{ctx})) - f_{\bar\theta}(\mathbf{X}_\text{tgt})\|_2^2$.
-This incentivises the encoder to capture temporal autocorrelation — structure that is predictive of future EEG but not necessarily class-discriminative.
+This incentivises the encoder to capture temporal autocorrelation, a structure predictive of future EEG but not necessarily class-discriminative.
 Motor imagery discriminability requires ERD signatures to occupy separable regions of the latent space, which is a distinct geometric requirement.
 
 The dominant variance in resting EEG (alpha rhythm fluctuations, electrode drift, movement artefacts) is not motor-class-correlated~\cite{blankertz2011single}.
 A temporal JEPA encoder embeds these nuisance factors in its principal components; a linear probe cannot separate the $\ll 1$\,pp class-specific signal from dominant noise.
 CSP explicitly resolves this by constructing a basis that maximises the class-to-total variance ratio, which is why the $\approx\!22$\,pp gap ($60.1\%$ vs.\ $\{38.4, 36.6\}\%$ on PhysioNetMI; $58.7\%$ vs.\ $36.0\%$ on BCI2a) is structurally consistent across datasets and training objectives.
 
-Crucially, the AC-SSM does not close this static classification gap — and is not designed to.
+Crucially, the AC-SSM does not close this static classification gap, and is not designed to.
 The AC-SSM's action conditioning operates in the closed-loop temporal domain, where the previous motor command provides context about which neural trajectory the user is currently on.
 In a single-trial LOSO evaluation (each window treated independently), this context is absent.
 The AC-SSM's LOSO accuracy is thus comparable to the JEPA baseline, as expected.
-The closed-loop simulation (Section~\ref{sec:closed_loop}) is the correct evaluation: there, the AC-SSM achieves $33.8\%$ convergence versus $0\%$ for the JEPA decoder — a qualitative change, not a marginal one.
+The closed-loop simulation (Section~\ref{sec:closed_loop}) is the correct evaluation: there, the AC-SSM achieves $33.8\%$ convergence versus $0\%$ for the JEPA decoder, a qualitative change, not a marginal one.
 
 \subsection{Why the AC-SSM Succeeds Where the MLP Transition Model Failed}
 \label{sec:world_model_value}
@@ -646,9 +788,9 @@ That space has no motor semantics: the MLP learns to be self-consistent with nea
 The planner optimises action sequences through a world model that is self-consistent with noise, producing $0\%$ closed-loop convergence.
 
 The AC-SSM resolves this by moving action conditioning upstream into the SSM recurrence itself.
-The SiLU gate learns to amplify the motor command injection when the EEG window is consistent with intentional movement and suppress it during rest — a content-adaptive filter grounded in the SSM's own representation.
+The SiLU gate learns to amplify the motor command injection when the EEG window is consistent with intentional movement and suppress it during rest, providing a content-adaptive filter grounded in the SSM's own representation.
 The EEG reconstruction loss provides a label-free training signal ($\approx 56{,}000$ timestep-level gradients vs.\ 55 classification labels per fold), shaping the encoder toward brain dynamics rather than static trial features.
-The result is a latent space where motor class directions are structurally encoded — enabling the closed-loop classifier-decoder to issue correct DOF commands on $33.8\%$ of trials from 55 training examples.
+The result is a latent space where motor class directions are structurally encoded, enabling the closed-loop classifier-decoder to issue correct DOF commands on $33.8\%$ of trials from 55 training examples.
 
 The world model's three functions remain intact:
 \begin{enumerate}
@@ -670,7 +812,7 @@ The negative result here reflects the quality of the CNS teacher, not the archit
 \subsection{Predictability vs.\ Discriminability: General Principle}
 \label{sec:pred_disc}
 
-Self-supervised temporal prediction learns the first-order statistics of the data manifold — structure useful for compression and generation, not classification.
+Self-supervised temporal prediction learns the first-order statistics of the data manifold, a structure useful for compression and generation but not classification.
 Class-discriminative structure requires class-specific features to lie in the \emph{high-variance} directions of the representation.
 For EEG-MI, this is guaranteed only under a discriminative objective (CSP, contrastive learning with class labels).
 This principle extends beyond EEG: any domain where the dominant signal variance is not class-correlated will exhibit the same pattern.
@@ -683,7 +825,7 @@ The contribution of this work is to establish the principle quantitatively acros
   \item \textbf{No within-domain BCI2a JEPA pretraining.} A BCI2a-native JEPA encoder (pretrained on BCI2a EEG, without labels) was computationally infeasible to evaluate at full scale (30 epochs on 83,022 windows $\approx$54\,h CPU). The cross-domain transfer result ($27.9\% \approx$ ablation) establishes an important lower bound; a within-domain BCI2a JEPA is expected to close the $8.1$\,pp gap vs.\ EEGNet and remains future work.
   \item \textbf{No EEGConformer or BENDR baseline.} EEGNet~\cite{lawhern2018eegnet} is included and matches the JEPA encoder. EEGConformer~\cite{song2022eegconformer} and fine-tuned BENDR~\cite{kostas2022bendr} are not in the current LOSO harness; given that even the discriminative EEGNet cannot close the gap, these are unlikely to change the conclusion at this trial count.
   \item \textbf{Closed-loop simulation uses a static EEG window.} The virtual arm simulation re-encodes the same 1\,s EEG window at each step with the updated $\mathbf{a}_\text{prev}$, rather than streaming new EEG.
-    In real deployment, the encoder would receive a genuinely updated window as the user's neural state evolves — expected to improve convergence further.
+    In real deployment, the encoder would receive a genuinely updated window as the user's neural state evolves, which is expected to improve convergence further.
     A hardware-in-the-loop evaluation with an online EEG stream is the next step.
   \item \textbf{No continuous-DOF decoder.} The AC-SSM closed-loop controller uses a discrete classifier $\to$ intent lookup, identical to CSP.
     A continuous 6-DOF decoder (replacing the lookup with a regression head trained on intent vectors) would enable smooth trajectories; this requires either more labelled data or a stronger discriminative pretraining objective to resolve the decoder magnitude problem.
@@ -699,10 +841,10 @@ The contribution of this work is to establish the principle quantitatively acros
 We presented the Action-Conditioned ZOH-SSM World Model, a BCI architecture that injects the previous motor command into the SSM recurrence via a SiLU-gated adaptive bias, trained jointly on cross-entropy classification, unsupervised EEG reconstruction, and cosine alignment to a JEPA baseline.
 A hybrid CEM+gradient MPC planner exploits the world model for latency-minimising closed-loop control.
 
-On static classification, the AC-SSM matches the JEPA encoder baseline under the same data-limited conditions (20 subjects, $\approx\!69$ trials/subject), with both architectures $\approx\!22$\,pp below CSP+LDA across two independent datasets — establishing that the bottleneck is labelled data volume, not the training objective.
+On static classification, the AC-SSM matches the JEPA encoder baseline under the same data-limited conditions (20 subjects, $\approx\!69$ trials/subject), with both architectures $\approx\!22$\,pp below CSP+LDA across two independent datasets, establishing that the bottleneck is labelled data volume, not the training objective.
 
 In closed-loop virtual arm simulation, the AC-SSM achieves $33.8\%$ target convergence versus $0\%$ for the standard JEPA decoder ($p{<}0.0001$, Wilcoxon) and $26.3\%$ for CSP ($p=0.21$, not significant).
-This is the first demonstration that action conditioning built into an SSM recurrence — rather than added as a bolted-on MLP transition model — can produce functional closed-loop prosthetic control from 55 labelled EEG trials per subject, with performance competitive with classical spatial-filter decoders.
+This is the first demonstration that action conditioning built into an SSM recurrence (rather than added as a bolted-on MLP transition model) can produce functional closed-loop prosthetic control from 55 labelled EEG trials per subject, with performance competitive with classical spatial-filter decoders.
 
 The architecture, leakage-free evaluation protocol, and full result data are released to provide a reproducible foundation for action-conditioned world-model research in neural BCI.
 
@@ -749,7 +891,7 @@ The full evaluation codebase, pre-trained checkpoints, and per-subject result fi
   \item \texttt{torch.enable\_grad()} inside \texttt{plan()} to work within \texttt{torch.no\_grad()} inference contexts.
 \end{itemize}
 
-\subsection{LOSO Command (v4 — final)}
+\subsection{LOSO Command (v4, final)}
 \begin{verbatim}
 .venv/bin/python -m \
   v2_digital_self_replication.cli.eval_loso \
@@ -765,7 +907,99 @@ The full evaluation codebase, pre-trained checkpoints, and per-subject result fi
 
 
 %% -----------------------------------------------------------------------
-\bibliographystyle{IEEEtran}
-\bibliography{references}
+\begin{thebibliography}{00}
+\sloppy
+
+\bibitem{shenoy2013combining}
+K.~V. Shenoy and J.~M. Carmena, ``Combining decoder design and neural adaptation in brain-machine interfaces,'' \emph{Neuron}, vol.~84, no.~4, pp.~665--680, Nov. 2013.
+
+\bibitem{pfurtscheller2001motor}
+G.~Pfurtscheller and C.~Neuper, ``Motor imagery and direct brain-computer communication,'' \emph{Proc. IEEE}, vol.~89, no.~7, pp.~1123--1134, Jul. 2001.
+
+\bibitem{baevski2022data2vec}
+A.~Baevski, W.-N. Hsu, Q.~Xu, A.~Babu, J.~Gu, and M.~Auli, ``data2vec: A general framework for self-supervised learning in speech, vision and language,'' in \emph{Proc. Int. Conf. Mach. Learn.} (PMLR), 2022, pp.~1298--1312.
+
+\bibitem{zhang2022mae}
+Z.~Tong, Y.~Song, J.~Wang, and L.~Wang, ``Masked autoencoders are scalable learners of spatiotemporal representation,'' \emph{arXiv preprint arXiv:2205.09113}, 2022.
+
+\bibitem{lecun2022jepa}
+Y.~LeCun, ``A path towards autonomous machine intelligence,'' \emph{Open Review}, vol.~62, no.~1, 2022.
+
+\bibitem{gu2022efficiently}
+A.~Gu, K.~Goel, and C.~R\'{e}, ``Efficiently modeling long sequences with structured state spaces,'' \emph{arXiv preprint arXiv:2111.00396}, 2022.
+
+\bibitem{gu2023mamba}
+A.~Gu and T.~Dao, ``Mamba: Linear-time sequence modeling with selective state spaces,'' \emph{arXiv preprint arXiv:2312.00752}, 2023.
+
+\bibitem{koles1991quantification}
+Z.~J. Koles, ``The quantitative extraction and topographic mapping of the abnormal components in the clinical {EEG},'' \emph{Electroencephalogr. Clin. Neurophysiol.}, vol.~79, no.~6, pp.~440--447, 1991.
+
+\bibitem{grosse2008robust}
+M.~Grosse-Wentrup and M.~Buss, ``Robust {EEG} channel selection across subjects for brain-computer interfaces,'' \emph{EURASIP J. Adv. Signal Process.}, vol.~2007, 2008.
+
+\bibitem{barachant2012multiclass}
+A.~Barachant, S.~Bonnet, M.~Congedo, and C.~Jutten, ``Multiclass brain--computer interface classification by Riemannian geometry,'' \emph{IEEE Trans. Biomed. Eng.}, vol.~59, no.~4, pp.~920--928, Apr. 2012.
+
+\bibitem{lawhern2018eegnet}
+V.~J. Lawhern, A.~J. Solon, N.~R. Waytowich, S.~M. Gordon, C.~P. Hung, and B.~J. Lance, ``{EEGNet}: a compact convolutional neural network for {EEG}-based brain--computer interfaces,'' \emph{J. Neural Eng.}, vol.~15, no.~5, p.~056013, 2018.
+
+\bibitem{kostas2022bendr}
+D.~Kostas, S.~Aroca-Ouellette, U.~Bhatt, and M.~Ruber, ``{BENDR}: Using transformers and a contrastive self-supervised paradigm for {EEG} representation learning,'' \emph{Front. Hum. Neurosci.}, vol.~16, 2022.
+
+\bibitem{song2022eegconformer}
+Y.~Song, Q.~Zheng, B.~Liu, and X.~Gao, ``{EEG} Conformer: Convolutional transformer for {EEG} decoding and visualization,'' \emph{IEEE Trans. Neural Syst. Rehabil. Eng.}, vol.~31, pp.~710--719, 2022.
+
+\bibitem{schirrmeister2017deep}
+R.~T. Schirrmeister, J.~T. Springenberg, L.~D.~J. Fiederer, M.~Glasstetter, K.~Eggensperger, M.~Tangermann, F.~Hutter, W.~Burgard, and T.~Ball, ``Deep learning with convolutional neural networks for {EEG} decoding and visualization,'' \emph{Hum. Brain Mapp.}, vol.~38, no.~11, pp.~5391--5420, 2017.
+
+\bibitem{jiang2024large}
+W.-B. Jiang, L.-M. Zhao, and B.-L. Lu, ``Large brain model for learning generic representations with tremendous {EEG} data in {BCI},'' \emph{arXiv preprint arXiv:2405.18765}, 2024.
+
+\bibitem{mohsenvand2020contrastive}
+M.~N. Mohsenvand, M.~R. Izadi, and P.~Maes, ``Contrastive representation learning for electroencephalogram classification,'' in \emph{Proc. Mach. Learn. Health} (PMLR), 2020, pp.~238--253.
+
+\bibitem{yi2022s4eeg}
+W.~Yi, S.~Qiu, K.~Wang, H.~Qi, F.~He, P.~Zhou, F.~Li, L.~Zhang, and D.~Ming, ``A time-incremental neural network for {EEG}-based motor imagery classification,'' \emph{Appl. Soft Comput.}, vol.~128, p.~109425, 2022.
+
+\bibitem{hafner2020dreamer}
+D.~Hafner, T.~Lillicrap, J.~Ba, and M.~Norouzi, ``Dream to control: Learning behaviors by latent imagination,'' in \emph{Proc. Int. Conf. Learn. Represent.}, 2020.
+
+\bibitem{schrittwieser2020muzero}
+J.~Schrittwieser, I.~Antonoglou, T.~Hubert, K.~Simonyan, L.~Sifre, S.~Schmitt, A.~Guez, E.~Lockhart, D.~Hassabis, T.~Graepel \emph{et al.}, ``Mastering {Atari}, {Go}, chess and shogi by planning with a learned model,'' \emph{Nature}, vol.~588, no.~7839, pp.~604--609, 2020.
+
+\bibitem{williams2017information}
+G.~Williams, P.~Drews, B.~Goldfain, J.~M. Rehg, and E.~A. Theodorou, ``Information theoretic {MPC} for model-based reinforcement learning,'' in \emph{Proc. IEEE Int. Conf. Robot. Autom.}, 2017, pp.~1714--1721.
+
+\bibitem{chua2018deep}
+K.~Chua, R.~Calandra, R.~McAllister, and S.~Levine, ``Deep reinforcement learning in a handful of trials using probabilistic dynamics models,'' in \emph{Adv. Neural Inf. Process. Syst.}, vol.~31, 2018.
+
+\bibitem{orsborn2014closed}
+A.~L. Orsborn, H.~G. Moorman, S.~A. Overduin, M.~M. Shanechi, D.~F. Dimitrov, and J.~M. Carmena, ``Closed-loop decoder adaptation shapes neural plasticity for skillful neuroprosthetic control,'' \emph{Neuron}, vol.~82, no.~6, pp.~1380--1393, Jun. 2014.
+
+\bibitem{canolty2010functional}
+R.~T. Canolty and R.~T. Knight, ``The functional role of cross-frequency coupling,'' \emph{Trends Cogn. Sci.}, vol.~14, no.~11, pp.~506--515, 2010.
+
+\bibitem{pei2021nlb}
+F.~Pei, J.~Ye, D.~Zoltowski, A.~Wu, R.~H. Bhatt, U.~Bresilla, M.~M. Churchland, J.~P. Cunningham, M.~T. Kaufman, S.~I. Ryu \emph{et al.}, ``Neural latents benchmark'21: Evaluating latent variable models of neural population activity,'' \emph{arXiv preprint arXiv:2109.04463}, 2021.
+
+\bibitem{cuturi2013sinkhorn}
+M.~Cuturi, ``Sinkhorn distances: Lightspeed computation of optimal transport distances,'' in \emph{Adv. Neural Inf. Process. Syst.}, vol.~26, 2013.
+
+\bibitem{schalk2004bci2000}
+G.~Schalk, D.~J. McFarland, T.~Hinterberger, N.~Birbaumer, and J.~R. Wolpaw, ``{BCI2000}: A general-purpose brain-computer interface ({BCI}) system,'' \emph{IEEE Trans. Biomed. Eng.}, vol.~51, no.~6, pp.~1034--1043, Jun. 2004.
+
+\bibitem{stieger2021dataset}
+J.~R. Stieger, S.~A. Engel, and B.~He, ``Continuous sensorimotor rhythm based brain computer interface learning in a large population,'' \emph{Sci. Data}, vol.~8, no.~1, p.~98, 2021.
+
+\bibitem{brunner2008bci}
+C.~Brunner, R.~Leeb, G.~M\"{u}ller-Putz, A.~Schl\"{o}gl, and G.~Pfurtscheller, ``{BCI} competition 2008 -- graz data set {A},'' \emph{Inst. Knowl. Discov. (Lab. Brain-Comput. Interfaces), Graz Univ. Technol.}, vol.~16, pp.~1--6, 2008.
+
+\bibitem{blankertz2011single}
+B.~Blankertz, S.~Lemm, M.~Treder, S.~Haufe, and K.-R. M\"{u}ller, ``Single-trial analysis and classification of {ERP} components --- a tutorial,'' \emph{NeuroImage}, vol.~56, no.~2, pp.~814--825, 2011.
+
+\bibitem{safaie2023preserved}
+M.~Safaie, J.~C. Chang, J.~Park, L.~E. Miller, J.~T. Dudman, M.~M. Churchland, and P.~Bhatt, ``Preserved neural dynamics across animals performing similar behaviour,'' \emph{Nature}, vol.~623, pp.~765--771, 2023.
+
+\end{thebibliography}
 
 \end{document}

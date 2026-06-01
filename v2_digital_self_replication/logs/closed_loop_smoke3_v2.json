@@ -1,0 +1,456 @@
+{
+  "aggregate": {
+    "oracle": {
+      "ttt": {
+        "mean": 193.0,
+        "std": 0.0
+      },
+      "final_error": {
+        "mean": 0.24609375
+      },
+      "path_efficiency": {
+        "mean": 1.0
+      },
+      "convergence_rate": 1.0
+    },
+    "csp": {
+      "ttt": {
+        "mean": 329.42857142857144,
+        "std": 86.28500472745148
+      },
+      "final_error": {
+        "mean": 1.1223069173949105
+      },
+      "path_efficiency": {
+        "mean": 1.0
+      },
+      "convergence_rate": 0.2857142857142857
+    },
+    "jepa": {
+      "ttt": {
+        "mean": 384.0,
+        "std": 0.0
+      },
+      "final_error": {
+        "mean": 1.0066133822713579
+      },
+      "path_efficiency": {
+        "mean": 0.6804133773576727
+      },
+      "convergence_rate": 0.0
+    },
+    "ac_ssm": {
+      "ttt": {
+        "mean": 356.7142857142857,
+        "std": 66.83607726736959
+      },
+      "final_error": {
+        "mean": 1.3728649531091963
+      },
+      "path_efficiency": {
+        "mean": 1.0
+      },
+      "convergence_rate": 0.14285714285714285
+    },
+    "statistics": {
+      "n_trials": 14,
+      "p_csp_vs_jepa_ttt": 0.022750131948179195,
+      "p_ac_vs_jepa_ttt": 0.07864960352514251,
+      "p_ac_vs_csp_ttt": 0.31731050786291415
+    }
+  },
+  "trial_results": [
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0599359273910522,
+        "path_efficiency": 0.6612813415298195,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0005528926849365,
+        "path_efficiency": 0.6453325309645517,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9918037056922913,
+        "path_efficiency": 0.6202798437759257,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0538207292556763,
+        "path_efficiency": 0.6623158176873136,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0491724014282227,
+        "path_efficiency": 0.6683150059994923,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9640318751335144,
+        "path_efficiency": 0.6975281941121636,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.964495837688446,
+        "path_efficiency": 0.7133330100411425,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0529377460479736,
+        "path_efficiency": 0.7117615447334443,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9677813649177551,
+        "path_efficiency": 0.7594146616854464,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 1.0526669025421143,
+        "path_efficiency": 0.7031290560675946,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 2.0,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "right_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9566656947135925,
+        "path_efficiency": 0.6284616737666243,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "left_hand"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9915578961372375,
+        "path_efficiency": 0.6631793953101416,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9876596927642822,
+        "path_efficiency": 0.708310705742089,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    },
+    {
+      "oracle": {
+        "ttt": 193,
+        "final_error": 0.24609375,
+        "path_efficiency": 1.0,
+        "converged": true
+      },
+      "csp": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "jepa": {
+        "ttt": 384,
+        "final_error": 0.9995046854019165,
+        "path_efficiency": 0.6831445015916666,
+        "converged": false
+      },
+      "ac_ssm": {
+        "ttt": 384,
+        "final_error": 1.4142135381698608,
+        "path_efficiency": 1.0,
+        "converged": false
+      },
+      "subject": 1,
+      "label": "feet"
+    }
+  ]
+}

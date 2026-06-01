@@ -1,51 +1,51 @@
 # v2 Digital Twin — Active TODO
 
-## JBHI v2 Paper Pipeline — COMPLETE (2026-05-31)
+## JBHI → TNSRE Resubmission Pipeline (2026-05-31)
 
-### Article: riemannian_s4_v2.tex (724 lines, branch: joseph-woodall-branch)
+### Article: riemannian_s4_v2.tex (branch: joseph-woodall-branch)
 
-All evaluation complete and committed. Article ready for submission.
+### Architecture Changes (DONE)
+- [x] Action-conditioned SSM: SiLU-gated `a_prev` injection into first SSM block (stream_encoder.py)
+- [x] EEG reconstruction head added to StreamEncoder
+- [x] New `ac_ssm` LOSO eval condition (eval_loso.py) — curriculum + cosine alignment + reconstruction loss
+- [x] New `closed_loop_sim_v2.py` — four-controller sim with AC-SSM classifier-decoder
+- [x] All 18 existing tests still pass
 
-### Final Results Summary
+### Evaluations
+- [x] Closed-loop sim v2 (10 subjects, 133 trials) — DONE
+      AC-SSM: 33.8% convergence, TTT=319 (vs JEPA 0%, p<0.0001; vs CSP 26.3%, p=0.21)
+- [ ] LOSO v5 (20 subjects, 5 folds, fast mode) — RUNNING (~2h remaining, at subject 7/20)
 
-**PhysioNetMI (20 subjects, 3-class, 8 conditions):**
-| Condition | Accuracy | 95% CI |
-|---|---|---|
-| CSP+LDA | 60.1% | [54.7–65.6%] |
-| MDM | 47.5% | [42.5–52.8%] |
-| EEGNet (supervised) | 38.4% | [35.6–41.2%] |
-| JEPA encoder (e2e FT) | 36.6% | [34.0–39.3%] |
-| Ablation (random init) | 35.5% | [33.4–37.7%] |
-| World-model cls | 34.2% | [32.9–35.6%] |
-| CNS cross-modal | 32.7% | [31.9–33.6%] |
+### Article Update (PENDING — run when LOSO v5 completes)
+- [ ] Run: `python v2_digital_self_replication/scripts/update_article.py`
+      Updates all tables, per-subject rows, inline numbers, closed-loop section
+- [ ] Review diff and verify no stale numbers remain
+- [ ] Update abstract with new primary result framing
+- [ ] Update Discussion §5.2 (world model value) — now has non-zero convergence
+- [ ] Check contributions list (item 3 — transition model; item 4 — planner)
 
-**BCI2a (9 subjects, 4-class):**
-| Condition | Accuracy |
-|---|---|
-| CSP+LDA | 58.7% |
-| MDM | 50.4% |
-| EEGNet | 36.0% |
-| JEPA (cross-domain) | 27.9% ≈ ablation |
+### Submission Prep (AFTER article update)
+- [ ] Switch venue framing to IEEE TNSRE (title, cover letter, keywords)
+- [ ] Write TNSRE cover letter
+- [ ] Compile PDF, verify no LaTeX errors
+- [ ] Final read-through for stale JBHI-specific language
+- [ ] Submit
 
-**Closed-loop sim (133 trials, 3 controllers):**
-| Controller | Convergence |
-|---|---|
-| Oracle (perfect decoder) | 100% at step 193 |
-| CSP (60% accuracy) | 27.8% |
-| JEPA decoder | 0% |
+## Key Numbers (to verify against article after update)
 
-**Latency (CPU, post-compile):**
-- decode_step(): 26.9 ms → 37 Hz
-- self_condition() fast path: 10.9 ms → 92 Hz
+### Closed-loop sim v2 (FINAL)
+| Controller | Convergence | TTT (steps) | Final Err | p vs JEPA |
+|---|---|---|---|---|
+| Oracle | 100.0% | 193 ± 0 | 0.246 | — |
+| CSP | 26.3% | 334 ± 84 | 1.252 | p<0.0001 |
+| JEPA | 0.0% | 384 ± 0 | 0.984 | baseline |
+| **AC-SSM** | **33.8%** | **319 ± 90** | **1.147** | **p<0.0001** |
+AC-SSM vs CSP: p=0.21 (not significant — competitive)
 
-### Remaining (optional, not needed for submission)
-- [ ] BCI2a native JEPA pretraining (~54h CPU, in background, not blocking)
-- [ ] GPU parallelisation via S4D parameterisation (future work)
-- [ ] Closed-loop sim with real hardware once Pico is connected
+### LOSO v5 (PENDING)
+TBD — will fill after eval completes
 
 ## Backlog
 - [ ] Resolve RTX 5070 Blackwell CUDA compile hang (S4D diagonal parameterisation)
 - [ ] ZMQ integration test with SimulatedHardware in separate process
-
-## Lessons
-- see tasks/lessons.md
+- [ ] BCI2a native AC-SSM evaluation (optional, not blocking)

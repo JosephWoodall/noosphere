@@ -72,6 +72,10 @@ def parse_args():
                    help="Add EEGNet (Lawhern 2018) as a modern neural baseline condition.")
     p.add_argument("--eegnet-epochs", type=int, default=50,
                    help="Training epochs for EEGNet (default 50).")
+    p.add_argument("--eegconformer", action="store_true",
+                   help="Add EEGConformer (Song 2022) as a transformer BCI baseline condition.")
+    p.add_argument("--eegconformer-epochs", type=int, default=50,
+                   help="Training epochs for EEGConformer (default 50).")
     return p.parse_args()
 
 
@@ -467,6 +471,177 @@ def _fit_eval_encoder_cls_planned(
     return float(balanced_accuracy_score(y_te, preds))
 
 
+def _fit_eval_ac_ssm(
+    checkpoint: str | None,
+    eeg_tr: np.ndarray,
+    y_tr: np.ndarray,
+    eeg_te: np.ndarray,
+    y_te: np.ndarray,
+    ft_epochs: int,
+    device: str,
+    class_names: list[str] | None = None,
+) -> float:
+    """
+    Action-Conditioned SSM world model condition.
+
+    Architecture changes vs encoder_ft_cls_planned:
+      1. Action conditioning built into the first SSM block (SiLU-gated additive bias).
+         The block learns when motor context modulates brain dynamics vs. when to ignore it.
+      2. EEG reconstruction head: unsupervised world-model loss trains on every EEG
+         timestep (label-free), giving ~56k training signals vs. 55 labelled trials.
+      3. Cosine alignment loss: aligns AC-SSM latents to JEPA-pretrained direction
+         (preserves representation geometry without forcing magnitude match).
+
+    Training: CE classification + EEG reconstruction + cosine alignment.
+    Test time: a_prev = zeros (no previous command available for isolated windows).
+    """
+    import copy
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    import torch.optim as optim
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.metrics import balanced_accuracy_score
+
+    from v2_digital_self_replication.core.stream_encoder import StreamEncoder
+    from v2_digital_self_replication.core.intent_decoder import IntentDecoder
+    from v2_digital_self_replication.data.intent_mapping import CLASS_TO_INTENT
+    from v2_digital_self_replication.config import V2Config
+
+    enc_cfg = V2Config().encoder
+    dec_cfg = V2Config().decoder
+    n_dof   = dec_cfg.n_dof
+    n_eeg   = enc_cfg.n_eeg_channels
+
+    # Build action-conditioned encoder with reconstruction head
+    ac_enc = StreamEncoder(
+        d_model=enc_cfg.d_model, d_state=enc_cfg.d_state,
+        n_layers=enc_cfg.n_layers, n_eeg=n_eeg,
+        n_prop=enc_cfg.n_prop_channels, dropout=enc_cfg.dropout,
+        d_dof=n_dof, n_eeg_recon=n_eeg,
+    ).to(device)
+
+    # Load JEPA pretrained weights (strict=False: action_proj/gate_proj/recon_head are new)
+    if checkpoint and Path(checkpoint).exists():
+        ckpt = torch.load(checkpoint, map_location="cpu", weights_only=True)
+        sd = ckpt.get("encoder", ckpt)
+        ac_enc.load_state_dict(sd, strict=False)
+
+    # Reference JEPA encoder (frozen) for cosine alignment loss and test-time bootstrap
+    jepa_enc = _load_encoder_from_ckpt(checkpoint, random_init=False).to(device)
+    jepa_enc.eval()
+    for p in jepa_enc.parameters():
+        p.requires_grad_(False)
+
+    # Small intent decoder for test-time bootstrap: JEPA latent → a_prev
+    jepa_dec = IntentDecoder(
+        d_model=enc_cfg.d_model, n_dof=n_dof, d_hidden=dec_cfg.d_hidden
+    ).to(device)
+    jepa_dec.eval()
+    for p in jepa_dec.parameters():
+        p.requires_grad_(False)
+
+    n_classes = len(np.unique(y_tr))
+    head = nn.Linear(enc_cfg.d_model, n_classes).to(device)
+
+    T_use = min(eeg_tr.shape[1], 256)
+    X_tr = torch.from_numpy(eeg_tr[:, -T_use:, :].astype(np.float32))
+    X_te = torch.from_numpy(eeg_te[:, -T_use:, :].astype(np.float32))
+    y_tr_t = torch.tensor(y_tr, dtype=torch.long)
+
+    # Build intent matrix aligned to LabelEncoder's sorted class order:
+    # intent_matrix[y_int] → 6-DOF intent for integer-encoded class y_int.
+    # class_names must be in sorted order (matching LabelEncoder output).
+    if class_names is None:
+        class_names = sorted(set(str(c) for c in np.unique(y_tr).tolist()))
+    _intent_rows = []
+    for cls_name in class_names:
+        vec = CLASS_TO_INTENT.get(cls_name, np.zeros(n_dof, dtype=np.float32))
+        _intent_rows.append(vec.astype(np.float32))
+    intent_matrix = torch.from_numpy(np.stack(_intent_rows)).to(device)  # (n_cls, n_dof)
+
+    # Curriculum: sort training trials by JEPA latent variance (low = easy, stable signal)
+    with torch.no_grad():
+        jepa_out, _ = jepa_enc(X_tr.to(device))
+        jepa_z_all = jepa_out[:, -64:, :].mean(1)
+    difficulty = jepa_z_all.var(dim=1).cpu().numpy()
+    curriculum_order = np.argsort(difficulty)  # easy first
+
+    X_tr_curr = X_tr[curriculum_order]
+    y_tr_curr = y_tr_t[curriculum_order]
+
+    loader = DataLoader(
+        TensorDataset(X_tr_curr, y_tr_curr),
+        batch_size=min(16, len(X_tr_curr)),
+        shuffle=False,
+        drop_last=False,
+    )
+
+    ac_enc.train()
+    head.train()
+    opt = optim.Adam(
+        list(ac_enc.parameters()) + list(head.parameters()),
+        lr=1e-3, weight_decay=0.1,
+    )
+
+    # Reconstruction weight kept small: it's a regulariser, not the primary signal.
+    # High w_recon drowns the classification gradient on 55 labelled samples.
+    w_recon = 0.05
+    w_align = 0.1
+
+    for epoch in range(ft_epochs):
+        if epoch == max(1, ft_epochs // 3):
+            loader = DataLoader(
+                TensorDataset(X_tr, y_tr_t),
+                batch_size=min(16, len(X_tr)),
+                shuffle=True, drop_last=False,
+            )
+
+        for Xb, yb in loader:
+            Xb, yb = Xb.to(device), yb.to(device)
+            # Teacher forcing: ground-truth class intent as a_prev.
+            # intent_matrix[i] is the intent for LabelEncoder class index i.
+            a_prev = intent_matrix[yb]  # (B, n_dof)
+
+            out, _ = ac_enc(Xb, a_prev=a_prev)
+            z = out[:, -64:, :].mean(1)
+
+            loss_ce = F.cross_entropy(head(z), yb)
+
+            eeg_hat = ac_enc.reconstruct_eeg(out)
+            loss_recon = F.mse_loss(eeg_hat, Xb)
+
+            # Cosine alignment: keep AC-SSM latent direction close to JEPA baseline
+            with torch.no_grad():
+                jepa_out_b, _ = jepa_enc(Xb)
+                jepa_z_b = jepa_out_b[:, -64:, :].mean(1).detach()
+            z_norm   = F.normalize(z, dim=-1)
+            ref_norm = F.normalize(jepa_z_b, dim=-1)
+            loss_align = (1 - (z_norm * ref_norm).sum(dim=-1)).mean()
+
+            loss = loss_ce + w_recon * loss_recon + w_align * loss_align
+            opt.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(
+                list(ac_enc.parameters()) + list(head.parameters()), 1.0
+            )
+            opt.step()
+
+    # Test-time: bootstrap a_prev from frozen JEPA decoder (no ground truth available)
+    ac_enc.eval()
+    head.eval()
+    with torch.no_grad():
+        jepa_te, _ = jepa_enc(X_te.to(device))
+        jepa_z_te  = jepa_te[:, -64:, :].mean(1)
+        a_prev_te  = jepa_dec(jepa_z_te).mu          # (N_te, n_dof)
+
+        out_te, _ = ac_enc(X_te.to(device), a_prev=a_prev_te)
+        z_te = out_te[:, -64:, :].mean(1)
+        preds = head(z_te).argmax(1).cpu().numpy()
+
+    return float(balanced_accuracy_score(y_te, preds))
+
+
 def _fit_eval_eegnet(
     eeg_tr: np.ndarray,
     y_tr:   np.ndarray,
@@ -524,6 +699,63 @@ def _fit_eval_eegnet(
     return float(balanced_accuracy_score(y_te, preds))
 
 
+def _fit_eval_eegconformer(
+    eeg_tr: np.ndarray,
+    y_tr:   np.ndarray,
+    eeg_te: np.ndarray,
+    y_te:   np.ndarray,
+    n_epochs: int,
+    device:   str,
+) -> float:
+    """
+    Train EEGConformer end-to-end from scratch on training fold, evaluate on test fold.
+    Song et al. (2022) doi:10.1109/TNNLS.2022.3150699
+    eeg: (n, T, C) — transposed to (n, C, T) internally.
+    """
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.metrics import balanced_accuracy_score
+
+    from v2_digital_self_replication.core.eegconformer import EEGConformer
+
+    T_use = min(eeg_tr.shape[1], 256)
+    n_ch  = eeg_tr.shape[2]
+    n_cls = len(np.unique(y_tr))
+
+    X_tr = torch.from_numpy(eeg_tr[:, -T_use:, :].transpose(0, 2, 1).astype(np.float32))
+    X_te = torch.from_numpy(eeg_te[:, -T_use:, :].transpose(0, 2, 1).astype(np.float32))
+    y_tr_t = torch.tensor(y_tr, dtype=torch.long)
+
+    net = EEGConformer(n_classes=n_cls, n_channels=n_ch, T=T_use).to(device)
+    loader = DataLoader(
+        TensorDataset(X_tr, y_tr_t),
+        batch_size=min(16, len(X_tr)),
+        shuffle=True,
+        drop_last=False,
+    )
+    opt = optim.Adam(net.parameters(), lr=1e-3, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(opt, T_max=n_epochs)
+
+    net.train()
+    for _ in range(n_epochs):
+        for Xb, yb in loader:
+            Xb, yb = Xb.to(device), yb.to(device)
+            loss = nn.functional.cross_entropy(net(Xb), yb)
+            opt.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            opt.step()
+        scheduler.step()
+
+    net.eval()
+    with torch.no_grad():
+        preds = net(X_te.to(device)).argmax(1).cpu().numpy()
+
+    return float(balanced_accuracy_score(y_te, preds))
+
+
 def _calibration_corr(sigma: np.ndarray, dof_pred: np.ndarray,
                       dof_true: np.ndarray) -> float:
     """
@@ -550,6 +782,8 @@ def _run_subject_cv(
     ft_epochs_cls: int | None = None,
     eegnet: bool = False,
     eegnet_epochs: int = 50,
+    eegconformer: bool = False,
+    eegconformer_epochs: int = 50,
 ) -> dict:
     from sklearn.model_selection import StratifiedKFold
     from sklearn.preprocessing import LabelEncoder
@@ -567,13 +801,15 @@ def _run_subject_cv(
     slow_conditions = ["jepa_ft", "ablation_ft", "zero_shot_probe", "calib_corr"]
     base_conditions = ([] if fast else slow_conditions) + [
         "csp_lda", "mdm", "encoder_ft_cls", "ablation_encoder_cls",
-        "encoder_ft_cls_planned",
+        "encoder_ft_cls_planned", "ac_ssm",
     ]
     if cns_checkpoint:
         base_conditions.append("encoder_ft_cls_cns")
         base_conditions.append("encoder_ft_cls_cns_planned")
     if eegnet:
         base_conditions.append("eegnet")
+    if eegconformer:
+        base_conditions.append("eegconformer")
     fold_results = {k: [] for k in base_conditions}
 
     for fold_idx, (tr_idx, te_idx) in enumerate(skf.split(eeg, y)):
@@ -642,15 +878,27 @@ def _run_subject_cv(
         )
         fold_results["ablation_encoder_cls"].append(acc_abl_enc)
 
-        # ── I. encoder_ft_cls_planned: world-model condition ─────────────────
+        # ── I. encoder_ft_cls_planned: world-model condition (MLP transition) ──
         #    Train encoder + transition + decoder + cls head jointly.
-        #    At test time classify from T(h, decoder(h).mu) — the MC-guided
-        #    self-conditioned predicted next latent.
+        #    At test time classify from T(h, decoder(h).mu).
         enc_plan = _load_encoder_from_ckpt(checkpoint, random_init=False)
         acc_planned = _fit_eval_encoder_cls_planned(
             enc_plan, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
         )
         fold_results["encoder_ft_cls_planned"].append(acc_planned)
+
+        # ── K. ac_ssm: action-conditioned SSM world model ────────────────────
+        #    Action conditioning built into SSM recurrence (SiLU-gated bias).
+        #    Teacher-forcing at train time (ground-truth intent as a_prev).
+        #    Bootstrap from JEPA decoder at test time (no GT available).
+        #    Joint loss: CE + EEG reconstruction (label-free) + cosine alignment.
+        #    Curriculum: easy trials (low JEPA latent variance) trained first.
+        sorted_cls_names = le.classes_.tolist()  # LabelEncoder order = sorted alphabetically
+        acc_ac = _fit_eval_ac_ssm(
+            checkpoint, eeg_tr, y_tr, eeg_te, y_te, cls_epochs, device,
+            class_names=sorted_cls_names,
+        )
+        fold_results["ac_ssm"].append(acc_ac)
 
         # ── J. EEGNet baseline ───────────────────────────────────────────────
         if eegnet:
@@ -658,6 +906,13 @@ def _run_subject_cv(
                 eeg_tr, y_tr, eeg_te, y_te, eegnet_epochs, device,
             )
             fold_results["eegnet"].append(acc_eegnet)
+
+        # ── L. EEGConformer baseline ─────────────────────────────────────────
+        if eegconformer:
+            acc_eegconformer = _fit_eval_eegconformer(
+                eeg_tr, y_tr, eeg_te, y_te, eegconformer_epochs, device,
+            )
+            fold_results["eegconformer"].append(acc_eegconformer)
 
         # ── H. encoder_ft_cls_cns: CNS cross-modal encoder fine-tuned e2e ─────
         if cns_checkpoint:
@@ -771,6 +1026,8 @@ def main():
             ft_epochs_cls=args.ft_epochs_cls,
             eegnet=args.eegnet,
             eegnet_epochs=args.eegnet_epochs,
+            eegconformer=args.eegconformer,
+            eegconformer_epochs=args.eegconformer_epochs,
         )
         all_subject_results.append(result)
         subject_ids_done.append(subj)
@@ -789,7 +1046,7 @@ def main():
 
     # ── Aggregate across subjects ─────────────────────────────────────────────
     conditions = [
-        "encoder_ft_cls", "encoder_ft_cls_planned",
+        "encoder_ft_cls", "encoder_ft_cls_planned", "ac_ssm",
         "ablation_encoder_cls", "csp_lda", "mdm",
     ]
     if not args.fast:
@@ -799,6 +1056,8 @@ def main():
         conditions.append("encoder_ft_cls_cns_planned")
     if args.eegnet:
         conditions.append("eegnet")
+    if args.eegconformer:
+        conditions.append("eegconformer")
     agg = {}
     for cond in conditions:
         means = [s[cond]["mean"] for s in all_subject_results
@@ -839,7 +1098,8 @@ def main():
     print("═" * 60)
     labels_map = {
         "encoder_ft_cls":            "JEPA encoder + cls head (e2e FT)",
-        "encoder_ft_cls_planned":    "JEPA encoder + world-model planner + cls [PRIMARY]",
+        "encoder_ft_cls_planned":    "JEPA encoder + MLP world-model planner + cls",
+        "ac_ssm":                    "AC-SSM world model + cls [PRIMARY — NEW]",
         "ablation_encoder_cls":      "Random encoder + cls head (e2e FT) [ablation]",
         "zero_shot_probe":           "JEPA encoder + LogReg (zero-shot)",
         "jepa_ft":                   "JEPA + IntentDecoder FT",
@@ -852,6 +1112,8 @@ def main():
         labels_map["encoder_ft_cls_cns_planned"] = "CNS encoder + world-model planner + cls [Phase 2+WM]"
     if args.eegnet:
         labels_map["eegnet"] = "EEGNet (Lawhern 2018) [modern neural baseline]"
+    if args.eegconformer:
+        labels_map["eegconformer"] = "EEGConformer (Song 2022) [transformer BCI baseline]"
     for cond, label in labels_map.items():
         if cond not in agg:
             continue

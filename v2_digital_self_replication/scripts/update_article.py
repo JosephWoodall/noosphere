@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 Update riemannian_s4_v2.tex with results from:
-  - loso_results_v5.json  (LOSO eval with ac_ssm condition)
-  - closed_loop_sim_v2.json (four-controller closed-loop sim)
+  - loso_results_v5.json        (LOSO eval with ac_ssm condition)
+  - closed_loop_sim_v2_full.json (four-controller closed-loop sim)
+  - loso_results_eegconformer.json (optional: adds EEGConformer row)
+  - window_sensitivity.json        (optional: fills sensitivity table)
 
-Run after both evals complete:
+Run after all evals complete:
   python v2_digital_self_replication/scripts/update_article.py
 """
 from __future__ import annotations
@@ -17,9 +19,11 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import wilcoxon
 
-ARTICLE = Path("v2_digital_self_replication/articles/riemannian_s4_v2.tex")
-LOSO_V5 = Path("v2_digital_self_replication/logs/loso_results_v5.json")
-SIM_V2  = Path("v2_digital_self_replication/logs/closed_loop_sim_v2_full.json")
+ARTICLE       = Path("v2_digital_self_replication/articles/riemannian_s4_v2.tex")
+LOSO_V5       = Path("v2_digital_self_replication/logs/loso_results_v5.json")
+SIM_V2        = Path("v2_digital_self_replication/logs/closed_loop_sim_v2_full.json")
+LOSO_CONFORM  = Path("v2_digital_self_replication/logs/loso_results_eegconformer.json")
+WIN_SENS      = Path("v2_digital_self_replication/logs/window_sensitivity.json")
 
 
 def load(p: Path) -> dict:
@@ -331,6 +335,56 @@ def main():
         r"The encoder\_ft\_cls\_planned condition ($34.2\%$) performs below the base encoder ($36.6\%$, $\Delta = -2.4$\,pp, $p=0.16$).",
         f"The encoder\\_ft\\_cls\\_planned condition (${wm_mlp['mean']*100:.1f}\\%$) performs below the base encoder (${enc['mean']*100:.1f}\\%$).",
     )
+
+    # 7. EEGConformer row in aggregate table (optional)
+    if LOSO_CONFORM.exists():
+        loso_conf = load(LOSO_CONFORM)
+        ec = loso_conf.get("aggregate", {}).get("eegconformer", {})
+        if ec:
+            tex = tex.replace(
+                r"\quad EEGConformer (supervised) & TBD & — & — \\",
+                f"\\quad EEGConformer (supervised) & {ec['mean']*100:.1f} & {ec['ci_lo']*100:.1f} & {ec['ci_hi']*100:.1f} \\\\",
+                1,
+            )
+            print(f"\nEEGConformer: {ec['mean']*100:.1f}% [{ec['ci_lo']*100:.1f}–{ec['ci_hi']*100:.1f}%]")
+
+    # 8. Window sensitivity table (optional)
+    if WIN_SENS.exists():
+        ws = load(WIN_SENS)
+        res = ws.get("results", {})
+        cond_map = {
+            "csp_lda":              "CSP + LDA",
+            "encoder_ft_cls":       "JEPA enc + cls",
+            "ac_ssm":               "AC-SSM (this work)",
+            "ablation_encoder_cls": "Random ablation",
+        }
+        for cond, label in cond_map.items():
+            a_val = res.get("A_0.5-2.5", {}).get(cond, {})
+            c_val = res.get("C_1.0-3.5", {}).get(cond, {})
+            b_mean = res.get("B_0.5-4.5", {}).get(cond, {}).get("mean", 0) * 100
+
+            a_str = f"{a_val['mean']*100:.1f}" if a_val else "TBD"
+            c_str = f"{c_val['mean']*100:.1f}" if c_val else "TBD"
+
+            # Use regex to match any whitespace between label and & TBD
+            escaped = re.escape(label)
+            pattern = rf"{escaped}\s*& TBD & {b_mean:.1f} & TBD \\\\"
+            # re.sub treats \\ in replacement as literal \, so use a lambda
+            new_row = f"{label}  & {a_str} & {b_mean:.1f} & {c_str} \\\\"
+            tex = re.sub(pattern, lambda _: new_row, tex, count=1)
+
+        # Fill CSP-JEPA gap row for all windows
+        gaps = []
+        for wk in ["A_0.5-2.5", "B_0.5-4.5", "C_1.0-3.5"]:
+            r = res.get(wk, {})
+            csp_m = r.get("csp_lda", {}).get("mean", 0) * 100
+            enc_m = r.get("encoder_ft_cls", {}).get("mean", 0) * 100
+            gaps.append(f"{csp_m - enc_m:.1f}" if (csp_m and enc_m) else "TBD")
+        old_gap = re.compile(r"CSP \$-\$ JEPA gap \(pp\)\s*& TBD & 23\.6 & TBD \\\\")
+        new_gap = f"CSP $-$ JEPA gap (pp) & {gaps[0]} & {gaps[1]} & {gaps[2]} \\\\"
+        tex = old_gap.sub(lambda _: new_gap, tex, count=1)
+
+        print("\nWindow sensitivity table filled.")
 
     # Write back
     if tex != original:

@@ -72,6 +72,10 @@ def parse_args():
                    help="Add EEGNet (Lawhern 2018) as a modern neural baseline condition.")
     p.add_argument("--eegnet-epochs", type=int, default=50,
                    help="Training epochs for EEGNet (default 50).")
+    p.add_argument("--eegconformer", action="store_true",
+                   help="Add EEGConformer (Song 2022) as a transformer BCI baseline condition.")
+    p.add_argument("--eegconformer-epochs", type=int, default=50,
+                   help="Training epochs for EEGConformer (default 50).")
     return p.parse_args()
 
 
@@ -695,6 +699,63 @@ def _fit_eval_eegnet(
     return float(balanced_accuracy_score(y_te, preds))
 
 
+def _fit_eval_eegconformer(
+    eeg_tr: np.ndarray,
+    y_tr:   np.ndarray,
+    eeg_te: np.ndarray,
+    y_te:   np.ndarray,
+    n_epochs: int,
+    device:   str,
+) -> float:
+    """
+    Train EEGConformer end-to-end from scratch on training fold, evaluate on test fold.
+    Song et al. (2022) doi:10.1109/TNNLS.2022.3150699
+    eeg: (n, T, C) — transposed to (n, C, T) internally.
+    """
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import TensorDataset, DataLoader
+    from sklearn.metrics import balanced_accuracy_score
+
+    from v2_digital_self_replication.core.eegconformer import EEGConformer
+
+    T_use = min(eeg_tr.shape[1], 256)
+    n_ch  = eeg_tr.shape[2]
+    n_cls = len(np.unique(y_tr))
+
+    X_tr = torch.from_numpy(eeg_tr[:, -T_use:, :].transpose(0, 2, 1).astype(np.float32))
+    X_te = torch.from_numpy(eeg_te[:, -T_use:, :].transpose(0, 2, 1).astype(np.float32))
+    y_tr_t = torch.tensor(y_tr, dtype=torch.long)
+
+    net = EEGConformer(n_classes=n_cls, n_channels=n_ch, T=T_use).to(device)
+    loader = DataLoader(
+        TensorDataset(X_tr, y_tr_t),
+        batch_size=min(16, len(X_tr)),
+        shuffle=True,
+        drop_last=False,
+    )
+    opt = optim.Adam(net.parameters(), lr=1e-3, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(opt, T_max=n_epochs)
+
+    net.train()
+    for _ in range(n_epochs):
+        for Xb, yb in loader:
+            Xb, yb = Xb.to(device), yb.to(device)
+            loss = nn.functional.cross_entropy(net(Xb), yb)
+            opt.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            opt.step()
+        scheduler.step()
+
+    net.eval()
+    with torch.no_grad():
+        preds = net(X_te.to(device)).argmax(1).cpu().numpy()
+
+    return float(balanced_accuracy_score(y_te, preds))
+
+
 def _calibration_corr(sigma: np.ndarray, dof_pred: np.ndarray,
                       dof_true: np.ndarray) -> float:
     """
@@ -721,6 +782,8 @@ def _run_subject_cv(
     ft_epochs_cls: int | None = None,
     eegnet: bool = False,
     eegnet_epochs: int = 50,
+    eegconformer: bool = False,
+    eegconformer_epochs: int = 50,
 ) -> dict:
     from sklearn.model_selection import StratifiedKFold
     from sklearn.preprocessing import LabelEncoder
@@ -745,6 +808,8 @@ def _run_subject_cv(
         base_conditions.append("encoder_ft_cls_cns_planned")
     if eegnet:
         base_conditions.append("eegnet")
+    if eegconformer:
+        base_conditions.append("eegconformer")
     fold_results = {k: [] for k in base_conditions}
 
     for fold_idx, (tr_idx, te_idx) in enumerate(skf.split(eeg, y)):
@@ -841,6 +906,13 @@ def _run_subject_cv(
                 eeg_tr, y_tr, eeg_te, y_te, eegnet_epochs, device,
             )
             fold_results["eegnet"].append(acc_eegnet)
+
+        # ── L. EEGConformer baseline ─────────────────────────────────────────
+        if eegconformer:
+            acc_eegconformer = _fit_eval_eegconformer(
+                eeg_tr, y_tr, eeg_te, y_te, eegconformer_epochs, device,
+            )
+            fold_results["eegconformer"].append(acc_eegconformer)
 
         # ── H. encoder_ft_cls_cns: CNS cross-modal encoder fine-tuned e2e ─────
         if cns_checkpoint:
@@ -954,6 +1026,8 @@ def main():
             ft_epochs_cls=args.ft_epochs_cls,
             eegnet=args.eegnet,
             eegnet_epochs=args.eegnet_epochs,
+            eegconformer=args.eegconformer,
+            eegconformer_epochs=args.eegconformer_epochs,
         )
         all_subject_results.append(result)
         subject_ids_done.append(subj)
@@ -982,6 +1056,8 @@ def main():
         conditions.append("encoder_ft_cls_cns_planned")
     if args.eegnet:
         conditions.append("eegnet")
+    if args.eegconformer:
+        conditions.append("eegconformer")
     agg = {}
     for cond in conditions:
         means = [s[cond]["mean"] for s in all_subject_results
@@ -1036,6 +1112,8 @@ def main():
         labels_map["encoder_ft_cls_cns_planned"] = "CNS encoder + world-model planner + cls [Phase 2+WM]"
     if args.eegnet:
         labels_map["eegnet"] = "EEGNet (Lawhern 2018) [modern neural baseline]"
+    if args.eegconformer:
+        labels_map["eegconformer"] = "EEGConformer (Song 2022) [transformer BCI baseline]"
     for cond, label in labels_map.items():
         if cond not in agg:
             continue

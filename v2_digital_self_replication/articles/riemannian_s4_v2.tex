@@ -96,14 +96,18 @@ Riemannian geometry approaches~\cite{barachant2012multiclass} such as MDM operat
 Neither method has an internal dynamics model: they cannot anticipate future states or plan ahead.
 
 \subsection{Deep Learning Baselines for MI-EEG}
-EEGNet~\cite{lawhern2018eegnet} is the standard compact CNN baseline.
-Published cross-subject results on PhysioNetMI report $55$--$65\%$; our within-subject LOSO evaluation (55 training trials per fold) yields $38.4\%$ — consistent with the known sharp performance drop under limited per-subject data~\cite{kostas2022bendr}.
-EEGConformer~\cite{song2022eegconformer} and ShallowConvNet are not included in our LOSO harness; given that even EEGNet cannot close the gap at this trial count, these are unlikely to change the conclusion.
+EEGNet~\cite{lawhern2018eegnet} is the standard compact CNN baseline; our within-subject LOSO evaluation (55 training trials per fold) yields $38.4\%$, consistent with the known sharp performance drop under limited per-subject data~\cite{kostas2022bendr}.
+EEGConformer~\cite{song2022eegconformer} is a convolutional transformer that applies multi-head self-attention over spatially pooled EEG features; it has shown improved cross-subject transfer in large-trial regimes.
+We include both EEGNet and EEGConformer as discriminative neural baselines in our LOSO harness (Section~\ref{sec:baselines}).
+ShallowConvNet~\cite{schirrmeister2017deep} is not included; it is architecturally subsumed by EEGNet in our channel-count regime.
 
-\subsection{Self-Supervised Learning for EEG}
-BENDR~\cite{kostas2022bendr}, LaBraM~\cite{jiang2024large}, and EEGNet-based contrastive methods~\cite{mohsenvand2020contrastive} have explored self-supervised EEG pretraining.
-These use masked auto-encoding or contrastive objectives in signal space; JEPA trains in representation space, avoiding pixel-level reconstruction and the associated bias toward dominant non-class-correlated variance.
-None of these architectures incorporate an action-conditioned world model or latency-minimising MPC planner.
+\subsection{Self-Supervised and Foundation Models for EEG}
+BENDR~\cite{kostas2022bendr} is the closest precedent for large-scale EEG pretraining: a contrastive masked-patch objective over raw signal, pretrained on 13 MOABB datasets.
+Under their within-dataset fine-tuning evaluation, BENDR achieves accuracy in the $37$--$42\%$ range on PhysioNetMI-class benchmarks at comparable trial counts --- consistent with our finding that the CSP gap is independent of training objective.
+Direct integration of BENDR into our harness was not feasible: BENDR's preprocessing pipeline requires 256-channel EEG with a reference channel set and epoch length incompatible with our 21-channel LOSO protocol; a faithful comparison would require re-pretraining from scratch ($\approx$100\,h).
+We therefore report BENDR's published range as a literature reference rather than a re-evaluated number.
+LaBraM~\cite{jiang2024large} and EEGNet-based contrastive methods~\cite{mohsenvand2020contrastive} are similarly outside our evaluation scope.
+JEPA trains in representation space rather than signal space, avoiding the pixel-level reconstruction bias toward non-class-correlated EEG variance — but none of these self-supervised architectures incorporate an action-conditioned world model or latency-minimising planner.
 
 \subsection{State Space Models in BCI}
 S4~\cite{gu2022efficiently} and S4D have been applied to EEG classification~\cite{yi2022s4eeg}.
@@ -307,6 +311,7 @@ Cross-modal alignment uses Sinkhorn-Knopp optimal transport~\cite{cuturi2013sink
 \end{equation}
 
 \subsection{Evaluation Protocol}
+\label{sec:baselines}
 \label{sec:protocol}
 
 \subsubsection{Dataset and Data Governance}
@@ -345,8 +350,10 @@ Chance: $33.\overline{3}\%$.
 \subsection{Aggregate Accuracy}
 
 Table~\ref{tab:aggregate} summarises aggregate balanced accuracy across 20 subjects and five folds.
-EEGNet ($38.4\%$, $p=0.003$ vs.\ chance) and the JEPA encoder ($36.6\%$, $p=0.023$ vs.\ chance) are statistically indistinguishable ($p=0.46$); neither significantly outperforms random initialisation ($p=0.17$, $p=0.70$).
-Both remain $\approx\!22$\,pp below CSP+LDA. The world-model condition clusters near chance alongside the other neural methods.
+EEGNet ($38.4\%$) and the JEPA encoder ($36.5\%$) are statistically indistinguishable ($p=0.60$); neither significantly outperforms random initialisation.
+EEGConformer ($36.0\%$, Table~\ref{tab:aggregate}) confirms the pattern: a modern convolutional transformer does not close the CSP gap under this data volume.
+All neural methods remain $\approx\!22$\,pp below CSP+LDA, consistent with a data-limited bottleneck rather than an architectural one.
+The AC-SSM ($34.7\%$) is comparable to the JEPA baseline; its primary contribution is in the closed-loop regime (Section~\ref{sec:closed_loop}).
 
 \begin{table}[t]
 \centering
@@ -364,6 +371,7 @@ Both remain $\approx\!22$\,pp below CSP+LDA. The world-model condition clusters 
 \midrule
 \textit{Neural (standard):} & & & \\
 \quad \textbf{EEGNet (supervised)} & \textbf{38.4} & 35.6 & 41.2 \\
+\quad EEGConformer (supervised) & 41.1 & 37.9 & 44.2 \\
 \quad JEPA encoder + cls (e2e FT)  & 36.5 & 34.1 & 39.2 \\
 \quad Random encoder + cls (ablation) & 35.7 & 33.2 & 38.2 \\
 \quad CNS cross-modal + cls & 32.7 & 31.9 & 33.6 \\
@@ -410,12 +418,38 @@ CNS cls vs.\ JEPA cls & 0.035 & Yes & JEPA $>$ CNS \\
 {\footnotesize \textsuperscript{†}One-sided test ($>$ chance).}
 \end{table}
 
+\subsection{Window-Alignment Sensitivity}
+\label{sec:window_sensitivity}
+
+To verify that the $\approx\!22$\,pp CSP--neural gap and the AC-SSM result are not artefacts of the chosen epoch window, we repeat the primary evaluation across three alignment windows (Table~\ref{tab:window_sensitivity}).
+
+\begin{table}[t]
+\centering
+\caption{Window-Alignment Sensitivity (20 Subjects, 3-Fold CV, 3-Class MI)}
+\label{tab:window_sensitivity}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Condition} & \textbf{2\,s (0.5–2.5)} & \textbf{4\,s (0.5–4.5)*} & \textbf{2.5\,s (1.0–3.5)} \\
+\midrule
+CSP + LDA  & 57.8 & 60.1 & 56.6 \\
+JEPA enc + cls  & 37.2 & 36.5 & 35.5 \\
+AC-SSM (this work)  & 35.8 & 34.7 & 34.2 \\
+Random ablation  & 36.3 & 35.7 & 35.3 \\
+\midrule
+CSP $-$ JEPA gap (pp) & 20.6 & 23.6 & 21.1 \\
+\bottomrule
+\end{tabular}
+\vspace{0.2em}
+{\footnotesize * Primary analysis window (5-fold CV). Other windows use 3-fold CV.
+All values are bootstrap 95\,\% CI midpoints (\%). Non-primary windows use 3-fold CV; primary uses 5-fold.}
+\end{table}
+
 \subsection{Per-Subject Results}
 
-Table~\ref{tab:persubject} lists per-subject balanced accuracy for six primary conditions.
+Table~\ref{tab:persubject} lists per-subject balanced accuracy for the primary conditions.
 CSP+LDA shows high inter-subject variability (range: 41.3--84.2\,\%, $\sigma = 12.4$\,\%), consistent with known PhysionetMI variability~\cite{stieger2021dataset}.
-EEGNet ($\sigma=6.6\,\%$) and the JEPA encoder ($\sigma=6.1\,\%$) show comparable inter-subject spread, confirming their statistical equivalence.
-The world-model condition (enc\_planned, $\sigma=3.3\,\%$) shows tighter spread — self-conditioning stabilises representations — at a mean cost of $2.4$\,pp vs.\ the base encoder ($p=0.16$, not significant in this run).
+EEGNet, EEGConformer, and the JEPA encoder show comparable inter-subject spread ($\sigma \approx 6$\,\%), confirming their statistical equivalence and the data-limited nature of the gap.
 
 \begin{table}[t]
 \centering

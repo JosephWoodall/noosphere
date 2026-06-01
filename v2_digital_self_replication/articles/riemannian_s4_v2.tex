@@ -130,174 +130,142 @@ Our planner directly optimises a discounted cost that penalises late convergence
 \section{Methods}
 \label{sec:methods}
 
-Fig.~\ref{fig:overview} provides an at-a-glance architecture overview; Figs.~\ref{fig:pipeline} and~\ref{fig:architecture} detail the full inference pipeline and the encoder layer stack respectively.
+Fig.~\ref{fig:overview} provides a complete architecture overview covering the encoder backbone, decoder heads, JEPA pretraining paths, and the full closed-loop control pipeline; Fig.~\ref{fig:architecture} gives supplementary per-layer encoder detail.
 
-%% ── Compact single-column overview (quick-read) ──────────────────────────────
-\begin{figure}[t]
-\centering
-\resizebox{\columnwidth}{!}{%
-\begin{tikzpicture}[
-  every node/.style={font=\small},
-  block/.style={rectangle, draw, rounded corners=2pt,
-    fill=blue!12, minimum width=1.5cm, minimum height=0.75cm,
-    text centered, text width=1.45cm},
-  novel/.style={rectangle, draw, line width=1.6pt, rounded corners=2pt,
-    fill=orange!28, minimum width=1.5cm, minimum height=0.75cm,
-    text centered, text width=1.45cm},
-  io/.style={rectangle, draw, rounded corners=2pt,
-    fill=cyan!25, minimum width=1.25cm, minimum height=0.68cm,
-    text centered, text width=1.2cm},
-  outbox/.style={rectangle, draw, rounded corners=2pt,
-    fill=green!22, minimum width=1.35cm, minimum height=0.58cm,
-    text centered, text width=1.3cm, font=\scriptsize},
-  side/.style={rectangle, draw, rounded corners=2pt,
-    fill=orange!22, minimum width=1.15cm, minimum height=0.58cm,
-    text centered, text width=1.1cm, font=\scriptsize},
-  arr/.style={-{Stealth[length=2.5mm]}, thick},
-]
-%% Left-to-right data flow
-\node[io]     (inp)  at (0.0,  0.0) {EEG\\$T{\times}21$};
-\node[novel]  (b1)   at (2.0,  0.0) {\textbf{AC-SSM}\\Block~1};
-\node[block]  (b24)  at (4.0,  0.0) {SSM\\Blocks 2--4};
-\node[block]  (pool) at (6.0,  0.0) {Temporal\\Pool};
-\node[block]  (dec)  at (8.0,  0.0) {Intent\\Decoder};
-%% Output heads
-\node[outbox] (mu)   at (10.3,  0.58) {$\bm\mu$: 6-DOF};
-\node[outbox] (sig)  at (10.3,  0.00) {$\bm\sigma$: uncert.};
-\node[outbox] (ern)  at (10.3, -0.58) {$p_\text{ERN}$: ERN};
-%% Previous motor command
-\node[side]   (act)  at (2.0,  -1.45) {$\mathbf{a}_{t-1}$\\prev.\,cmd};
-%% Arrows
-\draw[arr] (inp)  -- (b1);
-\draw[arr] (b1)   -- (b24);
-\draw[arr] (b24)  -- (pool);
-\draw[arr] (pool) -- (dec);
-\draw[arr] (dec.east) -- ++(3mm,0) |- (mu.west);
-\draw[arr] (dec.east) --             (sig.west);
-\draw[arr] (dec.east) -- ++(3mm,0) |- (ern.west);
-\draw[arr] (act.north) --
-    node[right=1mm, font=\tiny]{SiLU} (b1.south);
-\end{tikzpicture}%
-}%
-\caption{Architecture overview (inference path).
-\textbf{Orange} (thick border): novel action-conditioned Block~1, where the
-previous motor command $\mathbf{a}_{t-1}$ enters via a SiLU gate.
-\textbf{Blue:} standard ZOH-SSM blocks (2--4).
-\textbf{Cyan:} EEG input tensor.
-\textbf{Green:} three decoder heads ($\bm\mu$, $\bm\sigma$, $p_\text{ERN}$).
-Full pipeline: Fig.~\ref{fig:pipeline}; layer detail: Fig.~\ref{fig:architecture}.}
-\label{fig:overview}
-\end{figure}
-
+%% ── Full model architecture overview (figure*) ───────────────────────────────
 \begin{figure*}[!t]
 \centering
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
   every node/.style={font=\small},
-  block/.style={rectangle, draw, rounded corners=2pt,
-                minimum width=1.7cm, minimum height=0.72cm,
-                text centered, text width=1.6cm, fill=blue!8},
-  newblock/.style={rectangle, draw, rounded corners=2pt,
-                   minimum width=1.7cm, minimum height=0.72cm,
-                   text centered, text width=1.6cm, fill=orange!18, thick},
-  outblock/.style={rectangle, draw, rounded corners=2pt,
-                   minimum width=2.5cm, minimum height=0.62cm,
-                   text centered, fill=gray!7},
-  arr/.style={-{Stealth[length=2mm]}, thick},
-  darr/.style={-{Stealth[length=2mm]}, thick, dashed, gray},
+  %% Reuse style names matching fig:architecture for consistency
+  mbox/.style={rectangle, draw, line width=0.9pt, rounded corners=4pt,
+               minimum width=2.3cm, minimum height=0.95cm,
+               text centered, text width=2.2cm,
+               fill=blue!35, draw=blue!60!black},
+  acbox/.style={rectangle, draw, line width=2.2pt, rounded corners=4pt,
+                minimum width=2.3cm, minimum height=0.95cm,
+                text centered, text width=2.2cm,
+                fill=orange!55, draw=orange!80!black},
+  iobox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+                minimum width=2.0cm, minimum height=0.85cm,
+                text centered, text width=1.9cm,
+                fill=cyan!40, draw=cyan!70!black},
+  obox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+               minimum width=2.5cm, minimum height=0.80cm,
+               text centered, text width=2.4cm,
+               fill=green!35, draw=green!60!black, font=\scriptsize},
+  sidebox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+                  minimum width=2.0cm, minimum height=0.80cm,
+                  text centered, text width=1.9cm,
+                  fill=orange!45, draw=orange!70!black, font=\scriptsize},
+  tbox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
+               minimum width=2.3cm, minimum height=0.95cm,
+               text centered, text width=2.2cm,
+               fill=gray!15, draw=gray!60, font=\scriptsize},
+  arr/.style={-{Stealth[length=2.5mm]}, line width=1.0pt},
+  darr/.style={-{Stealth[length=2.0mm]}, line width=0.8pt, dashed, gray},
+  lbl/.style={font=\scriptsize, fill=white, inner sep=2pt, rounded corners=2pt},
 ]
 
-%% Absolute-coordinate layout eliminates all arrow crossings.
-%% x-columns: 0 (inputs), 2.4 (fusion), 4.9 (encoder), 7.4 (latent),
-%%            9.8 (decoder/transition), 13.0 (outputs)
-%% y-rows:    1.2 / 0 / -1.3 (inputs); 1.6 (JEPA);
-%%            0.9 (decoder); -1.1 (transition); -2.6 (planner);
-%%            -4.1 (Kalman); -5.5 (safety); -6.9 (hardware)
+%% ── ROW 1 (y=0): Encoder backbone ──────────────────────────────────────────
+\node[iobox]  (eeg)  at ( 0.0,  0.0) {EEG\\$T{\times}21$};
+\node[acbox]  (b1)   at ( 2.5,  0.0) {\textbf{AC-SSM}\\Block~1};
+\node[mbox]   (b24)  at ( 5.2,  0.0) {ZOH-SSM\\Blocks 2--4};
+\node[mbox]   (pool) at ( 7.9,  0.0) {Temporal\\Pool};
+\node[iobox]  (lat)  at (10.4,  0.0) {Latent $\mathbf{h}$\\$\mathbb{R}^{128}$};
+\node[mbox]   (dec)  at (13.0,  0.0) {Intent\\Decoder};
 
-%% ── Input modalities ─────────────────────────────────────────────────────
-\node[block] (eeg)  at (0,  1.2) {EEG\\(21\,ch)};
-\node[block] (hrv)  at (0,  0.0) {HRV/GSR};
-\node[block] (prop) at (0, -1.3) {Prop.\ (6\,DOF)};
+%% Three decoder output heads
+\node[obox]   (mu)   at (16.0,  0.90) {$\bm\mu\!\in\![-1,1]^6$\\6-DOF cmd};
+\node[obox]   (sig)  at (16.0,  0.00) {$\bm\sigma\!\in\!\mathbb{R}^6_{>0}$\\uncertainty};
+\node[obox]   (ern)  at (16.0, -0.90) {$p_\text{ERN}\!\in\![0,1]$\\error signal};
 
-%% ── Fusion ───────────────────────────────────────────────────────────────
-\node[block] (fuse) at (2.4, 0.0) {Modal\\Fusion};
-\draw[arr] (eeg.east)  -- ++(4mm,0) |- (fuse.north west);
-\draw[arr] (hrv.east)  -- (fuse.west);
-\draw[arr] (prop.east) -- ++(4mm,0) |- (fuse.south west);
-
-%% ── Encoder ──────────────────────────────────────────────────────────────
-\node[block] (enc) at (4.9, 0.0) {ZOH-SSM\\$\times$4 layers};
-\draw[arr] (fuse) -- (enc);
-
-\node[outblock] (jepa) at (4.9, 1.6) {JEPA\\pretrain};
-\draw[darr] (enc.north) -- (jepa.south)
-    node[midway, right=1.5mm, gray, font=\tiny] {offline};
-
-%% ── Latent ───────────────────────────────────────────────────────────────
-\node[block] (lat) at (7.4, 0.0) {Latent $\mathbf{h}$\\(128-d)};
-\draw[arr] (enc) -- (lat);
-
-%% ── Intent Decoder (upper path) ──────────────────────────────────────────
-\node[block] (dec) at (9.8, 0.9) {Intent\\Decoder};
-\draw[arr] (lat.north east) -- ++(3mm,0) |- (dec.west);
-
-%% Output nodes in their own column -- no arrows need to cross back left
-\node[outblock] (mu)    at (13.0,  1.4) {$\bm\mu$: 6-DOF cmd};
-\node[outblock] (sigma) at (13.0,  0.9) {$\bm\sigma$: uncertainty};
-\node[outblock] (ern)   at (13.0,  0.4) {$p_\text{ERN}$: error sig.};
+%% Main forward-pass arrows
+\draw[arr] (eeg)  -- (b1);
+\draw[arr] (b1)   -- node[above, lbl]{LN+Res} (b24);
+\draw[arr] (b24)  -- node[above, lbl]{LN+Res} (pool);
+\draw[arr] (pool) -- (lat);
+\draw[arr] (lat)  -- (dec);
 \draw[arr] (dec.east) -- ++(3mm,0) |- (mu.west);
-\draw[arr] (dec.east) --            (sigma.west);
+\draw[arr] (dec.east) --             (sig.west);
 \draw[arr] (dec.east) -- ++(3mm,0) |- (ern.west);
 
-%% ── Action-Conditioned Transition (lower path) ───────────────────────────
-\node[newblock] (trans) at (9.8, -1.1) {Action-Cond.\\ Transition $T$};
-\draw[arr] (lat.south east) -- ++(3mm,0) |- (trans.west);
-%% mu feeds the action input to the transition
-\draw[darr] (mu.west) -- ++(-3mm,0) -- ++(0,-8mm) -- ++(0,-16mm)
-    -| (trans.north) node[near end, right=1mm, gray, font=\tiny] {$\mathbf{a}$};
+%% ── Training paths (above encoder, y=2.2) ───────────────────────────────────
+\node[tbox] (jepa) at ( 5.2,  2.2) {JEPA pretrain\\$\mathcal{L}_\text{JEPA}$\\(EMA target)};
+\node[tbox] (loss) at (10.4,  2.2) {Joint losses\\$\mathcal{L}_\text{CE}{+}\mathcal{L}_\text{recon}$\\$+\mathcal{L}_\text{JEPA}{+}\mathcal{L}_\text{sc}$};
 
-%% ── Latency Planner ──────────────────────────────────────────────────────
-\node[newblock] (plan) at (9.8, -2.6) {Latency\\Planner (CEM)};
-\draw[arr] (trans.south) -- (plan.north);
+\draw[darr] (b24.north) -- node[right=1.5mm, lbl]{offline} (jepa.south);
+\draw[darr] (lat.north) -- (loss.south);
 
-%% ── Kalman Filter ────────────────────────────────────────────────────────
-\node[block] (kalman) at (9.8, -4.1) {Kalman\\Filter};
-\draw[arr] (plan.south) -- node[right=1mm, font=\tiny] {$\hat{\mathbf{a}}$} (kalman.north);
-%% sigma routes: right past output column, then down to kalman's y, then left
-\draw[darr] (sigma.east) -- ++(6mm,0) |- (kalman.east);
+%% ── Action input (below B1) ─────────────────────────────────────────────────
+\node[sidebox] (act) at ( 2.5, -1.7) {$\mathbf{a}_{t-1}$\\prev.\ cmd};
+\draw[arr] (act.north) -- node[right=1.5mm, lbl]{SiLU} (b1.south);
 
-%% ── Safety Gate ──────────────────────────────────────────────────────────
-\node[block] (safety) at (9.8, -5.5) {Safety Gate\\(ERN, $\bm\sigma$)};
-\draw[arr] (kalman) -- (safety);
-%% ern routes: right past output column, then down to safety's y, then left
-\draw[darr] (ern.east) -- ++(6mm,0) |- (safety.east);
+%% ── ROW 2 (y=-3.2): World-model control pipeline ────────────────────────────
+\node[acbox] (trans) at (10.4, -3.2) {Transition\\$T_\phi(\mathbf{h},\mathbf{a})$};
+\node[acbox] (plan)  at (13.0, -3.2) {CEM Planner\\$K{=}32$, $H{=}3$};
+\node[mbox]  (kal)   at (15.6, -3.2) {Kalman Filter\\$R{=}\mathrm{diag}(\bm\sigma^2)$};
+\node[mbox]  (safe)  at (18.2, -3.2) {Safety Gate\\($p_\text{ERN}$, $\bm\sigma$)};
+\node[iobox] (hw)    at (20.8, -3.2) {Hardware\\6-DOF Arm};
 
-%% ── Hardware ─────────────────────────────────────────────────────────────
-\node[block] (hw) at (9.8, -6.9) {Hardware\\(6-DOF arm)};
-\draw[arr] (safety) -- (hw);
+%% World-model flow
+\draw[arr] (lat.south)   -- (trans.north);
+\draw[arr] (trans) -- (plan);
+\draw[arr] (plan)  -- (kal);
+\draw[arr] (kal)   -- (safe);
+\draw[arr] (safe)  -- (hw);
 
-%% ── Legend ───────────────────────────────────────────────────────────────
-\node[block,    minimum width=0.9cm, minimum height=0.4cm, text width=0.9cm]
-    (l1) at (0, -5.5) {};
-\node[right=2mm of l1, font=\footnotesize, anchor=west]
-    {ZOH-SSM + JEPA (prior work)};
-\node[newblock, minimum width=0.9cm, minimum height=0.4cm, text width=0.9cm]
-    (l2) at (0, -6.3) {};
-\node[right=2mm of l2, font=\footnotesize, anchor=west]
-    {World-model additions (new)};
+%% Signal routing (dashed): mu→T, sigma→Kalman, ern→Safety
+\draw[darr] (mu.south)  -- (16.0,-1.7) -- (10.4,-1.7) -- (trans.north)
+    node[midway, below=1mm, lbl]{$\mathbf{a}$};
+\draw[darr] (sig.east)  -- (18.5, 0.0) -- (18.5,-2.4) -- (kal.north)
+    node[near end, right=1mm, lbl]{$R$};
+\draw[darr] (ern.south) -- (16.0,-1.9) -- (18.2,-1.9) -- (safe.north)
+    node[midway, below=1mm, lbl]{inhibit};
+
+%% Recurrent feedback: mu → a_{t-1}
+\draw[darr] (mu.west) -- (13.0, 0.90) -- (13.0,-1.0) -- (2.5,-1.0) -- (act.north)
+    node[near end, right=1mm, lbl]{$\mathbf{a}_{t-1}$};
+
+%% ── Legend ───────────────────────────────────────────────────────────────────
+\node[acbox,   minimum width=1.0cm, minimum height=0.4cm, text width=0.9cm]
+    (la) at (0.0, -3.2) {};
+\node[right=2mm of la, font=\footnotesize, anchor=west]
+    {Novel: AC-SSM / world model (this work)};
+\node[mbox,    minimum width=1.0cm, minimum height=0.4cm, text width=0.9cm]
+    (lb) at (0.0, -4.1) {};
+\node[right=2mm of lb, font=\footnotesize, anchor=west]
+    {Standard ZOH-SSM / control block};
+\node[iobox,   minimum width=1.0cm, minimum height=0.4cm]
+    (lc) at (0.0, -5.0) {};
+\node[right=2mm of lc, font=\footnotesize, anchor=west]
+    {Data tensor / hardware};
+\node[obox,    minimum width=1.0cm, minimum height=0.4cm, text width=0.9cm]
+    (ld) at (0.0, -5.9) {};
+\node[right=2mm of ld, font=\footnotesize, anchor=west]
+    {Decoder output head};
+\node[tbox,    minimum width=1.0cm, minimum height=0.4cm, text width=0.9cm]
+    (le) at (0.0, -6.8) {};
+\node[right=2mm of le, font=\footnotesize, anchor=west]
+    {Training path (offline)};
 
 \end{tikzpicture}%
 }%
-\caption{ZOH-SSM World Model inference pipeline.
-Blue blocks: pretrained encoder-decoder (ZOH-SSM + JEPA objective).
-Orange blocks: novel world-model components (Action-Conditioned Transition $T(\mathbf{h},\mathbf{a})$
-and hybrid CEM+gradient Latency Planner).
-Gray output nodes: decoder outputs fed to downstream components.
-Dashed arrows indicate offline pretraining or uncertainty signal routing.
-In real-time BCI operation the fast self-conditioning path
-$\mathbf{h}_\text{plan} = T(\mathbf{h}, \mathrm{dec}(\mathbf{h}).\bm\mu)$
-replaces the full CEM optimisation loop ($<$5\,ms CPU).}
-\label{fig:pipeline}
+\caption{Complete model architecture.
+\textbf{Row~1:} EEG $\to$ \textbf{AC-SSM Block~1} (orange, novel; receives
+$\mathbf{a}_{t-1}$ via SiLU gate) $\to$ ZOH-SSM Blocks~2--4 (blue, LN+residual)
+$\to$ Temporal Pool $\to$ Latent $\mathbf{h}$ $\to$ Intent Decoder $\to$ three
+heads ($\bm\mu$, $\bm\sigma$, $p_\text{ERN}$).
+Gray boxes (top): offline training paths (JEPA pretraining; joint loss
+$\mathcal{L}_\text{CE}{+}\mathcal{L}_\text{recon}{+}\mathcal{L}_\text{JEPA}{+}\mathcal{L}_\text{sc}$).
+\textbf{Row~2:} closed-loop pipeline --- Transition $T_\phi$
+$\to$ CEM Planner ($K{=}32$, $H{=}3$, $\gamma{=}0.8$) $\to$ Kalman Filter
+$\to$ Safety Gate $\to$ 6-DOF arm.
+Dashed arrows: $\bm\mu{\to}T_\phi$ (action), $\bm\sigma{\to}$Kalman ($R$),
+$p_\text{ERN}{\to}$Safety Gate; recurrent $\mathbf{a}_{t-1}$ feedback closes
+the action-conditioning loop.}
+\label{fig:overview}
 \end{figure*}
 
 %% -----------------------------------------------------------------------
@@ -322,11 +290,13 @@ replaces the full CEM optimisation loop ($<$5\,ms CPU).}
   %% Green: decoder output heads
   obox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
                minimum width=3.0cm, minimum height=1.05cm,
-               text centered, fill=green!35, draw=green!60!black},
+               text centered, text width=2.9cm,
+               fill=green!35, draw=green!60!black},
   %% Orange side box: action signal input
   sidebox/.style={rectangle, draw, line width=0.9pt, rounded corners=3pt,
                   minimum width=2.4cm, minimum height=0.9cm,
-                  text centered, fill=orange!45, draw=orange!70!black},
+                  text centered, text width=2.3cm,
+                  fill=orange!45, draw=orange!70!black},
   arr/.style={-{Stealth[length=2.5mm]}, line width=1.1pt},
   lbl/.style={font=\scriptsize, fill=white, inner sep=2pt, rounded corners=2pt},
 ]
@@ -411,7 +381,7 @@ gate. \textbf{Blue:} standard bilinear ZOH-SSM blocks (2--4) with LayerNorm
 and residual connections; these receive no direct action input.
 \textbf{Cyan:} input and latent data tensors. \textbf{Green:} three decoder
 output heads ($\bm\mu$, $\bm\sigma$, $p_\text{ERN}$). The JEPA pretraining
-path and closed-loop CEM planner are shown in Fig.~\ref{fig:pipeline}.}
+path and closed-loop CEM planner are shown in Fig.~\ref{fig:overview}.}
 \label{fig:architecture}
 \end{figure*}
 
@@ -595,6 +565,9 @@ Wilcoxon tests on per-subject means (Table~\ref{tab:wilcoxon}) reveal:
   \item EEGNet vs.\ chance: $p = 0.003$ (one-sided); JEPA encoder vs.\ chance: $p = 0.023$. Both methods are marginally above chance, consistent with a real but weak signal.
   \item JEPA encoder vs.\ CSP+LDA: $p < 0.0001$; CSP vastly superior at $23.6$\,pp above JEPA.
   \item EEGNet vs.\ CSP+LDA: $p < 0.001$; $21.7$\,pp gap. The discriminative objective does not close the gap at this data scale.
+  \item EEGConformer vs.\ JEPA encoder: $p = 0.070$ (\emph{not significant}). The modern convolutional transformer ($41.1\%$) is statistically equivalent to the JEPA encoder ($36.5\%$) after accounting for between-subject variance, confirming the data-limited ceiling is architecture-independent.
+  \item EEGConformer vs.\ EEGNet: $p = 0.097$ (\emph{not significant}). Despite a $2.7$\,pp mean advantage, EEGConformer is equivalent to EEGNet at this trial count.
+  \item EEGConformer vs.\ CSP+LDA: $p < 0.0001$; $19.0$\,pp gap. The pattern holds for the strongest neural baseline.
   \item CNS cross-modal vs.\ JEPA: $p = 0.035$. CNS pretraining on synthetic spike trains \emph{significantly underperforms} ($32.7\%$).
 \end{enumerate}
 
@@ -602,19 +575,24 @@ Wilcoxon tests on per-subject means (Table~\ref{tab:wilcoxon}) reveal:
 \centering
 \caption{Wilcoxon Signed-Rank Test Results ($N=20$)}
 \label{tab:wilcoxon}
+{\renewcommand{\arraystretch}{0.88}%
 \begin{tabular}{lrrl}
 \toprule
-\textbf{Comparison} & \textbf{$p$-value} & \textbf{Sig.?} & \textbf{Direction} \\
+\textbf{Comparison} & \textbf{$p$} & \textbf{Sig.?} & \textbf{Direction} \\
 \midrule
 EEGNet vs.\ JEPA cls & 0.455 & No & equivalent \\
+EEGConformer vs.\ JEPA cls & 0.070 & No & equivalent \\
+EEGConformer vs.\ EEGNet & 0.097 & No & equivalent \\
 JEPA cls vs.\ random cls & 0.701 & No & equivalent \\
 EEGNet vs.\ chance\textsuperscript{†} & 0.003 & Yes & EEGNet $>$ chance \\
 JEPA cls vs.\ chance\textsuperscript{†} & 0.023 & Yes & JEPA $>$ chance \\
+EEGConformer vs.\ chance\textsuperscript{†} & 0.0003 & Yes & EEGConformer $>$ chance \\
 EEGNet vs.\ CSP+LDA & $<$0.001 & Yes & CSP $\gg$ EEGNet \\
 JEPA cls vs.\ CSP+LDA & $<$0.0001 & Yes & CSP $\gg$ JEPA \\
+EEGConformer vs.\ CSP+LDA & $<$0.0001 & Yes & CSP $\gg$ EEGConformer \\
 CNS cls vs.\ JEPA cls & 0.035 & Yes & JEPA $>$ CNS \\
 \bottomrule
-\end{tabular}
+\end{tabular}}%
 \vspace{0.2em}
 {\footnotesize \textsuperscript{†}One-sided test ($>$ chance).}
 \end{table}
@@ -656,41 +634,42 @@ EEGNet, EEGConformer, and the JEPA encoder show comparable inter-subject spread 
 \centering
 \caption{Per-Subject Balanced Accuracy (\%)}
 \label{tab:persubject}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{crrrrrrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{crrrrrrrr}
 \toprule
-\textbf{Subj.} & \textbf{EEGNet} & \textbf{Enc} & \textbf{AC-SSM} & \textbf{Enc+WM} & \textbf{Abl} & \textbf{CSP} & \textbf{MDM} \\
+\textbf{Subj.} & \textbf{EEGNet} & \textbf{Conf.} & \textbf{Enc} & \textbf{AC-SSM} & \textbf{Enc+WM} & \textbf{Abl} & \textbf{CSP} & \textbf{MDM} \\
 \midrule
-S01 & n/a & 43.3 & 29.0 & 27.7 & 29.0 & 78.2 & 66.5 \\
-S02 & n/a & 42.0 & 40.0 & 30.3 & 34.7 & 71.9 & 63.7 \\
-S03 & n/a & 36.7 & 38.3 & 31.3 & 38.7 & 49.5 & 61.1 \\
-S04 & n/a & 43.3 & 37.3 & 41.7 & 46.7 & 68.1 & 55.1 \\
-S05 & n/a & 35.7 & 33.7 & 39.7 & 41.7 & 63.6 & 46.3 \\
-S06 & n/a & 35.7 & 32.3 & 43.0 & 34.3 & 63.6 & 36.3 \\
-S07 & n/a & 35.7 & 31.7 & 33.0 & 31.0 & 83.7 & 63.3 \\
-S08 & n/a & 37.0 & 35.0 & 33.3 & 30.0 & 57.1 & 54.0 \\
-S09 & n/a & 29.7 & 23.3 & 32.0 & 24.7 & 50.8 & 39.6 \\
-S10 & n/a & 29.3 & 33.0 & 22.3 & 40.0 & 63.8 & 44.6 \\
-S11 & n/a & 45.0 & 41.0 & 36.7 & 43.7 & 57.4 & 43.2 \\
-S12 & n/a & 48.7 & 41.7 & 45.7 & 43.3 & 58.6 & 56.3 \\
-S13 & n/a & 29.3 & 37.7 & 33.7 & 33.3 & 50.8 & 28.5 \\
-S14 & n/a & 31.7 & 45.3 & 30.7 & 34.3 & 62.1 & 53.8 \\
-S15 & n/a & 28.0 & 40.7 & 26.7 & 33.3 & 84.2 & 59.1 \\
-S16 & n/a & 41.7 & 33.0 & 40.7 & 43.0 & 49.0 & 33.5 \\
-S17 & n/a & 30.0 & 27.0 & 21.3 & 28.7 & 42.9 & 34.7 \\
-S18 & n/a & 36.0 & 27.0 & 36.7 & 34.0 & 58.1 & 34.9 \\
-S19 & n/a & 33.3 & 31.7 & 28.3 & 38.0 & 48.1 & 35.0 \\
-S20 & n/a & 38.0 & 35.7 & 32.3 & 31.0 & 41.3 & 40.1 \\
+S01 & 39.0 & 40.7 & 43.3 & 29.0 & 27.7 & 29.0 & 78.2 & 66.5 \\
+S02 & 41.3 & 41.3 & 42.0 & 40.0 & 30.3 & 34.7 & 71.9 & 63.7 \\
+S03 & 51.3 & 52.0 & 36.7 & 38.3 & 31.3 & 38.7 & 49.5 & 61.1 \\
+S04 & 46.3 & 38.3 & 43.3 & 37.3 & 41.7 & 46.7 & 68.1 & 55.1 \\
+S05 & 31.7 & 48.3 & 35.7 & 33.7 & 39.7 & 41.7 & 63.6 & 46.3 \\
+S06 & 33.0 & 37.7 & 35.7 & 32.3 & 43.0 & 34.3 & 63.6 & 36.3 \\
+S07 & 29.3 & 31.3 & 35.7 & 31.7 & 33.0 & 31.0 & 83.7 & 63.3 \\
+S08 & 33.0 & 46.3 & 37.0 & 35.0 & 33.3 & 30.0 & 57.1 & 54.0 \\
+S09 & 36.0 & 36.7 & 29.7 & 23.3 & 32.0 & 24.7 & 50.8 & 39.6 \\
+S10 & 36.0 & 44.7 & 29.3 & 33.0 & 22.3 & 40.0 & 63.8 & 44.6 \\
+S11 & 48.3 & 55.3 & 45.0 & 41.0 & 36.7 & 43.7 & 57.4 & 43.2 \\
+S12 & 38.0 & 35.7 & 48.7 & 41.7 & 45.7 & 43.3 & 58.6 & 56.3 \\
+S13 & 32.3 & 35.3 & 29.3 & 37.7 & 33.7 & 33.3 & 50.8 & 28.5 \\
+S14 & 32.7 & 42.7 & 31.7 & 45.3 & 30.7 & 34.3 & 62.1 & 53.8 \\
+S15 & 37.7 & 48.7 & 28.0 & 40.7 & 26.7 & 33.3 & 84.2 & 59.1 \\
+S16 & 38.0 & 25.3 & 41.7 & 33.0 & 40.7 & 43.0 & 49.0 & 33.5 \\
+S17 & 40.0 & 41.0 & 30.0 & 27.0 & 21.3 & 28.7 & 42.9 & 34.7 \\
+S18 & 51.0 & 45.3 & 36.0 & 27.0 & 36.7 & 34.0 & 58.1 & 34.9 \\
+S19 & 41.3 & 37.7 & 33.3 & 31.7 & 28.3 & 38.0 & 48.1 & 35.0 \\
+S20 & 30.7 & 38.0 & 38.0 & 35.7 & 32.3 & 31.0 & 41.3 & 40.1 \\
 \midrule
-\textbf{Mean} & \textbf{n/a} & \textbf{36.5} & \textbf{34.7} & \textbf{33.3} & \textbf{35.7} & \textbf{60.1} & \textbf{47.5} \\
-\textbf{95\,\% CI} & n/a & [34.1,39.2] & [32.4,37.2] & [30.5,36.5] & [33.2,38.2] & [54.7,65.6] & [42.5,52.8] \\
+\textbf{Mean} & \textbf{38.4} & \textbf{41.1} & \textbf{36.5} & \textbf{34.7} & \textbf{33.3} & \textbf{35.7} & \textbf{60.1} & \textbf{47.5} \\
+\textbf{95\,\% CI} & [35.6,41.2] & [37.9,44.2] & [34.1,39.2] & [32.4,37.2] & [30.5,36.5] & [33.2,38.2] & [54.7,65.6] & [42.5,52.8] \\
 \bottomrule
 \end{tabular}
 \par\vspace{2pt}
 \begin{minipage}{\linewidth}
-{\footnotesize\raggedright EEGNet = EEGNet (Lawhern 2018)~\cite{lawhern2018eegnet};
-Enc = encoder\_ft\_cls; AC-SSM = action-conditioned SSM (this work);
-Enc+WM = MLP world-model planner; Abl = ablation; CSP = CSP+LDA; MDM = Riemannian MDM.}
+{\footnotesize\raggedright EEGNet = EEGNet~\cite{lawhern2018eegnet};
+Conf.\ = EEGConformer~\cite{song2022eegconformer};
+Enc = JEPA encoder + linear cls (encoder\_ft\_cls); AC-SSM = action-conditioned SSM (this work);
+Enc+WM = MLP world-model planner; Abl = random-init ablation; CSP = CSP+LDA; MDM = Riemannian MDM.}
 \end{minipage}
 \end{table*}
 

@@ -353,23 +353,23 @@ the action-conditioning loop.}
 \draw[arr] (dec.south) -- (sigma.north);
 \draw[arr] (dec.south) -- ++(0,-0.4) -| (ern.north);
 
-%% ── Colour legend ───────────────────────────────────────────────────────────
+%% ── Colour legend (right side, clear of all main blocks) ────────────────────
 \node[mbox,    minimum width=1.2cm, minimum height=0.45cm, text width=1.1cm]
-    (la) at (-6.8, -5.35) {};
-\node[anchor=west, font=\footnotesize] at (-6.15, -5.35)
+    (la) at (5.3, -5.35) {};
+\node[anchor=west, font=\footnotesize] at (5.95, -5.35)
     {Standard ZOH-SSM block};
 \node[acbox,   minimum width=1.2cm, minimum height=0.45cm, text width=1.1cm,
                line width=1.5pt]
-    (lb) at (-6.8, -6.15) {};
-\node[anchor=west, font=\footnotesize] at (-6.15, -6.15)
+    (lb) at (5.3, -6.15) {};
+\node[anchor=west, font=\footnotesize] at (5.95, -6.15)
     {Novel AC-SSM block (action-cond.)};
 \node[iobox,   minimum width=1.2cm, minimum height=0.45cm]
-    (lc) at (-6.8, -6.95) {};
-\node[anchor=west, font=\footnotesize] at (-6.15, -6.95)
+    (lc) at (5.3, -6.95) {};
+\node[anchor=west, font=\footnotesize] at (5.95, -6.95)
     {Data tensor / latent};
 \node[obox,    minimum width=1.2cm, minimum height=0.45cm]
-    (ld) at (-6.8, -7.75) {};
-\node[anchor=west, font=\footnotesize] at (-6.15, -7.75)
+    (ld) at (5.3, -7.75) {};
+\node[anchor=west, font=\footnotesize] at (5.95, -7.75)
     {Decoder output head};
 
 \end{tikzpicture}

@@ -938,6 +938,7 @@ The full evaluation codebase, pre-trained checkpoints, and per-subject result fi
 \end{itemize}
 
 \subsection{LOSO Command (v4, final)}
+{\footnotesize
 \begin{verbatim}
 .venv/bin/python -m \
   v2_digital_self_replication.cli.eval_loso \
@@ -947,9 +948,11 @@ The full evaluation codebase, pre-trained checkpoints, and per-subject result fi
   --fast --eegnet --eegnet-epochs 50 \
   --device cpu \
   --checkpoint .../supervised_best.pt \
-  --cns-checkpoint .../jepa_encoder_cns_pretrained.pt \
+  --cns-checkpoint \
+    .../jepa_encoder_cns_pretrained.pt \
   --output .../loso_results_v4.json
 \end{verbatim}
+}
 
 
 %% -----------------------------------------------------------------------

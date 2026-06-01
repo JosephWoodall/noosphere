@@ -1,29 +1,33 @@
-%% IEEE TNSRE submission – Riemannian-S4 v2
+%% IEEE JBHI submission
 %% Compile: pdflatex x2 (bibliography is inline; no bibtex step needed)
 \documentclass[journal]{IEEEtran}
 
-\usepackage{amsmath,amssymb,bm}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts,bm}
+\usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage{algorithm,algorithmic}
+\usepackage{hyperref}
+\hypersetup{hidelinks=true}
+\usepackage{textcomp}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{xcolor}
-\usepackage{hyperref}
-\usepackage{cite}
-\usepackage{algorithm}
-\usepackage{algorithmic}
 \usepackage{siunitx}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
 
 \sisetup{separate-uncertainty=true}
+\markboth{IEEE Journal of Biomedical and Health Informatics}%
+{Woodall: Action-Conditioned ZOH-SSM World Model for Closed-Loop BCI}
 
 \begin{document}
 
 \title{Action-Conditioned ZOH-SSM World Model for Closed-Loop BCI: Competitive Convergence Under the Data-Limited Bottleneck}
 
 \author{Joseph~Woodall%
-  \thanks{Manuscript submitted to IEEE Transactions on Neural Systems and
-    Rehabilitation Engineering, May 2026.}%
+  \thanks{Manuscript submitted to the IEEE Journal of Biomedical and Health
+    Informatics, June 2026.}%
   \thanks{J.~Woodall is an independent researcher in neural engineering and
     brain-computer interfaces (e-mail: josephlw4@gmail.com).}%
   \thanks{\emph{Conflict of interest:} The author declares no competing
@@ -49,7 +53,7 @@ Code, pre-trained checkpoints, and per-subject results are publicly available.
 \end{abstract}
 
 \begin{IEEEkeywords}
-EEG, motor imagery BCI, state space model, action conditioning, world model, model predictive control, closed-loop prosthetics, leave-one-subject-out, data-limited bottleneck.
+action conditioning, brain-computer interface, closed-loop prosthetics, data-limited bottleneck, EEG, leave-one-subject-out, model predictive control, motor imagery, state space model, world model.
 \end{IEEEkeywords}
 
 
@@ -57,7 +61,7 @@ EEG, motor imagery BCI, state space model, action conditioning, world model, mod
 \section{Introduction}
 \label{sec:intro}
 
-Approximately 2.1\,million people in the United States are living with limb loss, with upper-limb amputees representing a population for whom dexterous prosthetic control is a central quality-of-life determinant~\cite{shenoy2013combining}.
+\IEEEPARstart{A}{pproximately} 2.1\,million people in the United States are living with limb loss, with upper-limb amputees representing a population for whom dexterous prosthetic control is a central quality-of-life determinant~\cite{shenoy2013combining}.
 Motor imagery (MI) brain-computer interfaces (BCIs) offer a non-invasive pathway to voluntary control without residual muscle function, by decoding oscillatory EEG signatures associated with imagined limb movements~\cite{pfurtscheller2001motor}.
 Despite decades of research, clinical translation remains limited: the predominant evaluation paradigm (epoch, bandpass, extract power features, classify with LDA) treats prosthetic control as a discrete $K$-class classification task.
 This framing is clinically misaligned: a real prosthetic hand does not switch discretely between $K$ states; it moves continuously in six degrees of freedom (DOF), and neurophysiological studies establish that natural motor commands must be delivered within 300\,ms of intent onset to feel responsive~\cite{shenoy2013combining}.
@@ -1043,5 +1047,13 @@ B.~Blankertz, S.~Lemm, M.~Treder, S.~Haufe, and K.-R. M\"{u}ller, ``Single-trial
 M.~Safaie, J.~C. Chang, J.~Park, L.~E. Miller, J.~T. Dudman, M.~M. Churchland, and P.~Bhatt, ``Preserved neural dynamics across animals performing similar behaviour,'' \emph{Nature}, vol.~623, pp.~765--771, 2023.
 
 \end{thebibliography}
+
+\begin{IEEEbiographynophoto}{Joseph Woodall}
+is an independent researcher in neural engineering and brain-computer
+interfaces. He received the M.S.\ degree in data science from Southern Methodist University in 2021.
+His research focuses on state space models for neural decoding, self-supervised
+representation learning for biosignals, and closed-loop prosthetic control
+systems.
+\end{IEEEbiographynophoto}
 
 \end{document}
